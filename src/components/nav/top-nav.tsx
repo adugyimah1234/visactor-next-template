@@ -9,6 +9,8 @@ import { Bell, Search, Menu, User, ChevronDown, LogOut, Settings, HelpCircle } f
 import { logout } from "@/services/auth";
 import { useAuth } from "@/hooks/useAuth"; // Import your useAuth hook
 import Image from "next/image"; // Import Image for profile picture
+import { useRouter } from 'next/navigation'; // Replace react-router-dom import
+import { Loader } from "@/components/ui/loader"; // Add this import
 
 export default function TopNav({ title }: { title: string }) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -16,6 +18,13 @@ export default function TopNav({ title }: { title: string }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user } = useAuth(); // Access the user object from the AuthContext
   const [profileImage, setProfileImage] = useState<string | null>(null); // State for profile image
+  const router = useRouter(); // Use Next.js router instead
+
+  // Add these states for loading
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(false);
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
 
   useEffect(() => {
     if (user?.id) {
@@ -28,11 +37,34 @@ export default function TopNav({ title }: { title: string }) {
 
   const handleLogout = async () => {
     try {
+      setIsLoggingOut(true);
       await logout();
-      // Logout service handles redirection
+      router.push('/login'); // Use Next.js navigation
     } catch (error: any) {
       console.error("Logout failed:", error.message);
       // Optionally display an error
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  const handleProfileClick = async () => {
+    try {
+      setIsLoadingProfile(true);
+      await router.push('/profile'); // Use Next.js navigation
+      setIsUserMenuOpen(false); // Close menu after navigation
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  };
+
+  const handleNotificationClick = async () => {
+    setIsLoadingNotifications(true);
+    try {
+      // Your notification loading logic here
+      setIsNotificationsOpen(!isNotificationsOpen);
+    } finally {
+      setIsLoadingNotifications(false);
     }
   };
 
@@ -73,12 +105,19 @@ export default function TopNav({ title }: { title: string }) {
         {/* Notifications */}
         <div className="relative">
           <button
-            className="p-2 rounded-md hover:bg-accent relative"
-            onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+            className="p-2 rounded-md hover:bg-accent relative disabled:opacity-50"
+            onClick={handleNotificationClick}
+            disabled={isLoadingNotifications}
           >
-            <Bell size={20} />
-            {notifications.filter(n => !n.read).length > 0 && (
-              <span className="absolute top-1 right-1 bg-red-500 rounded-full w-2 h-2"></span>
+            {isLoadingNotifications ? (
+              <Loader size="sm" showText={false} />
+            ) : (
+              <>
+                <Bell size={20} />
+                {notifications.filter(n => !n.read).length > 0 && (
+                  <span className="absolute top-1 right-1 bg-red-500 rounded-full w-2 h-2"></span>
+                )}
+              </>
             )}
           </button>
 
@@ -96,11 +135,14 @@ export default function TopNav({ title }: { title: string }) {
         {/* User Menu */}
         <div className="relative">
           <button
-            className="flex items-center gap-2 p-1 pl-2 rounded-md hover:bg-accent"
+            className="flex items-center gap-2 p-1 pl-2 rounded-md hover:bg-accent disabled:opacity-50"
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+            disabled={isLoadingProfile}
           >
             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-              {profileImage ? (
+              {isLoadingProfile ? (
+                <Loader size="sm" showText={false} />
+              ) : profileImage ? (
                 <Image src={profileImage} alt="User avatar" width={32} height={32} className="h-full w-full object-cover" />
               ) : (
                 <User size={16} className="text-primary" />
@@ -119,14 +161,29 @@ export default function TopNav({ title }: { title: string }) {
               </div>
               <ul>
                 <li>
-                  <button className="w-full text-left px-3 py-2 hover:bg-accent flex items-center gap-2">
-                    <User size={16} />
+                  <button 
+                    onClick={handleProfileClick} 
+                    className="w-full text-left px-3 py-2 hover:bg-accent flex items-center gap-2"
+                    disabled={isLoadingProfile}
+                  >
+                    {isLoadingProfile ? (
+                      <Loader size="sm" showText={false} />
+                    ) : (
+                      <User size={16} />
+                    )}
                     <span>Profile</span>
                   </button>
                 </li>
                 <li>
-                  <button className="w-full text-left px-3 py-2 hover:bg-accent flex items-center gap-2">
-                    <Settings size={16} />
+                  <button 
+                    className="w-full text-left px-3 py-2 hover:bg-accent flex items-center gap-2"
+                    disabled={isLoadingSettings}
+                  >
+                    {isLoadingSettings ? (
+                      <Loader size="sm" showText={false} />
+                    ) : (
+                      <Settings size={16} />
+                    )}
                     <span>Settings</span>
                   </button>
                 </li>
@@ -137,8 +194,16 @@ export default function TopNav({ title }: { title: string }) {
                   </button>
                 </li>
                 <li className="border-t border-border">
-                  <button onClick={handleLogout} className="w-full text-left px-3 py-2 hover:bg-accent flex items-center gap-2 text-red-500">
-                    <LogOut size={16} />
+                  <button 
+                    onClick={handleLogout} 
+                    className="w-full text-left px-3 py-2 hover:bg-accent flex items-center gap-2 text-red-500 disabled:opacity-50"
+                    disabled={isLoggingOut}
+                  >
+                    {isLoggingOut ? (
+                      <Loader size="sm" showText={false} className="text-red-500" />
+                    ) : (
+                      <LogOut size={16} />
+                    )}
                     <span>Log out</span>
                   </button>
                 </li>

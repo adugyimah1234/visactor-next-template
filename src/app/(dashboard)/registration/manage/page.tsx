@@ -5,6 +5,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Loader } from "@/components/ui/loader";
+import { 
+    ChevronLeft, 
+    ChevronRight, 
+    ChevronFirst, 
+    ChevronLast 
+} from 'lucide-react';
 import {
     Table,
     TableBody,
@@ -31,6 +38,16 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
     ArrowUpDown,
     CheckCircle,
     XCircle,
@@ -39,11 +56,23 @@ import {
     Trash2,
     Search,
     Users,
+    Download,
+    Printer,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from "@/contexts/AuthContext";
 import registrationService, { type RegistrationData } from '@/services/registrations';
+import { useRouter } from 'next/navigation';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from 'sonner';
 
+// ...other imports...
 interface Applicant {
     id: string;
     name: string;
@@ -54,126 +83,20 @@ interface Applicant {
     date: string; // Store as string, format on display
 }
 
-
-
-// Dummy data for initial state - Replace with API calls in a real app
-const initialApplicants: Applicant[] = [
-    {
-        id: '1',
-        name: 'John Doe',
-        email: 'john.doe@example.com',
-        phone: '123-456-7890',
-        role: 'Software Engineer',
-        status: 'pending',
-        date: '2024-07-28',
-    },
-    {
-        id: '2',
-        name: 'Jane Smith',
-        email: 'jane.smith@example.com',
-        phone: '987-654-3210',
-        role: 'Data Scientist',
-        status: 'reviewed',
-        date: '2024-07-27',
-    },
-    {
-        id: '3',
-        name: 'Bob Johnson',
-        email: 'bob.johnson@example.com',
-        phone: '555-123-4567',
-        role: 'Product Manager',
-        status: 'accepted',
-        date: '2024-07-26',
-    },
-    {
-        id: '4',
-        name: 'Alice Brown',
-        email: 'alice.brown@example.com',
-        phone: '111-222-3333',
-        role: 'UX Designer',
-        status: 'rejected',
-        date: '2024-07-25',
-    },
-    {
-        id: '5',
-        name: 'Michael Davis',
-        email: 'michael.davis@example.com',
-        phone: '444-555-6666',
-        role: 'Frontend Developer',
-        status: 'pending',
-        date: '2024-07-24'
-    },
-    {
-        id: '6',
-        name: 'Sarah Wilson',
-        email: 'sarah.wilson@example.com',
-        phone: '777-888-9999',
-        role: 'Backend Developer',
-        status: 'reviewed',
-        date: '2024-07-23'
-    },
-    {
-        id: '7',
-        name: 'David Garcia',
-        email: 'david.garcia@example.com',
-        phone: '222-333-4444',
-        role: 'Data Analyst',
-        status: 'accepted',
-        date: '2024-07-22'
-    },
-    {
-        id: '8',
-        name: 'Jennifer Rodriguez',
-        email: 'jennifer.rodriguez@example.com',
-        phone: '666-777-8888',
-        role: 'Project Manager',
-        status: 'rejected',
-        date: '2024-07-21'
-    },
-    {
-        id: '9',
-        name: 'Christopher Williams',
-        email: 'chris.williams@example.com',
-        phone: '333-444-5555',
-        role: 'Software Engineer',
-        status: 'pending',
-        date: '2024-07-20'
-    },
-    {
-        id: '10',
-        name: 'Angela Garcia',
-        email: 'angela.garcia@example.com',
-        phone: '888-999-0000',
-        role: 'Data Scientist',
-        status: 'reviewed',
-        date: '2024-07-19'
-    }
-];
-
-const roles = [
-    'Software Engineer',
-    'Data Scientist',
-    'Product Manager',
-    'UX Designer',
-    'Frontend Developer',
-    'Backend Developer',
-    'Data Analyst',
-    'Project Manager',
-];
-
-const statusOptions = ['pending', 'reviewed', 'accepted', 'rejected'];
-
 const ApplicantManagement = () => {
-    const [applicants, setApplicants] = useState<Applicant[]>(initialApplicants);
+    const router = useRouter();
+    const [applicants, setApplicants] = useState<Applicant[]>([]);
     const [open, setOpen] = useState(false);
     const [editApplicant, setEditApplicant] = useState<Applicant | null>(null);
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
-    const [role, setRole] = useState(roles[0]);
+    const [role, setRole] = useState<string>(''); // or a default role string like 'user'
     const [status, setStatus] = useState<Applicant['status']>('pending');
     const [sortConfig, setSortConfig] = useState<{ key: keyof Applicant; direction: 'ascending' | 'descending' } | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
+    const [loading, setLoading] = useState(false);
+
     const [itemsPerPage] = useState(10); // Number of items per page
     const [registrations, setRegistrations] = useState<RegistrationData[]>([]);
     const [isRegistrationFormOpen, setIsRegistrationFormOpen] = useState(false);
@@ -188,7 +111,53 @@ const ApplicantManagement = () => {
     const [guardianName, setGuardianName] = useState('');
     const [relationship, setRelationship] = useState('');
     const [guardianPhoneNumber, setGuardianPhoneNumber] = useState('');
-    // --- CRUD Operations ---
+    const { user } = useAuth(); // Get the current user
+
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [selectedRegistration, setSelectedRegistration] = useState<RegistrationData | null>(null);
+
+    const [pageSize, setPageSize] = useState(10);
+    const [totalPages, setTotalPages] = useState(0);
+
+        // Add this helper function inside your component or in a separate utils file
+    const getPaginationRange = (current: number, total: number) => {
+        if (total <= 7) {
+            return Array.from({ length: total }, (_, i) => i + 1);
+        }
+    
+        if (current <= 3) {
+            return [1, 2, 3, 4, '...', total];
+        }
+    
+        if (current >= total - 2) {
+            return [1, '...', total - 3, total - 2, total - 1, total];
+        }
+    
+        return [
+            1,
+            '...',
+            current - 1,
+            current,
+            current + 1,
+            '...',
+            total
+        ];
+    };
+
+    const fetchRegistrations = useCallback(async () => {
+        try {
+            const allRegistrations = await registrationService.getAll();
+            setRegistrations(allRegistrations);
+        } catch (error) {
+            console.error(error);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchRegistrations();
+    }, [fetchRegistrations]);
+
     const addApplicant = useCallback(() => {
         if (!name.trim() || !email.trim() || !phone.trim()) {
             alert('Please fill in all fields.'); // Basic validation
@@ -209,20 +178,17 @@ const ApplicantManagement = () => {
         setName('');
         setEmail('');
         setPhone('');
-        setRole(roles[0]);
+        setRole('');
         setStatus('pending');
     }, [name, email, phone, role, status]);
 
-    const handleRegistrationClick = () => {
-        setIsRegistrationFormOpen(true);
-    };
-    const addRegistration = useCallback(() => {
+    const addRegistration = useCallback(async () => {
         if (!firstName.trim() || !lastName.trim() || !email.trim() || !phoneNumber.trim()) {
-            alert('Please fill in all fields.'); // Basic validation
+            alert('Please fill in all fields.');
             return;
         }
         const newRegistration: RegistrationData = {
-            id: Date.now(), // Use timestamp as a unique ID
+            id: Date.now(),
             first_name: firstName,
             last_name: lastName,
             email,
@@ -231,44 +197,42 @@ const ApplicantManagement = () => {
             class_applying_for: classApplyingFor,
             gender: gender as "Male" | "Female" | "Other",
             address,
-            category: '', // Add a default value or get it from somewhere
-            academic_year: '', // Add a default value or get it from somewhere
+            category: '',
+            academic_year: '',
             guardian_name: guardianName,
             relationship,
+            scores: 0,
+            status: 'Pending',
             guardian_phone_number: guardianPhoneNumber,
-            school_id: 0, // Add a default value or get it from somewhere
-            student_id: 0, // Add a default value or get it from somewhere
-            class_id: 0, // Add a default value or get it from somewhere
+            school_id: 0,
+            student_id: 0,
+            class_id: 0,
             academic_year_id: 0
         };
-        setRegistrations((prevRegistrations) => [...prevRegistrations, newRegistration]);
-        setIsRegistrationFormOpen(false); // Close dialog
-        // Reset form fields
-        setFirstName('');
-        setLastName('');
-        setEmail('');
-        setPhoneNumber('');
-        setDateOfBirth('');
-        setClassApplyingFor('');
-        setGender('Male');
-        setAddress('');
-        setGuardianName('');
-        setRelationship('');
-        setGuardianPhoneNumber('');
-    }, [firstName, lastName, email, phoneNumber, dateOfBirth, classApplyingFor, gender, address, guardianName, relationship, guardianPhoneNumber]);
-
-
-    useEffect(() => {
-        const fetchRegistrations = async () => {
-            try {
-                const allRegistrations = await registrationService.getAll();
-                setRegistrations(allRegistrations);
-            } catch (error) {
-                console.error(error);
-            }
-        };
-        fetchRegistrations();
-    }, []);
+        try {
+            await registrationService.create(newRegistration);
+            setIsRegistrationFormOpen(false);
+            // Reset form fields
+            setFirstName('');
+            setLastName('');
+            setEmail('');
+            setPhoneNumber('');
+            setDateOfBirth('');
+            setClassApplyingFor('');
+            setGender('Male');
+            setAddress('');
+            setGuardianName('');
+            setRelationship('');
+            setGuardianPhoneNumber('');
+            // Refresh registrations
+            fetchRegistrations();
+        } catch (error) {
+            console.error(error);
+        }
+    }, [
+        firstName, lastName, email, phoneNumber, dateOfBirth, classApplyingFor, gender,
+        address, guardianName, relationship, guardianPhoneNumber, fetchRegistrations
+    ]);
 
     const handleDeleteRegistration = async (id: number) => {
         try {
@@ -298,9 +262,67 @@ const ApplicantManagement = () => {
         setOpen(true); // Reuse the dialog
     };
 
-
     const deleteApplicant = (id: string) => {
         setApplicants(prevApplicants => prevApplicants.filter(app => app.id !== id));
+    };
+
+    const handleDeleteClick = (registration: RegistrationData) => {
+        setSelectedRegistration(registration);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const handleEditClick = (registration: RegistrationData) => {
+        setSelectedRegistration(registration);
+        setIsEditDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (selectedRegistration?.id) {
+            try {
+                await handleDeleteRegistration(selectedRegistration.id);
+                toast.success("Registration deleted successfully");
+            } catch (error) {
+                toast.error("Failed to delete registration");
+            }
+        }
+        setIsDeleteDialogOpen(false);
+        setSelectedRegistration(null);
+    };
+
+    const confirmEdit = async () => {
+        if (selectedRegistration?.id) {
+            try {
+                await handleUpdateRegistration(selectedRegistration.id, {
+                    ...selectedRegistration,
+                    school_id: selectedRegistration.school_id,
+                    student_id: selectedRegistration.student_id,
+                    class_id: selectedRegistration.class_id,
+                    academic_year_id: selectedRegistration.academic_year_id,
+                    first_name: selectedRegistration.first_name,
+                    last_name: selectedRegistration.last_name,
+                    academic_year: selectedRegistration.academic_year ?? '',
+                    date_of_birth: selectedRegistration.date_of_birth,
+                    class_applying_for: selectedRegistration.class_applying_for,
+                    gender: selectedRegistration.gender,
+                    phone_number: selectedRegistration.phone_number,
+                    address: selectedRegistration.address,
+                    guardian_name: selectedRegistration.guardian_name,
+                    relationship: selectedRegistration.relationship,
+                    guardian_phone_number: selectedRegistration.guardian_phone_number,
+                    category: selectedRegistration.category ?? '',
+                    scores: selectedRegistration.scores ?? 0,
+                    status: selectedRegistration.status ?? 'Pending'
+                });
+                toast.success("Registration updated successfully");
+                // Refresh the registrations list
+                fetchRegistrations();
+            } catch (error) {
+                toast.error("Failed to update registration");
+                console.error(error);
+            }
+        }
+        setIsEditDialogOpen(false);
+        setSelectedRegistration(null);
     };
 
     // --- Sorting ---
@@ -320,58 +342,20 @@ const ApplicantManagement = () => {
         return sortableItems;
     }, [applicants, sortConfig]);
 
-    const requestSort = (key: keyof Applicant) => {
-        let direction: 'ascending' | 'descending' = 'ascending';
-        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
-            direction = 'descending';
-        }
-        setSortConfig({ key, direction });
-    };
-
-    const getSortIcon = (key: keyof Applicant) => {
-        if (!sortConfig || sortConfig.key !== key) {
-            return <ArrowUpDown className="ml-2 h-4 w-4" />;
-        }
-        return sortConfig.direction === 'ascending'
-            ? <ArrowUpDown className="ml-2 h-4 w-4 rotate-180" />
-            : <ArrowUpDown className="ml-2 h-4 w-4" />;
-    };
-
     // --- Filtering ---
-    const filteredApplicants = sortedApplicants.filter(applicant =>
-        applicant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        applicant.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        applicant.role.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredRegistrations = registrations.filter(registration =>
+    (registration.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        registration.last_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        registration.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        registration.phone_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        registration.class_applying_for?.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
     // --- Pagination ---
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const currentItems = filteredApplicants.slice(indexOfFirstItem, indexOfLastItem);
-
+    const currentItems = filteredRegistrations.slice(indexOfFirstItem, indexOfLastItem);
     const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
-
-    // --- Status Badge Variants ---
-    const getStatusBadgeVariant = (status: Applicant['status']) => {
-        switch (status) {
-            case 'pending': return 'secondary';
-            case 'reviewed': return 'outline';
-            case 'accepted': return 'default';
-            case 'rejected': return 'destructive';
-            default: return 'secondary';
-        }
-    };
-
-    const getStatusIcon = (status: Applicant['status']) => {
-        switch (status) {
-            case 'accepted':
-                return <CheckCircle className="h-4 w-4 ml-1 text-green-500" />;
-            case 'rejected':
-                return <XCircle className="h-4 w-4 ml-1 text-red-500" />;
-            default:
-                return null;
-        }
-    };
 
     // --- Effects ---
     useEffect(() => {
@@ -380,10 +364,330 @@ const ApplicantManagement = () => {
             setName('');
             setEmail('');
             setPhone('');
-            setRole(roles[0]);
+            setRole('');
             setStatus('pending');
         }
     }, [open]);
+
+    // --- Print and Export Functions ---
+    const handlePrintPDF = (registration: RegistrationData) => {
+        const receiptContent = `
+            REGISTRATION RECEIPT
+            -------------------
+            Registration ID: ${registration.id}
+            Date: ${new Date().toLocaleDateString()}
+            
+            Student Information:
+            ------------------
+            Name: ${registration.first_name} ${registration.last_name}
+            Class: ${registration.class_applying_for}
+            Email: ${registration.email}
+            Phone: ${registration.phone_number}
+            
+            Guardian Information:
+            -------------------
+            Name: ${registration.guardian_name}
+            Relationship: ${registration.relationship}
+            Phone: ${registration.guardian_phone_number}
+            
+            Payment Details:
+            --------------
+            Registration Fee: $XXX.XX
+            Status: ${registration.status}
+        `;
+
+        const blob = new Blob([receiptContent], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `registration-receipt-${registration.id}.pdf`;
+        link.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const handlePrintExcel = (registration: RegistrationData) => {
+        const data = [
+            ['Registration Receipt'],
+            ['Registration ID', registration.id],
+            ['Date', new Date().toLocaleDateString()],
+            [''],
+            ['Student Information'],
+            ['Name', `${registration.first_name} ${registration.last_name}`],
+            ['Class', registration.class_applying_for],
+            ['Email', registration.email],
+            ['Phone', registration.phone_number],
+            [''],
+            ['Guardian Information'],
+            ['Name', registration.guardian_name],
+            ['Relationship', registration.relationship],
+            ['Phone', registration.guardian_phone_number],
+            [''],
+            ['Payment Details'],
+            ['Registration Fee', 'XXX.XX'],
+            ['Status', registration.status],
+        ];
+
+        const csvContent = data.map(row => row.join(',')).join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `registration-receipt-${registration.id}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const handlePrint = (registration: RegistrationData) => {
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Registration Receipt</title>
+                        <style>
+                            @media print {
+                                @page { size: A4; margin: 2cm; }
+                            }
+                            body { 
+                                font-family: Arial, sans-serif; 
+                                padding: 20px;
+                                max-width: 800px;
+                                margin: 0 auto;
+                            }
+                            .logo {
+                                text-align: center;
+                                margin-bottom: 20px;
+                            }
+                            .logo img {
+                                height: 80px;
+                                width: auto;
+                            }
+                            .header { 
+                                text-align: center; 
+                                margin-bottom: 30px;
+                                border-bottom: 2px solid #333;
+                                padding-bottom: 20px;
+                            }
+                            .section { 
+                                margin-bottom: 20px;
+                                padding: 15px;
+                                background: #f8f9fa;
+                                border-radius: 5px;
+                            }
+                            .section-title { 
+                                font-weight: bold;
+                                border-bottom: 1px solid #dee2e6;
+                                margin-bottom: 10px;
+                                padding-bottom: 5px;
+                                color: #2c5282;
+                            }
+                            .row { 
+                                display: flex;
+                                margin-bottom: 8px;
+                                padding: 4px 0;
+                            }
+                            .label { 
+                                font-weight: bold;
+                                width: 150px;
+                                color: #4a5568;
+                            }
+                            .footer {
+                                margin-top: 40px;
+                                text-align: center;
+                                font-size: 0.9em;
+                                color: #666;
+                            }
+                            .watermark {
+                                position: fixed;
+                                bottom: 10px;
+                                right: 10px;
+                                opacity: 0.1;
+                                transform: rotate(-45deg);
+                                font-size: 60px;
+                                z-index: -1;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="logo">
+                            <img src="/logo.png" alt="School Logo"/>
+                        </div>
+                        <div class="header">
+                            <h1>Registration Receipt</h1>
+                            <p>Registration ID: ${registration.id}</p>
+                            <p>Date: ${new Date().toLocaleDateString()}</p>
+                        </div>
+                        
+                        <div class="section">
+                            <div class="section-title">Student Information</div>
+                            <div class="row">
+                                <span class="label">Name:</span>
+                                <span>${registration.first_name} ${registration.last_name}</span>
+                            </div>
+                            <div class="row">
+                                <span class="label">Class:</span>
+                                <span>${registration.class_applying_for}</span>
+                            </div>
+                            <div class="row">
+                                <span class="label">Email:</span>
+                                <span>${registration.email}</span>
+                            </div>
+                            <div class="row">
+                                <span class="label">Phone:</span>
+                                <span>${registration.phone_number}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="section">
+                            <div class="section-title">Guardian Information</div>
+                            <div class="row">
+                                <span class="label">Name:</span>
+                                <span>${registration.guardian_name}</span>
+                            </div>
+                            <div class="row">
+                                <span class="label">Relationship:</span>
+                                <span>${registration.relationship}</span>
+                            </div>
+                            <div class="row">
+                                <span class="label">Phone:</span>
+                                <span>${registration.guardian_phone_number}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="section">
+                            <div class="section-title">Payment Details</div>
+                            <div class="row">
+                                <span class="label">Registration Fee:</span>
+                                <span>$XXX.XX</span>
+                            </div>
+                            <div class="row">
+                                <span class="label">Status:</span>
+                                <span>${registration.status}</span>
+                            </div>
+                        </div>
+
+                        <div class="footer">
+                            <p>Thank you for choosing our institution</p>
+                            <p>For any queries, please contact: support@school.com</p>
+                        </div>
+
+                        <div class="watermark">
+                            OFFICIAL RECEIPT
+                        </div>
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+        }
+    };
+
+        const handlePrintTable = () => {
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Registrations Table</title>
+                        <style>
+                            @media print {
+                                @page { size: landscape; margin: 2cm; }
+                            }
+                            body { 
+                                font-family: Arial, sans-serif;
+                                padding: 20px;
+                            }
+                            .logo {
+                                text-align: center;
+                                margin-bottom: 20px;
+                            }
+                            .logo img {
+                                height: 60px;
+                                width: auto;
+                            }
+                            .header {
+                                text-align: center;
+                                margin-bottom: 20px;
+                            }
+                            table {
+                                width: 100%;
+                                border-collapse: collapse;
+                                margin-top: 20px;
+                            }
+                            th, td {
+                                border: 1px solid #ddd;
+                                padding: 8px;
+                                text-align: left;
+                            }
+                            th {
+                                background-color: #f4f4f4;
+                            }
+                            .footer {
+                                margin-top: 20px;
+                                text-align: center;
+                                font-size: 0.9em;
+                                color: #666;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="logo">
+                            <img src="/logo.png" alt="School Logo"/>
+                        </div>
+                        <div class="header">
+                            <h1>Registration Records</h1>
+                            <p>Generated on: ${new Date().toLocaleDateString()}</p>
+                            <p>Total Records: ${filteredRegistrations.length}</p>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>No.</th>
+                                    <th>Date</th>
+                                    <th>Name</th>
+                                    <th>Date of Birth</th>
+                                    <th>Class</th>
+                                    <th>Gender</th>
+                                    <th>Scores</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${filteredRegistrations.map((registration, idx) => `
+                                    <tr>
+                                        <td>${idx + 1}</td>
+                                        <td>${registration.registration_date 
+                                            ? new Date(registration.registration_date).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: '2-digit',
+                                            })
+                                            : ''}</td>
+                                        <td>${registration.first_name} ${registration.middle_name} ${registration.last_name}</td>
+                                        <td>${registration.date_of_birth 
+                                            ? new Date(registration.date_of_birth).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: '2-digit',
+                                            })
+                                            : ''}</td>
+                                        <td>${registration.class_applying_for}</td>
+                                        <td>${registration.gender}</td>
+                                        <td>${registration.scores ?? ''}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        <div class="footer">
+                            <p>Generated from the School Management System</p>
+                            <p>Date: ${new Date().toLocaleDateString()}</p>
+                        </div>
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+        }
+    };
 
     // --- UI ---
     return (
@@ -405,13 +709,26 @@ const ApplicantManagement = () => {
                         className="w-full md:w-64"
                     />
                 </div>
-                <Button
-                    onClick={() => setIsRegistrationFormOpen(true)}
-                    className="bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-2"
-                >
-                    <Plus className="w-4 h-4" />
-                    Add Registration
-                </Button>
+                <div className="flex items-center gap-y-2">
+                    <Button
+                        onClick={() => router.push('/registration/new')}
+                        className="bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-2"
+                        disabled={loading}
+                    >
+                        <Plus className="w-4 h-4" />
+                        Add Registration
+                    </Button>
+                    {loading && <Loader className="ml-2" />}
+                </div>
+                <div className="flex items-center gap-y-2">
+                    <Button
+                        onClick={handlePrintTable}
+                        className="bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-2"
+                    >
+                        <Printer className="w-4 h-4" />
+                        Print Table
+                    </Button>
+                </div>
             </div>
 
             {/* Table */}
@@ -419,6 +736,15 @@ const ApplicantManagement = () => {
                 <Table>
                     <TableHeader>
                         <TableRow>
+                            <TableHead className="w-[50px]">No.</TableHead>
+                            <TableHead>
+                                <Button
+                                    variant="ghost"
+                                    className="h-8 px-0 font-normal"
+                                >
+                                    <span>Date</span>
+                                </Button>
+                            </TableHead>
                             <TableHead className="w-[100px]">
                                 <Button
                                     variant="ghost"
@@ -435,22 +761,22 @@ const ApplicantManagement = () => {
                                     <span>Last Name</span>
                                 </Button>
                             </TableHead>
-                            <TableHead>
+                            {/* <TableHead>
                                 <Button
                                     variant="ghost"
                                     className="h-8 px-0 font-normal"
                                 >
                                     <span>Email</span>
                                 </Button>
-                            </TableHead>
-                            <TableHead>
+                            </TableHead> */}
+                            {/* <TableHead>
                                 <Button
                                     variant="ghost"
                                     className="h-8 px-0 font-normal"
                                 >
                                     <span>Phone Number</span>
                                 </Button>
-                            </TableHead>
+                            </TableHead> */}
                             <TableHead>
                                 <Button
                                     variant="ghost"
@@ -475,22 +801,20 @@ const ApplicantManagement = () => {
                                     <span>Gender</span>
                                 </Button>
                             </TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
                             <TableHead>
                                 <Button
                                     variant="ghost"
                                     className="h-8 px-0 font-normal"
-                                    onClick={() => requestSort('date')}
                                 >
-                                    <span>Date</span>
-                                    {getSortIcon('date')}
+                                    <span>Scores</span>
                                 </Button>
                             </TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         <AnimatePresence>
-                            {registrations.map((registration) => (
+                            {currentItems.map((registration, idx) => (
                                 <motion.tr
                                     key={registration.id?.toString()}
                                     initial={{ opacity: 0, x: -20 }}
@@ -498,38 +822,84 @@ const ApplicantManagement = () => {
                                     exit={{ opacity: 0, x: 20 }}
                                     transition={{ duration: 0.2 }}
                                 >
+                                    <TableCell>{idx + 1}</TableCell>
+                                    <TableCell>
+                                        {/* Format registration.registration_date as "MMM dd, yyyy" if available */}
+                                        {registration.registration_date
+                                            ? new Date(registration.registration_date).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: '2-digit',
+                                            })
+                                            : ''}
+                                    </TableCell>
                                     <TableCell className="font-medium">{registration.first_name}</TableCell>
                                     <TableCell>{registration.last_name}</TableCell>
-                                    <TableCell>{registration.email}</TableCell>
-                                    <TableCell>{registration.phone_number}</TableCell>
-                                    <TableCell>{registration.date_of_birth}</TableCell>
+                                    {/* <TableCell>{registration.email}</TableCell> */}
+                                    {/* <TableCell>{registration.phone_number}</TableCell> */}
+                                    <TableCell>
+                                        {/* Format date_of_birth as "MMM dd, yyyy" if available */}
+                                        {registration.date_of_birth
+                                            ? new Date(registration.date_of_birth).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: '2-digit',
+                                            })
+                                            : ''}
+                                    </TableCell>
                                     <TableCell>{registration.class_applying_for}</TableCell>
                                     <TableCell>
                                         <Badge variant="secondary">
                                             {registration.gender}
                                         </Badge>
                                     </TableCell>
+                                    <TableCell>
+                                        {/* Show registration.scores if available, else blank */}
+                                        {registration.scores ?? ''}
+                                    </TableCell>
                                     <TableCell className="flex justify-end gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="icon"
-                                            onClick={() => handleUpdateRegistration(registration.id!, {
-                                                ...registration,
-                                                category: '', // Add a default value or get it from somewhere
-                                                academic_year: registration.academic_year ?? '', // Provide a default value if it's undefined
-                                            })}
-                                            className="hover:bg-gray-200 dark:hover:bg-gray-700"
-                                        >
-                                            <Edit className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            variant="destructive"
-                                            size="icon"
-                                            onClick={() => handleDeleteRegistration(registration.id!)}
-                                            className="hover:bg-red-700"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    className="hover:bg-gray-200 dark:hover:bg-gray-700"
+                                                >
+                                                    <Download className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onClick={() => handlePrintPDF(registration)}>
+                                                    Download PDF
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handlePrintExcel(registration)}>
+                                                    Download Excel
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handlePrint(registration)}>
+                                                    Print Receipt
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                        {user?.role === "admin" && (
+                                            <>
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    onClick={() => handleEditClick(registration)}
+                                                    className="hover:bg-gray-200 dark:hover:bg-gray-700"
+                                                >
+                                                    <Edit className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="destructive"
+                                                    size="icon"
+                                                    onClick={() => handleDeleteClick(registration)}
+                                                    className="hover:bg-red-700"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </>
+                                        )}
                                     </TableCell>
                                 </motion.tr>
                             ))}
@@ -538,81 +908,146 @@ const ApplicantManagement = () => {
                 </Table>
             </div>
 
-            {/* Pagination */}
-            {filteredApplicants.length > itemsPerPage && (
-                <div className="flex items-center justify-center mt-4">
-                    {Array.from({ length: Math.ceil(filteredApplicants.length / itemsPerPage) }, (_, i) => (
-                        <Button
-                            key={i + 1}
-                            variant={currentPage === i + 1 ? 'default' : 'outline'}
-                            onClick={() => paginate(i + 1)}
-                            className={cn(
-                                "mx-1",
-                                currentPage === i + 1
-                                    ? "bg-blue-500 text-white hover:bg-blue-600"
-                                    : "hover:bg-gray-200 dark:hover:bg-gray-700"
-                            )}
+            {/* Pagination */}            {/* Enhanced Pagination */}
+            {filteredRegistrations.length > 0 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 px-4">
+                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                        <span>Rows per page:</span>
+                        <Select
+                            value={pageSize.toString()}
+                            onValueChange={(value) => {
+                                setPageSize(Number(value));
+                                setCurrentPage(1);
+                            }}
                         >
-                            {i + 1}
+                            <SelectTrigger className="h-8 w-[70px]">
+                                <SelectValue>{pageSize}</SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                                {[5, 10, 20, 50, 100].map((size) => (
+                                    <SelectItem key={size} value={size.toString()}>
+                                        {size}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <span>
+                            {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredRegistrations.length)} of{" "}
+                            {filteredRegistrations.length} items
+                        </span>
+                    </div>
+            
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(1)}
+                            disabled={currentPage === 1}
+                            className="hidden sm:flex"
+                        >
+                            <span className="sr-only">Go to first page</span>
+                            <ChevronFirst className="h-4 w-4" />
                         </Button>
-                    ))}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            disabled={currentPage === 1}
+                        >
+                            <span className="sr-only">Go to previous page</span>
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+            
+                        <div className="flex items-center gap-2">
+                            {getPaginationRange(currentPage, Math.ceil(filteredRegistrations.length / pageSize)).map((page, i) => (
+                                <React.Fragment key={i}>
+                                    {page === '...' ? (
+                                        <span className="px-2">...</span>
+                                    ) : (
+                                        <Button
+                                            variant={currentPage === page ? 'default' : 'outline'}
+                                            size="sm"
+                                            onClick={() => paginate(Number(page))}
+                                            className={cn(
+                                                "hidden sm:flex",
+                                                currentPage === page
+                                                    ? "bg-blue-500 text-white hover:bg-blue-600"
+                                                    : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                                            )}
+                                        >
+                                            {page}
+                                        </Button>
+                                    )}
+                                </React.Fragment>
+                            ))}
+                        </div>
+            
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredRegistrations.length / pageSize)))}
+                            disabled={currentPage === Math.ceil(filteredRegistrations.length / pageSize)}
+                        >
+                            <span className="sr-only">Go to next page</span>
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(Math.ceil(filteredRegistrations.length / pageSize))}
+                            disabled={currentPage === Math.ceil(filteredRegistrations.length / pageSize)}
+                            className="hidden sm:flex"
+                        >
+                            <span className="sr-only">Go to last page</span>
+                            <ChevronLast className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
             )}
 
-            {/* Add/Edit Applicant Dialog */}
-            <Dialog open={isRegistrationFormOpen} onOpenChange={setIsRegistrationFormOpen}>
-                <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                        <DialogTitle>
-                            Add Registration
-                        </DialogTitle>
-                        <DialogDescription>
-                            Fill in the details below.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <label htmlFor="first_name" className="text-right">
-                                First Name
-                            </label>
-                            <Input
-                                id="first_name"
-                                value={firstName}
-                                onChange={(e) => setFirstName(e.target.value)}
-                                className="col-span-3"
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <label htmlFor="last_name" className="text-right">
-                                Last Name
-                            </label>
-                            <Input
-                                id="last_name"
-                                value={lastName}
-                                onChange={(e) => setLastName(e.target.value)}
-                                className="col-span-3"
-                            />
-                        </div>
-                        {/* ... other form fields ... */}
-                    </div>
-                    <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setIsRegistrationFormOpen(false)}
-                            className="hover:bg-gray-200 dark:hover:bg-gray-700"
+                        {/* Delete Confirmation Dialog */}
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure you want to delete this registration?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the registration
+                            for {selectedRegistration?.first_name} {selectedRegistration?.last_name}.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmDelete}
+                            className="bg-red-600 hover:bg-red-700"
                         >
-                            Cancel
-                        </Button>
-                        <Button
-                            type="submit"
-                            onClick={addRegistration}
-                            className="bg-blue-500 hover:bg-blue-600 text-white"
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            
+            {/* Edit Confirmation Dialog */}
+            <AlertDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Edit Registration</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to edit the registration for{' '}
+                            {selectedRegistration?.first_name} {selectedRegistration?.last_name}?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setIsEditDialogOpen(false)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmEdit}
+                            className="bg-blue-600 hover:bg-blue-700"
                         >
-                            Add
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                            Edit
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/consistent-type-imports */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // hooks/useAuth.ts
 import { useState, useContext } from 'react';

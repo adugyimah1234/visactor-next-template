@@ -13,10 +13,7 @@ import {
 } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
-import { Calendar } from "@/components/ui/calendar"
 import { format } from "date-fns"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon } from "lucide-react"
 import registrationService, { type RegistrationCreateInput, type RegistrationData } from '@/services/registrations'; // Import the registration service
 import { Toaster, toast } from 'sonner';
 
@@ -37,24 +34,26 @@ const classes = [
 const NewRegistrationPage = () => {
     const [gender, setGender] = useState<"Male" | "Female" | "Other">('Male');
     const [registrationData, setRegistrationData] = useState<RegistrationData>({
-    first_name: '',
-    last_name: '',
-    email: '',
-    middle_name: '',
-    phone_number: '',
-    date_of_birth: '',
-    class_applying_for: '',
-    gender: gender as "Male" | "Female" | "Other",
-    academic_year: '',
-    category: '',
-    address: '',
-    guardian_name: '',
-    relationship: '',
-    guardian_phone_number: '',
-    school_id: 0, // Add a default value or get it from somewhere
-    student_id: 0, // Add a default value or get it from somewhere
-    class_id: 0, // Add a default value or get it from somewhere
-    academic_year_id: 0
+        first_name: '',
+        last_name: '',
+        scores: 0,
+        status: 'Pending',
+        email: '',
+        middle_name: '',
+        phone_number: '',
+        date_of_birth: '',
+        class_applying_for: '',
+        gender: gender as "Male" | "Female" | "Other",
+        academic_year: '',
+        category: '',
+        address: '',
+        guardian_name: '',
+        relationship: '',
+        guardian_phone_number: '',
+        school_id: 0, // Add a default value or get it from somewhere
+        student_id: 0, // Add a default value or get it from somewhere
+        class_id: 0, // Add a default value or get it from somewhere
+        academic_year_id: 0
     });
 
     const [date, setDate] = useState<Date>()
@@ -93,87 +92,92 @@ const NewRegistrationPage = () => {
     };
 
     const initialRegistrationData: RegistrationData = {
-    school_id: 0,
-    student_id: 0,
-    class_id: 0,
-    academic_year_id: 0,
-    academic_year: '',
-    first_name: '',
-    middle_name: '',
-    last_name: '',
-    date_of_birth: undefined,
-    class_applying_for: '',
-    gender: 'Male',
-    email: '',
-    phone_number: '',
-    address: '',
-    guardian_name: '',
-    relationship: '',
-    guardian_phone_number: '',
-    category: '',
-};
+        school_id: 0,
+        student_id: 0,
+        scores: 0,
+        status: 'Pending',
+        class_id: 0,
+        academic_year_id: 0,
+        academic_year: '',
+        first_name: '',
+        middle_name: '',
+        last_name: '',
+        date_of_birth: undefined,
+        class_applying_for: '',
+        gender: 'Male',
+        email: '',
+        phone_number: '',
+        address: '',
+        guardian_name: '',
+        relationship: '',
+        guardian_phone_number: '',
+        category: '',
+    };
 
-const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+    const handleSubmit = async (event: React.FormEvent) => {
+        event.preventDefault();
 
-    // Basic client-side validation
-    if (
-        !registrationData.first_name ||
-        !registrationData.last_name ||
-        !registrationData.date_of_birth ||
-        !registrationData.class_applying_for ||
-        !registrationData.gender ||
-        !registrationData.phone_number ||
-        !registrationData.address ||
-        !registrationData.guardian_name ||
-        !registrationData.relationship ||
-        !registrationData.guardian_phone_number
-    ) {
-        toast.error("Please fill in all required fields.");
-        return; // Stop submission
-    }
-    if (!selectedAcademicYearId) {
-        toast.error("Please select an academic year.");
-        return;
-    }
+        // Basic client-side validation
+        if (
+            !registrationData.first_name ||
+            !registrationData.last_name ||
+            !registrationData.date_of_birth ||
+            !registrationData.class_applying_for ||
+            !registrationData.gender ||
+            !registrationData.phone_number ||
+            !registrationData.address ||
+            !registrationData.guardian_name ||
+            !registrationData.relationship ||
+            !registrationData.guardian_phone_number
+        ) {
+            toast.error("Please fill in all required fields.");
+            return; // Stop submission
+        }
+        if (!selectedAcademicYearId) {
+            toast.error("Please select an academic year.");
+            return;
+        }
 
-    setLoading(true); // Set loading to true before making the API call
-    try {
-        // Prepare the data to match the backend API's expected format
-        const backendData: RegistrationCreateInput = {
-            school_id: schoolId, // Assuming school ID is 1, update as needed
-            student_id: studentId,
-            class_id: classId, // Assuming class ID is 1, update as needed
-            academic_year_id: selectedAcademicYearId,
-            academic_year: academicYears.find(y => y.id === selectedAcademicYearId)?.year || '',
-            first_name: registrationData.first_name,
-            middle_name: registrationData.middle_name,
-            last_name: registrationData.last_name,
-date_of_birth: format(new Date(registrationData.date_of_birth), "yyyy-MM-dd"),            class_applying_for: registrationData.class_applying_for,
-            gender: registrationData.gender as "Male" | "Female" | "Other",
-            email: registrationData.email,
-            phone_number: registrationData.phone_number,
-            category: registrationData.category,
-            address: registrationData.address,
-            guardian_name: registrationData.guardian_name,
-            relationship: registrationData.relationship,
-            guardian_phone_number: registrationData.guardian_phone_number,
-        };
+        setLoading(true); // Set loading to true before making the API call
+        try {
+            // Prepare the data to match the backend API's expected format
+            const backendData: RegistrationCreateInput = {
+                school_id: schoolId, // Assuming school ID is 1, update as needed
+                student_id: studentId,
+                scores: 0,
+                status: 'Pending',
+                class_id: classId, // Assuming class ID is 1, update as needed
+                academic_year_id: selectedAcademicYearId,
+                academic_year: academicYears.find(y => y.id === selectedAcademicYearId)?.year || '',
+                first_name: registrationData.first_name,
+                middle_name: registrationData.middle_name,
+                last_name: registrationData.last_name,
+                date_of_birth: format(new Date(registrationData.date_of_birth), "yyyy-MM-dd"),
+                class_applying_for: registrationData.class_applying_for,
+                gender: registrationData.gender as "Male" | "Female" | "Other",
+                email: registrationData.email,
+                phone_number: registrationData.phone_number,
+                category: registrationData.category,
+                address: registrationData.address,
+                guardian_name: registrationData.guardian_name,
+                relationship: registrationData.relationship,
+                guardian_phone_number: registrationData.guardian_phone_number,
+            };
 
 
-        // Call the registration service to create the registration
-        const newRegistrationId = await registrationService.create(backendData);
-        toast.success(`Registration successful! Registration ID: ${newRegistrationId}`);
-        // Optionally, reset the form or redirect the user
-        setRegistrationData(initialRegistrationData);
-        setDate(undefined);
-        setSelectedAcademicYearId(null); // Reset the selected academic year
-    } catch (error: any) {
-        toast.error(error.message || "An error occurred during registration.");
-    } finally {
-        setLoading(false);
-    }
-};
+            // Call the registration service to create the registration
+            const newRegistrationId = await registrationService.create(backendData);
+            // Optionally, reset the form or redirect the user
+            setRegistrationData(initialRegistrationData);
+            setDate(undefined);
+            setSelectedAcademicYearId(null); // Reset the selected academic year
+            toast.success(`Registration successful!`);
+        } catch (error: any) {
+            toast.error(error.message || "An error occurred during registration.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <div className="p-4 md:p-8">
@@ -229,17 +233,33 @@ date_of_birth: format(new Date(registrationData.date_of_birth), "yyyy-MM-dd"),  
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Date of Birth */}
-                    <div>
+<div>
+    <Label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        Date of Birth <span className="text-red-500">*</span>
+    </Label>
+    <Input
+        type="date"
+        id="dateOfBirth"
+        value={registrationData.date_of_birth ? registrationData.date_of_birth : ""}
+        onChange={e => handleChange('date_of_birth', e.target.value)}
+        required
+        className="mt-1"
+        disabled={loading}
+        max={new Date().toISOString().split('T')[0]}
+    />
+</div>
+
+                    {/* <div>
                         <Label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Date of Birth <span className="text-red-500">*</span>
                         </Label>
                         <Popover>
-<PopoverTrigger asChild>
-    <Button variant="outline" className="w-full justify-start text-left font-normal">
-        <CalendarIcon className="mr-2 h-4 w-4" />
-        {registrationData.date_of_birth ? format(registrationData.date_of_birth, "PPP") : "Date of birth"}
-    </Button>
-</PopoverTrigger>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" className="w-full justify-start text-left font-normal">
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {registrationData.date_of_birth ? format(registrationData.date_of_birth, "PPP") : "Date of birth"}
+                                </Button>
+                            </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
                                 <Calendar
                                     mode="single"
@@ -253,7 +273,7 @@ date_of_birth: format(new Date(registrationData.date_of_birth), "yyyy-MM-dd"),  
                                 />
                             </PopoverContent>
                         </Popover>
-                    </div>
+                    </div> */}
 
                     {/* Class Applying For */}
                     <div>
@@ -322,14 +342,13 @@ date_of_birth: format(new Date(registrationData.date_of_birth), "yyyy-MM-dd"),  
                     {/* Phone Number */}
                     <div>
                         <Label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Phone Number <span className="text-red-500">*</span>
+                            Phone Number
                         </Label>
                         <Input
                             type="tel"
                             id="phoneNumber"
                             value={registrationData.phone_number}
                             onChange={(e) => handleChange('phone_number', e.target.value)}
-                            required
                             className="mt-1"
                             disabled={loading}
                         />
@@ -352,24 +371,24 @@ date_of_birth: format(new Date(registrationData.date_of_birth), "yyyy-MM-dd"),  
                 </div>
 
                 <div>
-    <Label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-        Category <span className="text-red-500">*</span>
-    </Label>
-    <Select
-        onValueChange={(value) => handleChange('category', value)}
-        value={registrationData.category}
-        disabled={loading}
-    >
-        <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select Category" />
-        </SelectTrigger>
-        <SelectContent>
-            <SelectItem value="SVC">SVC</SelectItem>
-            <SelectItem value="MOD">MOD</SelectItem>
-            <SelectItem value="CIV">CIV</SelectItem>
-        </SelectContent>
-    </Select>
-</div>
+                    <Label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Category <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
+                        onValueChange={(value) => handleChange('category', value)}
+                        value={registrationData.category}
+                        disabled={loading}
+                    >
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select Category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="SVC">SVC</SelectItem>
+                            <SelectItem value="MOD">MOD</SelectItem>
+                            <SelectItem value="CIV">CIV</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
 
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white mt-8">Guardian Information</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

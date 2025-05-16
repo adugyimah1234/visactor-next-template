@@ -21,6 +21,8 @@ export interface RegistrationData {
   phone_number: string;
   address: string;
   guardian_name: string;
+  scores: number;
+  status: "Pending" | "Accepted" | "Rejected";
   relationship: string;
   guardian_phone_number: string;
   registration_date?: string;
