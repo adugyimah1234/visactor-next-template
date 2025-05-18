@@ -1,27 +1,36 @@
 export interface School {
   id: number;
   name: string;
-  code: string;
-  capacity: number;
   address: string;
-  status: 'active' | 'inactive';
-  createdAt: string;
+  phone_number: string;
+  email: string;
+  status?: 'active' | 'inactive';
+  createdAt?: string;
+  code: string;
+  logo?: string;
+  website?: string;
+  description?: string;
+  type?: 'public' | 'private';
+  capacity: number;
 }
 
 export interface SchoolClass {
   id: number;
   name: string;
-  schoolId: number;
-  capacity: number;
-  currentStudents: number;
-  category: string;
-  academicYear: string;
+  level: number;
+  school_id: number;
+  capacity?: number;
+  students_count?: number;
+  created_at?: string;
 }
 
 export interface Category {
+  code: string | undefined;
+  fees: number | undefined;
   id: number;
   name: string;
-  code: string;
   description: string;
-  fees: number;
+  school_id: number;
+  status: 'active' | 'inactive';
+  created_at?: string;
 }

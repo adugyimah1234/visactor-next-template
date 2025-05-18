@@ -23,6 +23,15 @@ export interface UpdateUserPayload {
   status?: 'active' | 'inactive';
 }
 
+export interface CreateUserDTO {
+  username: string;
+  full_name: string;
+  email: string;
+  password: string;
+  role: 'admin' | 'teacher' | 'staff';
+  school_id?: number | null;
+}
+
 export const getUserById = async (userId: string): Promise<User> => {
   try {
     const response = await api.get(`/users/${userId}`);
@@ -38,17 +47,12 @@ export const getUserById = async (userId: string): Promise<User> => {
 
 export const updateUser = async (userId: number, payload: UpdateUserPayload): Promise<User> => {
   try {
-    // Validate payload
-    if (Object.keys(payload).length === 0) {
-      throw new Error("No fields to update");
-    }
-
     const response = await api.put(`/users/${userId}`, payload);
-    if (response.status === 200 && response.data?.user) {
-      return response.data.user;
-    }
-    throw new Error("Failed to update user");
+    return response.data;
   } catch (error: any) {
+    if (error.response?.status === 401) {
+      throw new Error('Authentication required');
+    }
     console.error("Error updating user:", error);
     throw new Error(error.response?.data?.error || "Failed to update user");
   }
@@ -57,12 +61,25 @@ export const updateUser = async (userId: number, payload: UpdateUserPayload): Pr
 export const getAllUsers = async (): Promise<User[]> => {
   try {
     const response = await api.get('/users');
-    if (!response.data || !Array.isArray(response.data.users)) {
-      throw new Error('Invalid response format');
-    }
-    return response.data.users;
+    return response.data;
   } catch (error: any) {
+    if (error.response?.status === 401) {
+      throw new Error('Authentication required');
+    }
     console.error("Error fetching users:", error);
     throw new Error(error.response?.data?.error || "Failed to fetch users");
+  }
+};
+
+export const createUser = async (userData: CreateUserDTO): Promise<User> => {
+  try {
+    const response = await api.post('/users', userData);
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      throw new Error('Authentication required');
+    }
+    console.error("Error creating user:", error);
+    throw new Error(error.response?.data?.error || "Failed to create user");
   }
 };
