@@ -160,16 +160,6 @@ export default function ProfilePage() {
                   <h2 className="text-xl font-semibold text-white">
                     {user.full_name || 'User'}
                   </h2>
-                  <div className="flex items-center mt-1">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-800 text-indigo-100">
-                      {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                    </span>
-                    {user.school_id && (
-                      <span className="inline-flex items-center ml-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-800 text-indigo-100">
-                        School ID: {user.school_id}
-                      </span>
-                    )}
-                  </div>
                 </div>
               </div>
             </div>

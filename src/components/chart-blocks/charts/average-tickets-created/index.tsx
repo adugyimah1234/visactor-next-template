@@ -8,6 +8,9 @@ import ChartTitle from "../../components/chart-title";
 import Chart from "./chart";
 import { DatePickerWithRange } from "./components/date-range-picker";
 import MetricCard from "./components/metric-card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 
 export default function RegistrationStats() {
   const [stats, setStats] = useState<RegistrationStats | null>(null);
@@ -40,56 +43,77 @@ export default function RegistrationStats() {
     fetchStats();
   }, [dateRange]);
 
+  const acceptanceRate =
+    stats && stats.totalRegistered
+      ? Math.round((stats.totalAccepted / stats.totalRegistered) * 100)
+      : 0;
+
   if (error) {
     return (
-      <div className="text-destructive p-4 rounded-md bg-destructive/10">
-        Error: {error}
-      </div>
+      <Card className="bg-destructive/10 text-destructive border-destructive/30">
+        <CardHeader>
+          <CardTitle>Error</CardTitle>
+        </CardHeader>
+        <CardContent>{error}</CardContent>
+      </Card>
     );
   }
 
-  const acceptanceRate = stats 
-    ? Math.round((stats.totalAccepted / stats.totalRegistered) * 100) || 0
-    : 0;
-
   return (
-    <section className="flex h-full flex-col gap-2">
+    <section className="flex h-full flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <ChartTitle title="Registration Statistics" icon={Users} />
-        <DatePickerWithRange 
-          className="" 
-          value={dateRange}
-          onValueChange={setDateRange}
-        />
+        <DatePickerWithRange value={dateRange} onValueChange={setDateRange} />
       </div>
-      <div className="flex flex-wrap">
-        <div className="my-4 flex w-52 shrink-0 flex-col justify-center gap-6">
-          <MetricCard
-            title="Total Applications"
-            value={stats?.totalRegistered ?? 0}
-            color="#60C2FB"
-          />
-          <MetricCard
-            title="Accepted"
-            value={stats?.totalAccepted ?? 0}
-            color="#10B981"
-          />
-          <MetricCard
-            title="Acceptance Rate"
-            value={acceptanceRate}
-            color="#3161F8"
-          />
-        </div>
-        <div className="relative h-96 min-w-[320px] flex-1">
-          {loading ? (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : (
-            <Chart data={stats?.metrics ?? []} />
-          )}
-        </div>
-      </div>
+
+      <Card className="w-full shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-primary">
+            Overview
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-6">
+          <div className="flex flex-col gap-4 w-52">
+            {loading ? (
+              <>
+                <Skeleton className="h-24 w-full rounded-xl" />
+                <Skeleton className="h-24 w-full rounded-xl" />
+                <Skeleton className="h-24 w-full rounded-xl" />
+              </>
+            ) : (
+              <>
+                <MetricCard
+                  title="Total Applications"
+                  value={stats?.totalRegistered ?? 0}
+                  color="#60C2FB"
+                />
+                <MetricCard
+                  title="Accepted"
+                  value={stats?.totalAccepted ?? 0}
+                  color="#10B981"
+                />
+                <MetricCard
+                  title="Acceptance Rate"
+                  value={acceptanceRate}
+                  color="#3161F8"
+                />
+              </>
+            )}
+          </div>
+
+          <Separator orientation="vertical" className="hidden md:block h-auto" />
+
+          <div className="relative flex-1 min-w-[300px]">
+            {loading ? (
+              <div className="flex h-full items-center justify-center">
+                <Skeleton className="h-96 w-full rounded-xl" />
+              </div>
+            ) : (
+              <Chart data={stats?.metrics ?? []} />
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </section>
   );
 }

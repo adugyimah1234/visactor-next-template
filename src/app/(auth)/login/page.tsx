@@ -22,12 +22,15 @@ export default function ProfessionalLogin() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError(null);
+    setSocialLoading('true');
 
     try {
       await signIn(email, password); // Call the signIn function from useAuth
       // Redirection is handled in AuthContext
     } catch (err: any) {
       setLocalError(err.response?.data?.message || err.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setSocialLoading('false');
     }
   };
 

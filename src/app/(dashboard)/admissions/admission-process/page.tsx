@@ -27,7 +27,6 @@ import { School, Student, getQualifiedStudents, getSchools, assignSchool } from 
 export default function AdmissionProcess() {
   const [students, setStudents] = useState<Student[]>([]);
   const [schools, setSchools] = useState<School[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const handleSchoolAssignment = async (studentId: number, schoolId: number, classId: number) => {
     try {

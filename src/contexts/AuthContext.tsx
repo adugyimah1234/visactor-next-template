@@ -14,7 +14,7 @@ interface User {
   id: number;
   full_name?: string;
   email: string;
-  role: string;
+  role_id: number;
   school_id?: number | null;
   // Add other user properties
 }

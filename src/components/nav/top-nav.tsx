@@ -138,7 +138,7 @@ export default function TopNav({ title }: { title: string }) {
           <button
             className="flex items-center gap-2 p-1 pl-2 rounded-md hover:bg-accent disabled:opacity-50"
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            disabled={isLoadingProfile}
+            
           >
             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
               {isLoadingProfile ? (
@@ -178,7 +178,7 @@ export default function TopNav({ title }: { title: string }) {
                 <li>
                   <button 
                     className="w-full text-left px-3 py-2 hover:bg-accent flex items-center gap-2"
-                    disabled={isLoadingSettings}
+                    
                   >
                     {isLoadingSettings ? (
                       <Loader size="sm" showText={false} />
@@ -198,7 +198,7 @@ export default function TopNav({ title }: { title: string }) {
                   <button 
                     onClick={handleLogout} 
                     className="w-full text-left px-3 py-2 hover:bg-accent flex items-center gap-2 text-red-500 disabled:opacity-50"
-                    disabled={isLoggingOut}
+                    
                   >
                     {isLoggingOut ? (
                       <Loader size="sm" showText={false} className="text-red-500" />

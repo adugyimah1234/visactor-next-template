@@ -1,14 +1,19 @@
+/* eslint-disable no-console */
 'use client';
 
-import { useState } from 'react';
-import { 
-  Search, 
-  Filter, 
-  Download, 
-  Mail, 
-  Phone, 
+import { useEffect, useState } from 'react';
+import {
+  Mail,
+  Phone,
   Star,
-  MoreHorizontal 
+  Search,
+  Filter,
+  Download,
+  MoreHorizontal,
+  Computer,
+  List,
+  Send,
+  View,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,24 +34,46 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import studentService from '@/services/students';
+
+// ✅ Define TypeScript type for student
+type Student = {
+  id: number;
+  first_name: string;
+  last_name: string;
+  exam_score: number;
+  status: string;
+  avatar?: string;
+dob: string;
+gender: string;
+category_id: number;
+scores: number,
+class_id: number;
+registration_date: string;
+admission_status: string;
+school_id: number;
+};
 
 export default function ShortlistedPage() {
   const [selectedProgram, setSelectedProgram] = useState('all');
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const shortlistedCandidates = [
-    {
-      id: 'C001',
-      name: 'Sarah Johnson',
-      email: 'sarah.j@example.com',
-      phone: '+1234567890',
-      program: 'Computer Science',
-      score: 92,
-      status: 'interviewed',
-      avatar: '/avatars/sarah.jpg'
-    },
-    // Add more candidates as needed
-  ];
+  useEffect(() => {
+    const loadStudents = async () => {
+      try {
+        const allStudents: Student[] = await studentService.getAll();
+        const shortlisted = allStudents.filter((s: Student) => s.status === 'inactive');
+        setStudents(shortlisted);
+      } catch (err) {
+        console.error('Failed to fetch students:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStudents();
+  }, []);
 
   return (
     <div className="space-y-6 p-6">
@@ -64,6 +91,7 @@ export default function ShortlistedPage() {
             </Button>
           </div>
         </CardHeader>
+
         <CardContent>
           {/* Filters */}
           <div className="flex gap-4 mb-6">
@@ -72,10 +100,7 @@ export default function ShortlistedPage() {
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                   <Search className="h-4 w-4" />
                 </span>
-                <Input
-                  placeholder="Search candidates..."
-                  className="pl-9"
-                />
+                <Input placeholder="Search candidates..." className="pl-9" />
               </div>
             </div>
             <Select
@@ -99,67 +124,56 @@ export default function ShortlistedPage() {
 
           {/* Candidates List */}
           <ScrollArea className="h-[600px]">
-            <div className="space-y-4">
-              {shortlistedCandidates.map((candidate) => (
-                <div
-                  key={candidate.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex items-center gap-4">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={candidate.avatar} />
-                      <AvatarFallback>
-                        {candidate.name.split(' ').map(n => n[0]).join('')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h4 className="font-medium">{candidate.name}</h4>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center">
-                          <Mail className="mr-1 h-3 w-3" />
-                          {candidate.email}
-                        </span>
-                        <span className="flex items-center">
-                          <Phone className="mr-1 h-3 w-3" />
-                          {candidate.phone}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+            {loading ? (
+    <div className="flex justify-center items-center h-full text-muted-foreground">
+      Loading shortlisted candidates...
+    </div>
+  ) : (
+<div className="overflow-auto">
+  <table className="min-w-full border text-sm">
+    <thead className="bg-muted text-left">
+      <tr>
+        <th className="p-3 border">Name</th>
+        <th className="p-3 border">DOB</th>
+        <th className="p-3 border">Score</th>
+        <th className="p-3 border">Status</th>
+        <th className="p-3 border">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {students.map((student) => (
+        <tr key={student.id} className="hover:bg-accent/30">
+          <td className="p-3 border font-medium">
+            {student.first_name} {student.last_name}
+          </td>
+          <td className="p-3 border text-muted-foreground">{student.dob}</td>
+          <td className="p-3 border">{student.scores}%</td>
+          <td className="p-3 border">
+            <Badge variant="secondary">{student.status}</Badge>
+          </td>
+          <td className="p-3 border">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuItem>View Profile</DropdownMenuItem>
+                <DropdownMenuItem>Schedule Interview</DropdownMenuItem>
+                <DropdownMenuItem>Send Message</DropdownMenuItem>
+                <DropdownMenuItem className="text-red-600">Remove</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
 
-                  <div className="flex items-center gap-4">
-                    <Badge variant="secondary">{candidate.program}</Badge>
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span className="font-medium">{candidate.score}%</span>
-                    </div>
-                    <Badge 
-                      variant={
-                        candidate.status === 'interviewed' ? 'default' :
-                        candidate.status === 'pending' ? 'secondary' : 
-                        'outline'
-                      }
-                    >
-                      {candidate.status}
-                    </Badge>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>View Profile</DropdownMenuItem>
-                        <DropdownMenuItem>Schedule Interview</DropdownMenuItem>
-                        <DropdownMenuItem>Send Message</DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600">Remove</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              ))}
-            </div>
+  )}
           </ScrollArea>
         </CardContent>
       </Card>

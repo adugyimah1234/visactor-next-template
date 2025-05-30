@@ -5,9 +5,9 @@ const API_BASE_URL = "/registrations";
 
 export interface RegistrationData {
   id?: number;
-  school_id: number;
-  student_id: number;
-  class_id: number;
+  school_id?: number;
+  student_id?: number;
+  class_id?: number;
   academic_year_id: number;
   first_name: string;
   middle_name?: string;
@@ -22,7 +22,7 @@ export interface RegistrationData {
   address: string;
   guardian_name: string;
   scores: number;
-  status: "Pending" | "Accepted" | "Rejected";
+  status: "pending" | "approved" | "rejected";
   relationship: string;
   guardian_phone_number: string;
   registration_date?: string;
@@ -36,7 +36,7 @@ export interface RegistrationStats {
   metrics: {
     date: string;
     count: number;
-    status: 'Pending' | 'Accepted' | 'Rejected';
+    status: 'pending' | 'approved' | 'rejected';
   }[];
 }
 
@@ -107,9 +107,9 @@ const registrationService = {
       // Calculate totals
       const stats: RegistrationStats = {
         totalRegistered: filteredRegistrations.length,
-        totalPending: filteredRegistrations.filter(r => r.status === 'Pending').length,
-        totalAccepted: filteredRegistrations.filter(r => r.status === 'Accepted').length,
-        totalRejected: filteredRegistrations.filter(r => r.status === 'Rejected').length,
+        totalPending: filteredRegistrations.filter(r => r.status === 'pending').length,
+ totalAccepted: filteredRegistrations.filter(r => r.status === 'approved').length,
+        totalRejected: filteredRegistrations.filter(r => r.status === 'rejected').length,
         metrics: []
       };
 
@@ -118,21 +118,21 @@ const registrationService = {
         const date = reg.registration_date?.split('T')[0] || '';
         if (!acc[date]) {
           acc[date] = {
-            Pending: 0,
-            Accepted: 0,
-            Rejected: 0
+            pending: 0,
+            approved: 0,
+            rejected: 0
           };
         }
         acc[date][reg.status]++;
         return acc;
-      }, {} as Record<string, Record<'Pending' | 'Accepted' | 'Rejected', number>>);
+      }, {} as Record<string, Record<'pending' | 'approved' | 'rejected', number>>);
 
       // Convert to metrics array
       stats.metrics = Object.entries(groupedByDate).flatMap(([date, statuses]) => 
         Object.entries(statuses).map(([status, count]) => ({
           date,
           count,
-          status: status as 'Pending' | 'Accepted' | 'Rejected'
+          status: status as 'pending' | 'approved' | 'rejected'
         }))
       );
 

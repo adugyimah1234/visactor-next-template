@@ -1,838 +1,474 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/consistent-type-imports */
-'use client';
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable no-console */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { useToast } from '@/hooks/use-toast';
-
+import React, { useEffect, useState } from "react";
 import {
   Card,
-  CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
+  CardContent,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription,
-} from "@/components/ui/form";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { Plus, Edit, Trash2, ChevronRight, Calendar, School } from 'lucide-react';
-import { 
-  Class, 
-  ClassWithExams, 
-  ClassExam,
-  CreateClassDTO, 
-  UpdateClassDTO, 
-  CreateExamDTO, 
-  UpdateExamDTO 
-} from '@/types/class';
-import { 
-  getClasses, 
-  getClassById, 
-  createClass, 
-  updateClass,
-  deleteClass,
-  getClassExams,
-  createExam,
-  updateExam,
-  deleteExam
-} from '@/services/class';
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
-// Sample schools data - in a real app, you would fetch this from the API
-const schools = [
-  { id: 1, name: "Main Campus" },
-  { id: 2, name: "North Branch" },
-  { id: 3, name: "South Branch" },
-];
+import schoolService from "@/services/schools";
+import classService, { ClassData } from "@/services/class";
+import { School } from "@/types/school";
 
-// Sample categories data - in a real app, you would fetch this from the API
-const categories = [
-  { id: 1, name: "SVC" },
-  { id: 2, name: "MOD" },
-  { id: 3, name: "CIV" },
-];
+interface ClassWithSlots extends ClassData {
+  slots: number;
+}
 
-const classFormSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  level: z.number().min(1, "Level must be greater than 0"),
-  school_id: z.number().min(1, "School must be selected"),
-});
-
-const examFormSchema = z.object({
-  name: z.string().min(2, "Exam name must be at least 2 characters"),
-  category_id: z.number().min(1, "Category must be selected"),
-  date: z.string().min(1, "Date is required"),
-  venue: z.string().min(2, "Venue must be at least 2 characters"),
-});
-
-type ClassFormValues = z.infer<typeof classFormSchema>;
-type ExamFormValues = z.infer<typeof examFormSchema>;
-
-export default function ClassManagement() {
+export default function AdminSchoolsPage() {
   const { toast } = useToast();
-  
-  // State for classes and exams
-  const [classes, setClasses] = useState<Class[]>([]);
-  const [selectedClass, setSelectedClass] = useState<ClassWithExams | null>(null);
-  const [classExams, setClassExams] = useState<ClassExam[]>([]);
-  
-  // Loading states
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Dialog states
-  const [isAddingClass, setIsAddingClass] = useState(false);
-  const [isAddingExam, setIsAddingExam] = useState(false);
-  const [editingClass, setEditingClass] = useState<Class | null>(null);
-  const [editingExam, setEditingExam] = useState<ClassExam | null>(null);
-  
-  // Filter states
-  const [selectedSchoolId, setSelectedSchoolId] = useState<number | null>(null);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState("classes");
 
-  // Class form
-  const classForm = useForm<ClassFormValues>({
-    resolver: zodResolver(classFormSchema),
-    defaultValues: {
-      name: "",
-      level: 1,
-      school_id: schools[0]?.id || 0,
-    }
-  });
+  // List of all schools
+  const [schools, setSchools] = useState<School[]>([]);
+  // Selected school to edit
+  const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
+  // Classes under the selected school
+  const [classes, setClasses] = useState<ClassWithSlots[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  // Exam form
-  const examForm = useForm<ExamFormValues>({
-    resolver: zodResolver(examFormSchema),
-    defaultValues: {
-      name: "",
-      category_id: categories[0]?.id || 0,
-      date: new Date().toISOString().split('T')[0],
-      venue: "",
-    }
-  });
+  // Load all schools initially
 
-  // Fetch classes on mount and when school filter changes
-  useEffect(() => {
-    fetchClasses();
-  }, [selectedSchoolId]);
 
-  // Fetch exams when a class is selected and category filter changes
-  useEffect(() => {
-    if (selectedClass) {
-      fetchClassExams(selectedClass.id);
-    }
-  }, [selectedClass, selectedCategoryId]);
-
-  // Fetch classes with optional school filter
-  const fetchClasses = async () => {
-    setIsLoading(true);
+  async function loadSchools() {
+    setLoading(true);
     try {
-      const filters = selectedSchoolId ? { school_id: selectedSchoolId } : undefined;
-      const fetchedClasses = await getClasses(filters);
-      setClasses(fetchedClasses);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Fetch class details by ID
-  const fetchClassDetails = async (id: number) => {
-    setIsLoading(true);
-    try {
-      const classDetails = await getClassById(id);
-      setSelectedClass(classDetails);
-      setActiveTab("exams");
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Fetch exams for a selected class
-  const fetchClassExams = async (classId: number) => {
-    setIsLoading(true);
-    try {
-      const params = selectedCategoryId ? { category_id: selectedCategoryId } : undefined;
-      const exams = await getClassExams(classId, params?.category_id);
-      setClassExams(exams);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Handle school filter change
-  const handleSchoolChange = (schoolId: string) => {
-    setSelectedSchoolId(Number(schoolId));
-  };
-
-  // Handle category filter change
-  const handleCategoryChange = (categoryId: string) => {
-    setSelectedCategoryId(Number(categoryId));
-  };
-
-  // Handle class submission (create/update)
-  const onSubmitClass = async (values: ClassFormValues) => {
-    setIsSubmitting(true);
-    try {
-      if (editingClass) {
-        // Update existing class
-        await updateClass(editingClass.id, values);
-        toast({
-          title: "Success",
-          description: "Class updated successfully"
-        });
-      } else {
-        // Create new class
-        await createClass(values);
-        toast({
-          title: "Success",
-          description: "Class created successfully"
-        });
+      const allSchools = await schoolService.getAll();
+      setSchools(allSchools);
+      if (allSchools.length > 0) {
+        selectSchool(allSchools[0]);
       }
-      // Reset form and close dialog
-      setIsAddingClass(false);
-      setEditingClass(null);
-      classForm.reset();
-      // Refresh class list
-      fetchClasses();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setIsSubmitting(false);
+    } catch {
+      setError("Failed to load schools.");
     }
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    loadSchools();
+  }, []);
+  
+  async function selectSchool(school: School) {
+    setError(null);
+    setSelectedSchool(school);
+    setLoading(true);
+    try {
+      const schoolClasses = await classService.getBySchool(school.id);
+      setClasses(
+        schoolClasses.map((cls) => ({
+          ...cls,
+          slots: cls.slots ?? 0,
+        }))
+      );
+    } catch {
+      setError("Failed to load classes.");
+      setClasses([]);
+    }
+    setLoading(false);
+  }
+
+  // Handle form change for school details
+  function onSchoolChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
+    const { name, value } = e.target;
+    if (!selectedSchool) return;
+    setSelectedSchool((prev) => (prev ? { ...prev, [name]: value } : prev));
+  }
+
+  // Handle class changes
+  function onClassChange(
+    id: number,
+    field: "name" | "level" | "slots",
+    value: string | number
+  ) {
+    setClasses((prev) =>
+      prev.map((cls) =>
+        cls.id === id
+          ? {
+              ...cls,
+              [field]: field === "level" || field === "slots" ? Number(value) : value,
+            }
+          : cls
+      )
+    );
+  }
+
+  // Add new empty class
+function addClass() {
+  if (!selectedSchool) return;
+
+  const newClass: Omit<ClassWithSlots, 'id' | 'created_at' | 'updated_at'> = {
+    name: '',
+    level: 1,
+    school_id: selectedSchool.id,
+    school_name: selectedSchool.name,
+    slots: 0,
   };
 
-  // Handle exam submission (create/update)
-  const onSubmitExam = async (values: ExamFormValues) => {
-    if (!selectedClass) return;
-    
-    setIsSubmitting(true);
+  setClasses((prev) => [...prev, newClass as ClassWithSlots]); // type override if needed
+}
+
+
+
+  // Delete class from UI and backend if exists
+  async function deleteClass(id: number) {
+    if (!selectedSchool) return;
+    setLoading(true);
     try {
-      if (editingExam) {
-        // Update existing exam
-        await updateExam(selectedClass.id, editingExam.id, values);
-        toast({
-          title: "Success",
-          description: "Exam updated successfully"
-        });
-      } else {
-        // Create new exam
-        await createExam(selectedClass.id, values);
-        toast({
-          title: "Success",
-          description: "Exam scheduled successfully"
-        });
+      if (id < 1000000000) {
+        // existing class
+        await classService.delete(id);
       }
-      // Reset form and close dialog
-      setIsAddingExam(false);
-      setEditingExam(null);
-      examForm.reset();
-      // Refresh exam list
-      fetchClassExams(selectedClass.id);
-    } catch (error: any) {
+      setClasses((prev) => prev.filter((cls) => cls.id !== id));
+      toast({
+        title: "Class deleted",
+        description: "Class deleted successfully",
+        variant: "default",
+      });
+    } catch {
       toast({
         title: "Error",
-        description: error.message,
-        variant: "destructive"
+        description: "Failed to delete class",
+        variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
     }
+    setLoading(false);
+  }
+
+  // Delete school and clear selection
+  async function deleteSchool(id: number) {
+    setLoading(true);
+    try {
+      await schoolService.delete(id);
+      setSchools((prev) => prev.filter((s) => s.id !== id));
+      setSelectedSchool(null);
+      setClasses([]);
+      toast({
+        title: "School deleted",
+        description: "School deleted successfully",
+        variant: "default",
+      });
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to delete school",
+        variant: "destructive",
+      });
+    }
+    setLoading(false);
+  }
+
+  // Save school and classes (create or update)
+  async function onSave() {
+    if (!selectedSchool) return;
+    setSaving(true);
+    setError(null);
+
+    try {
+      if (!selectedSchool.name) throw new Error("School name is required");
+
+      // Save or update school
+      let savedSchool = selectedSchool;
+    if (!selectedSchool.id || selectedSchool.id === 0) {
+      const { id } = await schoolService.create(selectedSchool);
+      savedSchool = await schoolService.getById(id); // 🛠 Fetch full object
+      setSelectedSchool(savedSchool);
+      setSchools((prev) => [...prev, savedSchool]);
+    } else {
+      await schoolService.update(selectedSchool);
+      savedSchool = selectedSchool;
+      setSchools((prev) =>
+        prev.map((s) => (s.id === savedSchool.id ? savedSchool : s))
+      );
+    }
+
+      // Save or update classes
+const classRequests = classes.map((cls) => {
+  if (!cls.name) throw new Error("Class name is required");
+  if (!cls.level) throw new Error("Class level is required");
+
+  const payload: Omit<ClassData, "id" | "school_name"> = {
+    name: cls.name,
+    level: cls.level,
+    school_id: savedSchool.id!,
+    slots: cls.slots,
   };
 
-  // Handle deletion of an exam
-  const handleDeleteExam = async (examId: number) => {
-    if (!selectedClass) return;
-    
-    try {
-      await deleteExam(selectedClass.id, examId);
+  if (!cls.id) {
+    // No ID means new class
+    return classService.create(payload);
+  } else {
+    // ID exists, safe to update
+    return classService.update({
+      id: cls.id,
+      ...payload,
+    });
+  }
+});
+
+
+      await Promise.all(classRequests);
+
       toast({
         title: "Success",
-        description: "Exam deleted successfully"
+        description: "School and classes saved successfully!",
+        variant: "default",
       });
-      // Refresh exam list
-      fetchClassExams(selectedClass.id);
     } catch (error: any) {
+      setError(error.message || "Failed to save data.");
       toast({
         title: "Error",
-        description: error.message,
-        variant: "destructive"
+        description: error.message || "Failed to save data. Please try again.",
+        variant: "destructive",
       });
+    } finally {
+      setSaving(false);
     }
-  };
+  }
 
-  // Reset forms when opening dialogs
-  const openAddClassDialog = () => {
-    classForm.reset({
+  // Add new school (blank form)
+  function addSchool() {
+    setSelectedSchool({
+      id: 0,
       name: "",
-      level: 1,
-      school_id: schools[0]?.id || 0,
+      address: "",
+      phone_number: "",
+      email: "",
     });
-    setEditingClass(null);
-    setIsAddingClass(true);
-  };
-
-  const openEditClassDialog = (cls: Class) => {
-    classForm.reset({
-      name: cls.name,
-      level: cls.level,
-      school_id: cls.school_id,
-    });
-    setEditingClass(cls);
-    setIsAddingClass(true);
-  };
-
-  const openAddExamDialog = () => {
-    examForm.reset({
-      name: "",
-      category_id: categories[0]?.id || 0,
-      date: new Date().toISOString().split('T')[0],
-      venue: "",
-    });
-    setEditingExam(null);
-    setIsAddingExam(true);
-  };
-
-  const openEditExamDialog = (exam: ClassExam) => {
-    examForm.reset({
-      name: exam.name,
-      category_id: exam.category_id,
-      date: exam.date,
-      venue: exam.venue,
-    });
-    setEditingExam(exam);
-    setIsAddingExam(true);
-  };
+    setClasses([]);
+  }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>Class Management</CardTitle>
-          <CardDescription>
-            Manage classes and exam schedules for each school
-          </CardDescription>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          {/* School Filter */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">School:</span>
-            <Select
-              value={selectedSchoolId?.toString() || ""}
-              onValueChange={handleSchoolChange}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="All Schools" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">All Schools</SelectItem>
-                {schools.map((school) => (
-                  <SelectItem key={school.id} value={school.id.toString()}>
-                    {school.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          {/* Add Class Button */}
-          <Dialog open={isAddingClass} onOpenChange={setIsAddingClass}>
-            <DialogTrigger asChild>
-              <Button onClick={openAddClassDialog}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Class
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <Form {...classForm}>
-                <form onSubmit={classForm.handleSubmit(onSubmitClass)}>
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editingClass ? 'Edit Class' : 'Add New Class'}
-                    </DialogTitle>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    {/* School Selection */}
-                    <FormField
-                      control={classForm.control}
-                      name="school_id"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>School</FormLabel>
-                          <Select
-                            value={field.value.toString()}
-                            onValueChange={(value) => field.onChange(Number(value))}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select school" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {schools.map((school) => (
-                                <SelectItem key={school.id} value={school.id.toString()}>
-                                  {school.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    {/* Class Name */}
-                    <FormField
-                      control={classForm.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Class Name</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    {/* Level */}
-                    <FormField
-                      control={classForm.control}
-                      name="level"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Level</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field}
-                              onChange={e => field.onChange(parseInt(e.target.value))}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+    <div className="max-w-7xl mx-auto p-6 flex gap-6">
+      {/* Left sidebar: Schools list */}
+      <Card className="w-1/3 max-h-[80vh] overflow-auto">
+        <CardHeader>
+          <CardTitle>Schools</CardTitle>
+          <CardDescription>Manage all schools</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <Button variant="outline" className="w-full mb-4" onClick={addSchool}>
+            + Add New School
+          </Button>
+
+          {loading && !selectedSchool && <p>Loading schools...</p>}
+          {schools.length === 0 && <p>No schools found.</p>}
+
+          <ul>
+            {schools.map((schoolItem) => (
+              <li
+                key={schoolItem.id}
+                className={`cursor-pointer p-3 rounded-md ${
+                  selectedSchool?.id === schoolItem.id
+                    ? "bg-primary text-primary-foreground font-semibold"
+                    : "hover:bg-muted"
+                } flex justify-between items-center`}
+                onClick={() => selectSchool(schoolItem)}
+              >
+                <span>{schoolItem.name}</span>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (
+                      window.confirm(
+                        `Are you sure you want to delete school "${schoolItem.name}"?`
+                      )
+                    ) {
+                      deleteSchool(schoolItem.id);
+                    }
+                  }}
+                >
+                  Delete
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
+
+      {/* Right side: Selected school and classes */}
+      <div className="flex-1 space-y-6 overflow-auto max-h-[80vh]">
+        {!selectedSchool ? (
+          <Card>
+            <CardContent>
+              <p className="text-center text-muted-foreground">Select a school to edit or create a new one.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle>School Details</CardTitle>
+                <CardDescription>Edit school information</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="name">School Name</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    value={selectedSchool.name}
+                    onChange={onSchoolChange}
+                    placeholder="Example High School"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="address">Address</Label>
+                  <Textarea
+                    id="address"
+                    name="address"
+                    value={selectedSchool.address}
+                    onChange={onSchoolChange}
+                    placeholder="123 Main St, City"
+                    rows={2}
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="phone_number">Phone Number</Label>
+                    <Input
+                      id="phone_number"
+                      name="phone_number"
+                      value={selectedSchool.phone_number}
+                      onChange={onSchoolChange}
+                      placeholder="+1234567890"
+                      type="tel"
+                      required
                     />
                   </div>
-                  <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => {
-                      setIsAddingClass(false);
-                      setEditingClass(null);
-                      classForm.reset();
-                    }}>
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? 'Saving...' : (editingClass ? 'Update' : 'Create')}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </CardHeader>
-      
-      <CardContent>
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList>
-            <TabsTrigger value="classes">Classes</TabsTrigger>
-            {selectedClass && (
-              <TabsTrigger value="exams">{selectedClass.name} Exams</TabsTrigger>
-            )}
-          </TabsList>
-          
-          <TabsContent value="classes">
-            {/* Classes Table */}
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Level</TableHead>
-                  <TableHead>School</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center">Loading...</TableCell>
-                  </TableRow>
-                ) : classes.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center">No classes found</TableCell>
-                  </TableRow>
-                ) : (
-                  classes.map((cls) => (
-                    <TableRow key={cls.id}>
-                      <TableCell>{cls.name}</TableCell>
-                      <TableCell>{cls.level}</TableCell>
-                      <TableCell>{cls.school_name || "-"}</TableCell>
-                      <TableCell className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditClassDialog(cls)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => fetchClassDetails(cls.id)}
-                        >
-                          <Calendar className="h-4 w-4" />
-                        </Button>
-                        
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-destructive">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Class</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete {cls.name}? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={async () => {
-                                  try {
-                                    await deleteClass(cls.id);
-                                    toast({
-                                      title: "Success",
-                                      description: "Class deleted successfully"
-                                    });
-                                    fetchClasses();
-                                  } catch (error: any) {
-                                    toast({
-                                      title: "Error",
-                                      description: error.message,
-                                      variant: "destructive"
-                                    });
-                                  }
-                                }}
-                                className="bg-destructive text-destructive-foreground"
-                              >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  <div>
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      value={selectedSchool.email}
+                      onChange={onSchoolChange}
+                      placeholder="email@example.com"
+                      type="email"
+                      required
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Classes & Slots</CardTitle>
+                <CardDescription>
+                  Add, edit or delete classes for this school
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {classes.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    No classes added yet.
+                  </p>
                 )}
-              </TableBody>
-            </Table>
-          </TabsContent>
-          
-          <TabsContent value="exams">
-            {selectedClass ? (
-              <>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-4">
-                    <h3 className="text-lg font-semibold">
-                      {selectedClass.name} Exams
-                    </h3>
-                    
-                    {/* Category Filter */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">Category:</span>
-                      <Select
-                        value={selectedCategoryId?.toString() || ""}
-                        onValueChange={handleCategoryChange}
+
+                {classes.map((cls) => (
+                  <div
+                    key={cls.id}
+                    className="grid grid-cols-5 gap-4 items-center border-b border-border py-2"
+                  >
+                    <div>
+                      <Label htmlFor={`class-name-${cls.id}`}>Class Name</Label>
+                      <Input
+                        id={`class-name-${cls.id}`}
+                        value={cls.name}
+                        onChange={(e) =>
+                          onClassChange(cls.id, "name", e.target.value)
+                        }
+                        placeholder="Class Name"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`class-level-${cls.id}`}>Level</Label>
+                      <Input
+                        id={`class-level-${cls.id}`}
+                        type="number"
+                        min={1}
+                        value={cls.level}
+                        onChange={(e) =>
+                          onClassChange(cls.id, "level", e.target.value)
+                        }
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`class-slots-${cls.id}`}>
+                        Slots Available
+                      </Label>
+                      <Input
+                        id={`class-slots-${cls.id}`}
+                        type="number"
+                        min={0}
+                        value={cls.slots}
+                        onChange={(e) =>
+                          onClassChange(cls.id, "slots", e.target.value)
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="pt-6">
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Are you sure you want to delete class "${cls.name}"?`
+                            )
+                          ) {
+                            deleteClass(cls.id);
+                          }
+                        }}
                       >
-                        <SelectTrigger className="w-[150px]">
-                          <SelectValue placeholder="All Categories" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="">All Categories</SelectItem>
-                          {categories.map((category) => (
-                            <SelectItem key={category.id} value={category.id.toString()}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        Delete
+                      </Button>
                     </div>
                   </div>
-                  
-                  {/* Add Exam Button */}
-                  <Dialog open={isAddingExam} onOpenChange={setIsAddingExam}>
-                    <DialogTrigger asChild>
-                      <Button onClick={openAddExamDialog}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Schedule Exam
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <Form {...examForm}>
-                        <form onSubmit={examForm.handleSubmit(onSubmitExam)}>
-                          <DialogHeader>
-                            <DialogTitle>
-                              {editingExam ? 'Edit Exam' : 'Schedule New Exam'}
-                            </DialogTitle>
-                          </DialogHeader>
-                          <div className="grid gap-4 py-4">
-                            {/* Exam Name */}
-                            <FormField
-                              control={examForm.control}
-                              name="name"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Exam Name</FormLabel>
-                                  <FormControl>
-                                    <Input {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            {/* Category Selection */}
-                            <FormField
-                              control={examForm.control}
-                              name="category_id"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Category</FormLabel>
-                                  <Select
-                                    value={field.value.toString()}
-                                    onValueChange={(value) => field.onChange(Number(value))}
-                                  >
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select category" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      {categories.map((category) => (
-                                        <SelectItem key={category.id} value={category.id.toString()}>
-                                          {category.name}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            {/* Exam Date */}
-                            <FormField
-                              control={examForm.control}
-                              name="date"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Exam Date</FormLabel>
-                                  <FormControl>
-                                    <Input type="date" {...field} />
-                                  </FormControl>
-                                  <FormDescription>
-                                    Date when the exam will be held
-                                  </FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            {/* Venue */}
-                            <FormField
-                              control={examForm.control}
-                              name="venue"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Venue</FormLabel>
-                                  <FormControl>
-                                    <Input {...field} placeholder="e.g., Main Hall, Room 101" />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                          <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => {
-                              setIsAddingExam(false);
-                              setEditingExam(null);
-                              examForm.reset();
-                            }}>
-                              Cancel
-                            </Button>
-                            <Button type="submit" disabled={isSubmitting}>
-                              {isSubmitting ? 'Saving...' : (editingExam ? 'Update' : 'Schedule')}
-                            </Button>
-                          </DialogFooter>
-                        </form>
-                      </Form>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-                
-                {/* Exams Table */}
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Venue</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center">Loading...</TableCell>
-                      </TableRow>
-                    ) : classExams.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center">
-                          No exams scheduled for this class
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      classExams.map((exam) => (
-                        <TableRow key={exam.id}>
-                          <TableCell>{exam.name}</TableCell>
-                          <TableCell>{exam.category_name || "-"}</TableCell>
-                          <TableCell>{new Date(exam.date).toLocaleDateString()}</TableCell>
-                          <TableCell>{exam.venue}</TableCell>
-                          <TableCell className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openEditExamDialog(exam)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-destructive">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Exam</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete the exam "{exam.name}"? This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleDeleteExam(exam.id)}
-                                    className="bg-destructive text-destructive-foreground"
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Select a class to manage its exams</p>
-                <Button 
-                  variant="outline" 
-                  className="mt-4"
-                  onClick={() => setActiveTab("classes")}
-                >
-                  Back to Classes
+                ))}
+
+                <Button variant="outline" onClick={addClass}>
+                  + Add Class
                 </Button>
-              </div>
+              </CardContent>
+            </Card>
+
+            {error && (
+              <p className="text-red-600 font-semibold text-center">{error}</p>
             )}
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                onClick={onSave}
+                disabled={saving}
+                className="w-40"
+                type="button"
+              >
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

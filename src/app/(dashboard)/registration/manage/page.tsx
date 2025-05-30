@@ -885,7 +885,7 @@ const ApplicantManagement = () => {
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
-                                        {user?.role === "admin" && (
+                                        {user?.role_id === 1 && (
                                             <>
                                                 <Button
                                                     variant="outline"

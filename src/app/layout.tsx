@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 import "@/style/globals.css";
 import { Providers } from "./providers";
 import { AuthProvider } from "@/contexts/AuthContext";
+// import { ToastContainer } from "react-toastify";
+// import "react-toastify/dist/ReactToastify.css";
 
 const gabarito = Gabarito({ subsets: ["latin"], variable: "--font-gabarito" });
 
@@ -24,6 +26,7 @@ export default function RootLayout({
       <body className={cn("bg-background font-sans", gabarito.variable)}>
         <Providers>
           <AuthProvider>
+
           <div className="flex min-h-[100dvh]">
             <div className="flex-grow overflow-auto">{children}</div>
           </div>
@@ -33,3 +36,13 @@ export default function RootLayout({
     </html>
   );
 }
+      //           <ToastContainer
+      //   position="top-right"
+      //   autoClose={3000}
+      //   hideProgressBar={false}
+      //   newestOnTop
+      //   closeOnClick
+      //   pauseOnFocusLoss
+      //   draggable
+      //   pauseOnHover
+      // />

@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable no-console */
+/* eslint-disable @typescript-eslint/consistent-type-imports */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
@@ -16,20 +19,10 @@ import { Label } from "@/components/ui/label"
 import { format } from "date-fns"
 import registrationService, { type RegistrationCreateInput, type RegistrationData } from '@/services/registrations'; // Import the registration service
 import { Toaster, toast } from 'sonner';
+import classService, { ClassData } from '@/services/class';
+import { Category, getAllCategories } from '@/services/categories';
+import { academicYear, getAllAcademicYear } from '@/services/academic_year';
 
-interface AcademicYear {
-    id: number;
-    year: string;
-}
-
-const classes = [
-    'JHS 1',
-    'JHS 2',
-    'JHS 3',
-    'SHS 1',
-    'SHS 2',
-    'SHS 3',
-];
 
 const NewRegistrationPage = () => {
     const [gender, setGender] = useState<"Male" | "Female" | "Other">('Male');
@@ -37,7 +30,7 @@ const NewRegistrationPage = () => {
         first_name: '',
         last_name: '',
         scores: 0,
-        status: 'Pending',
+        status: 'pending',
         email: '',
         middle_name: '',
         phone_number: '',
@@ -55,29 +48,59 @@ const NewRegistrationPage = () => {
         class_id: 0, // Add a default value or get it from somewhere
         academic_year_id: 0
     });
-
     const [date, setDate] = useState<Date>()
     const [loading, setLoading] = useState(false);
-    const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]); // State for academic years
+    const [academicYears, setAcademicYears] = useState<academicYear[]>([]); // State for academic years
     const [selectedAcademicYearId, setSelectedAcademicYearId] = useState<number | null>(null); // State for selected academic year ID
     const [studentId, setStudentId] = useState<number>(0); //  Initialize.  Get this dynamically.
     const [schoolId, setSchoolId] = useState<number>(0); //  Initialize.  Get this dynamically.
     const [classId, setClassId] = useState<number>(0); //  Initialize.  Get this dynamically.
-
+    const [classes, setClasses] = useState<ClassData[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [error, setError] = useState<string | null>(null);
     // Simulate fetching academic years (replace with your actual API call)
     useEffect(() => {
         const fetchAcademicYears = async () => {
             // Replace this with your actual API call to fetch academic years
-            const mockAcademicYears: AcademicYear[] = [
-                { id: 1, year: '2023-2024' },
-                { id: 2, year: '2024-2025' },
-                { id: 3, year: '2025-2026' },
-            ];
+            const mockAcademicYears = await getAllAcademicYear();
             setAcademicYears(mockAcademicYears);
+
         };
 
         fetchAcademicYears();
     }, []);
+
+      useEffect(() => {
+        fetchCategories();
+      }, []);
+    
+      const fetchCategories = async () => {
+        try {
+          setLoading(true);
+          const data = await getAllCategories();
+          setCategories(data);
+        } catch (error: any) {
+            console.error("failed to load categories!")
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      async function loadSchools() {
+        setLoading(true);
+        try {
+          const allSchools = await classService.getAll();
+          setClasses(allSchools);
+          
+        } catch {
+          setError("Failed to load schools.");
+        }
+        setLoading(false);
+      }
+    
+      useEffect(() => {
+        loadSchools();
+      }, []);
 
     const handleChange = (field: keyof RegistrationData, value: any) => {
         setRegistrationData(prevData => ({
@@ -87,7 +110,7 @@ const NewRegistrationPage = () => {
     };
 
     const handleAcademicYearChange = (value: string) => {
-        const selectedYear = academicYears.find(year => year.year === value);
+        const selectedYear = academicYears.find(year => year.year.toString() === value);
         setSelectedAcademicYearId(selectedYear ? selectedYear.id : null);
     };
 
@@ -95,7 +118,7 @@ const NewRegistrationPage = () => {
         school_id: 0,
         student_id: 0,
         scores: 0,
-        status: 'Pending',
+        status: 'pending',
         class_id: 0,
         academic_year_id: 0,
         academic_year: '',
@@ -145,10 +168,10 @@ const NewRegistrationPage = () => {
                 school_id: schoolId, // Assuming school ID is 1, update as needed
                 student_id: studentId,
                 scores: 0,
-                status: 'Pending',
+                status: 'pending',
                 class_id: classId, // Assuming class ID is 1, update as needed
                 academic_year_id: selectedAcademicYearId,
-                academic_year: academicYears.find(y => y.id === selectedAcademicYearId)?.year || '',
+                academic_year: academicYears.find(y => y.id === selectedAcademicYearId)?.year.toString() ?? '',
                 first_name: registrationData.first_name,
                 middle_name: registrationData.middle_name,
                 last_name: registrationData.last_name,
@@ -289,9 +312,9 @@ const NewRegistrationPage = () => {
                                 <SelectValue placeholder="Select a class" />
                             </SelectTrigger>
                             <SelectContent>
-                                {classes.map((cls) => (
-                                    <SelectItem key={cls} value={cls}>
-                                        {cls}
+                                {classes.map((name, id) => (
+                                    <SelectItem key={id} value={name.name}>
+                                        {name.name}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -383,9 +406,11 @@ const NewRegistrationPage = () => {
                             <SelectValue placeholder="Select Category" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="SVC">SVC</SelectItem>
-                            <SelectItem value="MOD">MOD</SelectItem>
-                            <SelectItem value="CIV">CIV</SelectItem>
+                        {categories.map((name, id) => (
+                         <SelectItem key={id} value={id.toString()}>
+                              {name.name}
+                         </SelectItem>
+                          ))}
                         </SelectContent>
                     </Select>
                 </div>
@@ -445,7 +470,7 @@ const NewRegistrationPage = () => {
                     </Label>
                     <Select
                         onValueChange={handleAcademicYearChange}
-                        value={academicYears.find(y => y.id === selectedAcademicYearId)?.year}
+                        value={academicYears.find(y => y.id === selectedAcademicYearId)?.year.toString()}
                         disabled={loading}
                     >
                         <SelectTrigger className="w-full mt-1">
@@ -453,7 +478,7 @@ const NewRegistrationPage = () => {
                         </SelectTrigger>
                         <SelectContent>
                             {academicYears.map((year) => (
-                                <SelectItem key={year.id} value={year.year}>
+                                <SelectItem key={year.id} value={year.year.toString()}>
                                     {year.year}
                                 </SelectItem>
                             ))}

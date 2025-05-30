@@ -4,9 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { navigations } from "@/config/site";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 export default function Navigation() {
   const pathname = usePathname();
+  const [loading, setLoading] = useState(false);
+
   return (
     <nav className="flex flex-grow flex-col gap-y-1 p-2">
       {navigations.map((navigation) => {
@@ -27,7 +30,11 @@ export default function Navigation() {
               className="mr-2 text-slate-800 dark:text-slate-200"
             />
             <span className="text-sm text-slate-700 dark:text-slate-300">
+            {loading && navigation.name === "Loading" ? (
+              <span className="animate-pulse">Loading...</span>
+            ) : null}
               {navigation.name}
+              
             </span>
           </Link>
         );

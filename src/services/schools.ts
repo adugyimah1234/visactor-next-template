@@ -1,38 +1,64 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import api from '@/lib/axios';
-import { School, SchoolClass, Category } from '@/types/school';
+import api from "@/lib/axios";
+import { type School } from "@/types/school";
 
-export const getAllSchools = async (): Promise<School[]> => {
-  try {
-    const response = await api.get('/schools');
-    return response.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.message || 'Failed to fetch schools');
-  }
-};
+const schoolService = {
+  // 🔹 Fetch
+  getAll: async (): Promise<School[]> => {
+    const res = await api.get('/schools');
+    return res.data;
+  },
 
-export const createSchool = async (schoolData: Omit<School, 'id' | 'createdAt'>): Promise<School> => {
-  try {
-    const response = await api.post('/schools', schoolData);
-    return response.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.message || 'Failed to create school');
-  }
-};
+  getById: async (id: number): Promise<School> => {
+    const res = await api.get(`/schools/${id}`);
+    return res.data;
+  },
 
-export const updateSchool = async (id: number, schoolData: Partial<School>): Promise<School> => {
-  try {
-    const response = await api.put(`/schools/${id}`, schoolData);
-    return response.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.message || 'Failed to update school');
-  }
-};
+  // 🔹 Create/Update/Delete
+  create: async (school: Omit<School, "id">): Promise<{ id: number }> => {
+    const res = await api.post('/schools', school);
+    return res.data;
+  },
 
-export const deleteSchool = async (id: number): Promise<void> => {
-  try {
+  update: async (school: School): Promise<School> => {
+    const res =await api.put(`/schools/${school.id}`, school);
+    return res.data;
+  },
+
+  delete: async (id: number): Promise<void> => {
     await api.delete(`/schools/${id}`);
-  } catch (error: any) {
-    throw new Error(error.response?.data?.message || 'Failed to delete school');
+  },
+
+  // 🔹 Search by attribute
+  search: async (params: Partial<Record<
+    | 'name'
+    | 'location'
+    | 'type'
+    | 'capacity'
+    | 'status'
+    | 'owner_id'
+    | 'start_date'
+    | 'end_date'
+    | 'rating'
+    | 'features'
+    | 'affiliation'
+    | 'accreditation'
+    | 'programs'
+    | 'language',
+    string | number | string[]
+  >>): Promise<School[]> => {
+    const formattedParams = { ...params };
+
+    if (Array.isArray(params.features)) {
+      formattedParams.features = params.features.join(',');
+    }
+
+    if (Array.isArray(params.programs)) {
+      formattedParams.programs = params.programs.join(',');
+    }
+
+    const res = await api.get('/schools', { params: formattedParams });
+    return res.data;
   }
 };
+
+export default schoolService;
