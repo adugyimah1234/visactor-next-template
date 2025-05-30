@@ -3,6 +3,7 @@
 'use client';
 import { useState } from 'react';
 import { register } from '@/services/auth';
+import { RegisterPayload } from '@/types/user';
 
 interface CreateUserPayload {
   full_name: string;
@@ -34,7 +35,14 @@ const CreateUserPage = () => {
     setError(null);
 
     try {
-      const response = await register();
+      // Create a RegisterPayload from the form data
+      const registerPayload: RegisterPayload = {
+        name: formData.full_name,
+        email: formData.email,
+        password: formData.password
+      };
+
+      const response = await register(registerPayload);
       setMessage(response);
       // Optionally reset the form after successful creation
       setFormData({ full_name: '', email: '', password: '', role: '', school_id: null });

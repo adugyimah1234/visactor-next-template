@@ -1,5 +1,7 @@
 {
     "recommendations": [
-        "google.geminicodeassist"
+        "google.geminicodeassist",
+        "haack.warp-companion",
+        "meteorstudio.cursorcode"
     ]
 }

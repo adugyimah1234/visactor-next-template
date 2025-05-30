@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth"; // Import your useAuth hook
 import Image from "next/image"; // Import Image for profile picture
 import { useRouter } from 'next/navigation'; // Replace react-router-dom import
 import { Loader } from "@/components/ui/loader"; // Add this import
+import { Button } from "../ui/button";
 
 export default function TopNav({ title }: { title: string }) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -79,12 +80,12 @@ export default function TopNav({ title }: { title: string }) {
     <Container className="flex h-16 items-center justify-between border-b border-border">
       {/* Left side: Logo/Title and mobile menu toggle */}
       <div className="flex items-center gap-4">
-        <button
+        <Button
           className="md:hidden p-2 text-muted-foreground hover:text-foreground"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
           <Menu size={20} />
-        </button>
+        </Button>
         <h1 className="text-2xl font-medium">{title}</h1>
       </div>
 

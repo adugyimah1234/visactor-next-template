@@ -7,7 +7,7 @@ export interface User {
   full_name: string;
   email: string;
   phone_number?: string;
-  role: string;
+  role_id: number;
   school_id?: number | null;
   status?: 'active' | 'inactive';
   created_at?: string;
@@ -19,7 +19,7 @@ export interface UpdateUserPayload {
   email?: string;
   phone_number?: string;
   password?: string;
-  role?: string;
+  role_id?: number;
   status?: 'active' | 'inactive';
 }
 
@@ -28,7 +28,7 @@ export interface CreateUserDTO {
   full_name: string;
   email: string;
   password: string;
-  role: 'admin' | 'teacher' | 'staff';
+  role_id: number;
   school_id?: number | null;
 }
 

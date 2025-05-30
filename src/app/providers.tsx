@@ -3,6 +3,8 @@
 import { Provider as JotaiProvider } from "jotai";
 import { ChartThemeProvider } from "@/components/providers/chart-theme-provider";
 import { ModeThemeProvider } from "@/components/providers/mode-theme-provider";
+// import { ClassProvider } from "@/contexts/ClassContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -13,7 +15,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
         enableSystem
         disableTransitionOnChange
       >
-        <ChartThemeProvider>{children}</ChartThemeProvider>
+        <AuthProvider>
+            <ChartThemeProvider>{children}</ChartThemeProvider>
+        </AuthProvider>
       </ModeThemeProvider>
     </JotaiProvider>
   );

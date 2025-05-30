@@ -1,40 +1,88 @@
+/* eslint-disable @typescript-eslint/no-empty-object-type */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import api from '@/lib/axios';
 
 export interface Role {
-  id: number;
+  id: string;
   name: string;
-  description?: string;
-  permissions?: Permission[];
-  created_at?: Date;
-  updated_at?: Date;
+  description: string;
+  permissions: string[];
+  created_at?: string;
+  updated_at?: string;
 }
 
-export interface Permission {
-  id: number;
+export interface CreateRoleDTO {
   name: string;
-  description?: string;
+  description: string;
+  permissions: string[];
 }
 
-export const getRoles = async (): Promise<Role[]> => {
-  const response = await api.get('/roles');
-  return response.data;
+export interface CreateUserDTO {
+  username: string;
+  full_name: string;
+  email: string;
+  password: string;
+  role: string; // This will now come from your roles API
+  school_id?: number | null;
+}
+
+export interface UpdateRoleDTO extends Partial<CreateRoleDTO> {}
+
+export const getAllRoles = async (): Promise<Role[]> => {
+  try {
+    const response = await api.get('/roles');
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      throw new Error('Authentication required');
+    }
+    throw new Error(error.response?.data?.message || 'Failed to fetch roles');
+  }
 };
 
-export const createRole = async (role: Omit<Role, 'id' | 'createdAt' | 'usersCount'>): Promise<Role> => {
-  const response = await api.post('/roles', role);
-  return response.data;
+export const getRoleById = async (id: number): Promise<Role> => {
+  try {
+    const response = await api.get(`/roles/${id}`);
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      throw new Error('Authentication required');
+    }
+    throw new Error(error.response?.data?.message || 'Failed to fetch role');
+  }
 };
 
-export const updateRole = async (id: string, role: Partial<Role>): Promise<Role> => {
-  const response = await api.put(`/roles/${id}`, role);
-  return response.data;
+export const createRole = async (data: CreateRoleDTO): Promise<Role> => {
+  try {
+    const response = await api.post('/roles', data);
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      throw new Error('Authentication required');
+    }
+    throw new Error(error.response?.data?.message || 'Failed to create role');
+  }
+};
+
+export const updateRole = async (id: number, data: UpdateRoleDTO): Promise<Role> => {
+  try {
+    const response = await api.put(`/roles/${id}`, data);
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      throw new Error('Authentication required');
+    }
+    throw new Error(error.response?.data?.message || 'Failed to update role');
+  }
 };
 
 export const deleteRole = async (id: string): Promise<void> => {
-  await api.delete(`/roles/${id}`);
-};
-
-export const getPermissions = async (): Promise<Permission[]> => {
-  const response = await api.get('/permissions');
-  return response.data;
+  try {
+    await api.delete(`/roles/${id}`);
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      throw new Error('Authentication required');
+    }
+    throw new Error(error.response?.data?.message || 'Failed to delete role');
+  }
 };

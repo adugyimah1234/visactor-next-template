@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/consistent-type-imports */
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -21,6 +22,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Role, getAllRoles } from '@/services/roles';
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -47,17 +49,19 @@ const userFormSchema = z.object({
     .email("Please enter a valid email address"),
   password: z.string()
     .min(6, "Password must be at least 6 characters"),
-  role: z.enum(["admin", "teacher", "staff"]),
+  role_id: z.number(),
   school_id: z.number().optional().nullable()
 });
 
 type UserFormValues = z.infer<typeof userFormSchema>;
+export type RoleId = number;
+export type RoleFilter = RoleId | 'all';
 
 export default function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all');
+  const [roles, setRoles] = useState<Role[]>([]);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const { toast } = useToast();
   const form = useForm<UserFormValues>({
@@ -67,19 +71,37 @@ export default function UserManagement() {
       full_name: "",
       email: "",
       password: "",
-      role: "staff",
+      role_id: 1,
       school_id: null
     }
   });
+  
+  const fetchRoles = async () => {
+    try {
+      const data = await getAllRoles();
+      setRoles(data);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to fetch roles",
+        variant: "destructive"
+      });
+    }
+  };
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
+  
 
+  
   useEffect(() => {
     const token = localStorage.getItem('authToken');
     if (!token) {
-      // Redirect to login if no token
       window.location.href = '/login';
       return;
     }
-    fetchUsers();
+    
+    Promise.all([fetchUsers(), fetchRoles()]).catch(error => {
+      console.error('Error initializing data:', error);
+    });
   }, []);
 
   const fetchUsers = async () => {
@@ -125,31 +147,37 @@ export default function UserManagement() {
     }
   };
 
-    const onSubmit = async (values: UserFormValues) => {
+  const onSubmit = async (values: UserFormValues) => {
     try {
+      setIsLoading(true);
       await createUser({
         username: values.username,
         full_name: values.full_name,
         email: values.email,
         password: values.password,
-        role: values.role,
+        role_id: values.role_id,
         school_id: values.school_id
       });
-  
+
       toast({
         title: "Success",
-        description: "User created successfully"
+        description: `User ${values.full_name} has been created successfully`,
+        variant: "default",
+        duration: 3000,
       });
-      
+
       setIsCreatingUser(false);
       form.reset();
-      fetchUsers();
+      await fetchUsers(); // Refresh the user list
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.response?.data?.error || "Failed to create user",
-        variant: "destructive"
+        variant: "destructive",
+        duration: 5000,
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -158,7 +186,10 @@ export default function UserManagement() {
       user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase())
     )
-    .filter(user => roleFilter === 'all' || user.role === roleFilter);
+    .filter(user => {
+      if (roleFilter === 'all') return true;
+      return user.role_id === roleFilter;
+    });
 
   return (
     <Card>
@@ -176,18 +207,22 @@ export default function UserManagement() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Select 
-              value={roleFilter}
-              onValueChange={setRoleFilter}
+                       <Select 
+              value={String(roleFilter)} 
+              onValueChange={(value) => {
+                setRoleFilter(value === 'all' ? value : Number(value));
+              }}
             >
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="Filter by role" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="teacher">Teacher</SelectItem>
-                <SelectItem value="staff">Staff</SelectItem>
+                {roles.map((role) => (
+                  <SelectItem key={role.id} value={String(role.id)}>
+                    {role.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -266,20 +301,25 @@ export default function UserManagement() {
                   />
                   <FormField
                     control={form.control}
-                    name="role"
+                    name="role_id"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Role</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select 
+                          onValueChange={field.onChange}
+                          value={field.value?.toString()}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select a role" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="teacher">Teacher</SelectItem>
-                            <SelectItem value="staff">Staff</SelectItem>
+                            {roles.map((role) => (
+                              <SelectItem key={role.id} value={role.id}>
+                                {role.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -323,7 +363,7 @@ export default function UserManagement() {
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
                     <Badge variant="outline">
-                      {user.role}
+                      {roles.find(role =>                       Number(role.id) === user.role_id)?.name || 'Unknown'}
                     </Badge>
                   </TableCell>
                   <TableCell>

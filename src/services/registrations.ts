@@ -28,6 +28,18 @@ export interface RegistrationData {
   registration_date?: string;
 }
 
+export interface RegistrationStats {
+  totalRegistered: number;
+  totalPending: number;
+  totalAccepted: number;
+  totalRejected: number;
+  metrics: {
+    date: string;
+    count: number;
+    status: 'Pending' | 'Accepted' | 'Rejected';
+  }[];
+}
+
 export type RegistrationCreateInput = Omit<
   RegistrationData,
   "registration_date" | "id"
@@ -63,14 +75,14 @@ const registrationService = {
     }
   },
 
-async update(id: number, data: RegistrationUpdateInput): Promise<RegistrationData> {
-  try {
-    const response = await api.put<RegistrationData>(`${API_BASE_URL}/${id}`, data);
-    return response.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.error || "Failed to update registration");
-  }
-},
+  async update(id: number, data: RegistrationUpdateInput): Promise<RegistrationData> {
+    try {
+      const response = await api.put<RegistrationData>(`${API_BASE_URL}/${id}`, data);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.error || "Failed to update registration");
+    }
+  },
 
   async remove(id: number): Promise<void> {
     try {
@@ -79,6 +91,56 @@ async update(id: number, data: RegistrationUpdateInput): Promise<RegistrationDat
       throw new Error(error.response?.data?.error || "Failed to delete registration");
     }
   },
+
+  async getStats(startDate?: string, endDate?: string): Promise<RegistrationStats> {
+    try {
+      const registrations = await this.getAll();
+      
+      // Filter by date range if provided
+      const filteredRegistrations = startDate && endDate 
+        ? registrations.filter(reg => {
+            const date = new Date(reg.registration_date || '');
+            return date >= new Date(startDate) && date <= new Date(endDate);
+          })
+        : registrations;
+
+      // Calculate totals
+      const stats: RegistrationStats = {
+        totalRegistered: filteredRegistrations.length,
+        totalPending: filteredRegistrations.filter(r => r.status === 'Pending').length,
+        totalAccepted: filteredRegistrations.filter(r => r.status === 'Accepted').length,
+        totalRejected: filteredRegistrations.filter(r => r.status === 'Rejected').length,
+        metrics: []
+      };
+
+      // Group by date and status for metrics
+      const groupedByDate = filteredRegistrations.reduce((acc, reg) => {
+        const date = reg.registration_date?.split('T')[0] || '';
+        if (!acc[date]) {
+          acc[date] = {
+            Pending: 0,
+            Accepted: 0,
+            Rejected: 0
+          };
+        }
+        acc[date][reg.status]++;
+        return acc;
+      }, {} as Record<string, Record<'Pending' | 'Accepted' | 'Rejected', number>>);
+
+      // Convert to metrics array
+      stats.metrics = Object.entries(groupedByDate).flatMap(([date, statuses]) => 
+        Object.entries(statuses).map(([status, count]) => ({
+          date,
+          count,
+          status: status as 'Pending' | 'Accepted' | 'Rejected'
+        }))
+      );
+
+      return stats;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.error || "Failed to fetch registration statistics");
+    }
+  }
 };
 
 export default registrationService;

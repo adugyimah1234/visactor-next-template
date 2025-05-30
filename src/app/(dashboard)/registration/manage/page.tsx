@@ -769,26 +769,18 @@ const ApplicantManagement = () => {
                                     <span>Email</span>
                                 </Button>
                             </TableHead> */}
-                            {/* <TableHead>
-                                <Button
-                                    variant="ghost"
-                                    className="h-8 px-0 font-normal"
-                                >
-                                    <span>Phone Number</span>
-                                </Button>
-                            </TableHead> */}
                             <TableHead>
-                                <Button
-                                    variant="ghost"
-                                    className="h-8 px-0 font-normal"
-                                >
-                                    <span>Date of Birth</span>
-                                </Button>
+                            <Button
+                            variant="ghost"
+                            className="h-8 px-0 font-normal"
+                            >
+                            <span>Date of Birth</span>
+                            </Button>
                             </TableHead>
                             <TableHead>
-                                <Button
-                                    variant="ghost"
-                                    className="h-8 px-0 font-normal"
+                            <Button
+                            variant="ghost"
+                            className="h-8 px-0 font-normal"
                                 >
                                     <span>Class Applying For</span>
                                 </Button>
@@ -800,7 +792,15 @@ const ApplicantManagement = () => {
                                 >
                                     <span>Gender</span>
                                 </Button>
-                            </TableHead>
+                                </TableHead>
+                                <TableHead>
+                                    <Button
+                                        variant="ghost"
+                                        className="h-8 px-0 font-normal"
+                                    >
+                                        <span>Status</span>
+                                    </Button>
+                                </TableHead>
                             <TableHead>
                                 <Button
                                     variant="ghost"
@@ -852,6 +852,11 @@ const ApplicantManagement = () => {
                                         <Badge variant="secondary">
                                             {registration.gender}
                                         </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                    <Badge variant="secondary">
+                                    {registration.status}
+                                    </Badge>
                                     </TableCell>
                                     <TableCell>
                                         {/* Show registration.scores if available, else blank */}
