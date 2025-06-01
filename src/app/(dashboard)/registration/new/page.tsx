@@ -58,7 +58,9 @@ const NewRegistrationPage = () => {
     const [classes, setClasses] = useState<ClassData[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [error, setError] = useState<string | null>(null);
+    
     // Simulate fetching academic years (replace with your actual API call)
+
     useEffect(() => {
         const fetchAcademicYears = async () => {
             // Replace this with your actual API call to fetch academic years
@@ -86,17 +88,28 @@ const NewRegistrationPage = () => {
         }
       };
 
-      async function loadSchools() {
-        setLoading(true);
-        try {
-          const allSchools = await classService.getAll();
-          setClasses(allSchools);
-          
-        } catch {
-          setError("Failed to load schools.");
-        }
-        setLoading(false);
+async function loadSchools() {
+  setLoading(true);
+  try {
+    const allClasses = await classService.getAll();
+
+    // Extract unique class names
+    const uniqueClassMap = new Map<string, ClassData>();
+
+    for (const classItem of allClasses) {
+      if (!uniqueClassMap.has(classItem.name)) {
+        uniqueClassMap.set(classItem.name, classItem);
       }
+    }
+
+    setClasses(Array.from(uniqueClassMap.values()));
+  } catch {
+    setError("Failed to load schools.");
+  } finally {
+    setLoading(false);
+  }
+}
+
     
       useEffect(() => {
         loadSchools();
@@ -147,14 +160,13 @@ const NewRegistrationPage = () => {
             !registrationData.date_of_birth ||
             !registrationData.class_applying_for ||
             !registrationData.gender ||
-            !registrationData.phone_number ||
             !registrationData.address ||
             !registrationData.guardian_name ||
             !registrationData.relationship ||
             !registrationData.guardian_phone_number
         ) {
             toast.error("Please fill in all required fields.");
-            return; // Stop submission
+            return;
         }
         if (!selectedAcademicYearId) {
             toast.error("Please select an academic year.");
@@ -169,7 +181,7 @@ const NewRegistrationPage = () => {
                 student_id: studentId,
                 scores: 0,
                 status: 'pending',
-                class_id: classId, // Assuming class ID is 1, update as needed
+                class_id: classId, 
                 academic_year_id: selectedAcademicYearId,
                 academic_year: academicYears.find(y => y.id === selectedAcademicYearId)?.year.toString() ?? '',
                 first_name: registrationData.first_name,
@@ -178,13 +190,13 @@ const NewRegistrationPage = () => {
                 date_of_birth: format(new Date(registrationData.date_of_birth), "yyyy-MM-dd"),
                 class_applying_for: registrationData.class_applying_for,
                 gender: registrationData.gender as "Male" | "Female" | "Other",
-                email: registrationData.email,
-                phone_number: registrationData.phone_number,
-                category: registrationData.category,
-                address: registrationData.address,
-                guardian_name: registrationData.guardian_name,
-                relationship: registrationData.relationship,
-                guardian_phone_number: registrationData.guardian_phone_number,
+                email: registrationData.email || '',
+                phone_number: registrationData.phone_number || '',
+                category: registrationData.category || '',
+                address: registrationData.address || '',
+                guardian_name: registrationData.guardian_name || '',
+                relationship: registrationData.relationship || '',
+                guardian_phone_number: registrationData.guardian_phone_number || '',
             };
 
 
@@ -271,32 +283,6 @@ const NewRegistrationPage = () => {
         max={new Date().toISOString().split('T')[0]}
     />
 </div>
-
-                    {/* <div>
-                        <Label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Date of Birth <span className="text-red-500">*</span>
-                        </Label>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" className="w-full justify-start text-left font-normal">
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {registrationData.date_of_birth ? format(registrationData.date_of_birth, "PPP") : "Date of birth"}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                    mode="single"
-                                    selected={date}
-                                    onSelect={(selectedDate) => {
-                                        setDate(selectedDate);
-                                        handleChange('date_of_birth', selectedDate);
-                                    }}
-                                    initialFocus
-                                    disabled={loading}
-                                />
-                            </PopoverContent>
-                        </Popover>
-                    </div> */}
 
                     {/* Class Applying For */}
                     <div>

@@ -25,10 +25,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { useDashboard } from "@/contexts/DashboardContext";
-import { Loader } from "@/components/ui/loader";
+import { InlineLoader } from "@/components/ui/loader"; // Updated import
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { getAllRoles } from "@/services/roles";
+import { useLoading } from "./components/LoadingContext";
 
 interface NavItem {
   name: string;
@@ -108,46 +109,45 @@ export default function SideNav() {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const { user, logout } = useAuth();
   const { activeItem, setActiveItem } = useDashboard();
+  const { startNavigation, navigationLoading } = useLoading();
   const router = useRouter();
 
   useEffect(() => {
     setProfileImage(user?.id ? `/api/users/${user.id}/profile-image` : "/images/default-user.png");
   }, [user?.id]);
-const [filteredNavItems, setFilteredNavItems] = useState<NavItem[]>([]);
 
-const filterNavItemsByRole = (role: string, items: NavItem[]): NavItem[] => {
-  const map = {
-    admin: items,
-    frontdesk: items.filter(item =>
-      !['Fee Management', 'Admin', 'Admissions', 'Entrance Exams'].includes(item.name)
-    ),
-    accountant: items.filter(item => ['Dashboard', 'Fee Management', 'Profile'].includes(item.name)),
-    teacher: items.filter(item => ['Dashboard', 'Entrance Exams', 'Profile'].includes(item.name)),
+  const [filteredNavItems, setFilteredNavItems] = useState<NavItem[]>([]);
+
+  const filterNavItemsByRole = (role: string, items: NavItem[]): NavItem[] => {
+    const map = {
+      admin: items,
+      frontdesk: items.filter(item =>
+        !['Fee Management', 'Admin', 'Admissions', 'Entrance Exams'].includes(item.name)
+      ),
+      accountant: items.filter(item => ['Dashboard', 'Fee Management', 'Profile'].includes(item.name)),
+      teacher: items.filter(item => ['Dashboard', 'Entrance Exams', 'Profile'].includes(item.name)),
+    };
+
+    return map[role as keyof typeof map] || [];
   };
 
-  return map[role as keyof typeof map] || [];
-};
+  useEffect(() => {
+    const fetchRolesAndFilter = async () => {
+      if (!user?.role_id) return;
 
-useEffect(() => {
-  const fetchRolesAndFilter = async () => {
-    if (!user?.role_id) return;
+      try {
+        const roles = await getAllRoles();
+        const userRole = roles.find((role) => role.id === user.role_id);
+        const roleName = userRole?.name?.toLowerCase() || "";
+        const allowedItems = filterNavItemsByRole(roleName, navigationItems);
+        setFilteredNavItems(allowedItems);
+      } catch (error) {
+        console.error("Failed to fetch roles:", error);
+      }
+    };
 
-    try {
-      const roles = await getAllRoles(); // assume this returns array of roles: { id, name }
-
-      const userRole = roles.find((role) => role.id === user.role_id);
-      const roleName = userRole?.name?.toLowerCase() || "";
-
-      const allowedItems = filterNavItemsByRole(roleName, navigationItems);
-      setFilteredNavItems(allowedItems);
-    } catch (error) {
-      console.error("Failed to fetch roles:", error);
-    }
-  };
-
-  fetchRolesAndFilter();
-}, [user?.role_id]);
-
+    fetchRolesAndFilter();
+  }, [user?.role_id]);
 
   const toggleSubMenu = (name: string) => {
     setExpandedMenu(expandedMenu === name ? null : name);
@@ -161,21 +161,47 @@ useEffect(() => {
     }
 
     setLoadingItem(item.name);
+    
     try {
       if (item.name === "Logout") {
+        startNavigation("/login");
         await logout();
         router.push("/login");
       } else {
-        await router.push(item.href);
+        startNavigation(item.href);
+        router.push(item.href);
         setActiveItem(item.name);
         setExpandedMenu(null);
       }
     } catch (error) {
       console.error("Navigation error:", error);
-    } finally {
       setLoadingItem(null);
     }
   };
+
+  const handleSubNavClick = async (sub: NavItem, e: React.MouseEvent) => {
+    e.preventDefault();
+    setLoadingItem(sub.name);
+    
+    try {
+      startNavigation(sub.href);
+      router.push(sub.href);
+      setActiveItem(sub.name);
+    } catch (error) {
+      console.error("Navigation error:", error);
+      setLoadingItem(null);
+    }
+  };
+
+  // Clear loading item when navigation completes
+  useEffect(() => {
+    if (!navigationLoading && loadingItem) {
+      const timer = setTimeout(() => {
+        setLoadingItem(null);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [navigationLoading, loadingItem]);
 
   return (
     <aside
@@ -184,7 +210,7 @@ useEffect(() => {
       {/* Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="absolute -right-3 top-12 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-white shadow-md hover:bg-indigo-700"
+        className="absolute -right-3 top-12 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-white shadow-md hover:bg-indigo-700 transition-colors duration-200"
       >
         {isOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
       </button>
@@ -209,7 +235,7 @@ useEffect(() => {
             <input
               type="text"
               placeholder="Search..."
-              className="block w-full rounded-md border-gray-300 bg-gray-100 py-2 pl-10 pr-3 text-sm placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+              className="block w-full rounded-md border-gray-300 bg-gray-100 py-2 pl-10 pr-3 text-sm placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500 transition-colors duration-200"
             />
           </div>
         </div>
@@ -226,18 +252,22 @@ useEffect(() => {
                 activeItem === item.name && !item.children
                   ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400"
                   : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-              } ${!isOpen && !item.children ? "justify-center" : ""}`}
+              } ${!isOpen && !item.children ? "justify-center" : ""} ${
+                loadingItem === item.name ? "opacity-75 cursor-wait" : ""
+              }`}
             >
-              <div className="relative">
+              <div className="relative flex items-center justify-center">
                 {loadingItem === item.name ? (
-                  <Loader size="sm" showText={false} />
+                  <InlineLoader size="sm" color="indigo" />
                 ) : (
-                  <item.icon size={20} />
-                )}
-                {item.badge && (
-                  <span className="absolute -right-2 -top-2 h-4 w-4 rounded-full bg-red-500 text-xs text-white flex items-center justify-center">
-                    {item.badge}
-                  </span>
+                  <>
+                    <item.icon size={20} />
+                    {item.badge && (
+                      <span className="absolute -right-2 -top-2 h-4 w-4 rounded-full bg-red-500 text-xs text-white flex items-center justify-center">
+                        {item.badge}
+                      </span>
+                    )}
+                  </>
                 )}
               </div>
               {isOpen && <span className="ml-3 flex-1">{item.name}</span>}
@@ -250,39 +280,35 @@ useEffect(() => {
 
             {/* Submenu */}
             <AnimatePresence>
-            {item.children && expandedMenu === item.name && isOpen && (
+              {item.children && expandedMenu === item.name && isOpen && (
                 <motion.div
                   className="ml-6 space-y-1"
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
                 >
                   {item.children.map((sub) => (
                     <Link
                       key={sub.name}
                       href={sub.href}
-                      onClick={async (e) => {
-                        e.preventDefault();
-                        setLoadingItem(sub.name);
-                        try {
-                          await router.push(sub.href);
-                          setActiveItem(sub.name);
-                      } finally {
-                        setLoadingItem(null);
-                      }
-                    }}
-                    className={`flex items-center rounded-md px-4 py-2 text-sm transition-all duration-200 ${
-                      activeItem === sub.name
-                        ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400"
-                        : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-                    }`}
-                  >
-                    <sub.icon size={18} className="mr-2" />
-                    {sub.name}
-                  </Link>
-                ))}
-              </motion.div>
-            )}
+                      onClick={(e) => handleSubNavClick(sub, e)}
+                      className={`flex items-center rounded-md px-4 py-2 text-sm transition-all duration-200 ${
+                        activeItem === sub.name
+                          ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400"
+                          : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                      } ${loadingItem === sub.name ? "opacity-75 cursor-wait" : ""}`}
+                    >
+                      {loadingItem === sub.name ? (
+                        <InlineLoader size="xs" color="indigo" className="mr-2" />
+                      ) : (
+                        <sub.icon size={18} className="mr-2" />
+                      )}
+                      {sub.name}
+                    </Link>
+                  ))}
+                </motion.div>
+              )}
             </AnimatePresence>
           </div>
         ))}

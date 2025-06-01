@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import "@/style/globals.css";
 import { Providers } from "./providers";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { LoadingProvider } from "@/components/nav/side-nav/components/LoadingContext";
 // import { ToastContainer } from "react-toastify";
 // import "react-toastify/dist/ReactToastify.css";
 
@@ -25,12 +26,16 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={cn("bg-background font-sans", gabarito.variable)}>
         <Providers>
-          <AuthProvider>
-
+        <LoadingProvider 
+        showOverlay={true} 
+        minLoadingTime={1500}
+        >
+        <AuthProvider>
           <div className="flex min-h-[100dvh]">
             <div className="flex-grow overflow-auto">{children}</div>
           </div>
           </AuthProvider>
+          </LoadingProvider>
         </Providers>
       </body>
     </html>

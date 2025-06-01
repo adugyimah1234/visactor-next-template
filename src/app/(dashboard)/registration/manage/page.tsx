@@ -202,7 +202,7 @@ const ApplicantManagement = () => {
             guardian_name: guardianName,
             relationship,
             scores: 0,
-            status: 'Pending',
+            status: 'pending',
             guardian_phone_number: guardianPhoneNumber,
             school_id: 0,
             student_id: 0,
@@ -370,40 +370,7 @@ const ApplicantManagement = () => {
     }, [open]);
 
     // --- Print and Export Functions ---
-    const handlePrintPDF = (registration: RegistrationData) => {
-        const receiptContent = `
-            REGISTRATION RECEIPT
-            -------------------
-            Registration ID: ${registration.id}
-            Date: ${new Date().toLocaleDateString()}
-            
-            Student Information:
-            ------------------
-            Name: ${registration.first_name} ${registration.last_name}
-            Class: ${registration.class_applying_for}
-            Email: ${registration.email}
-            Phone: ${registration.phone_number}
-            
-            Guardian Information:
-            -------------------
-            Name: ${registration.guardian_name}
-            Relationship: ${registration.relationship}
-            Phone: ${registration.guardian_phone_number}
-            
-            Payment Details:
-            --------------
-            Registration Fee: $XXX.XX
-            Status: ${registration.status}
-        `;
 
-        const blob = new Blob([receiptContent], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `registration-receipt-${registration.id}.pdf`;
-        link.click();
-        URL.revokeObjectURL(url);
-    };
 
     const handlePrintExcel = (registration: RegistrationData) => {
         const data = [
@@ -437,150 +404,518 @@ const ApplicantManagement = () => {
         URL.revokeObjectURL(url);
     };
 
-    const handlePrint = (registration: RegistrationData) => {
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-            printWindow.document.write(`
-                <html>
-                    <head>
-                        <title>Registration Receipt</title>
-                        <style>
-                            @media print {
-                                @page { size: A4; margin: 2cm; }
+const handlePrint = (registration: RegistrationData) => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Official School Registration Receipt</title>
+                    <style>
+                        @media print {
+                            @page { 
+                                size: A4; 
+                                margin: 1.5cm; 
                             }
-                            body { 
-                                font-family: Arial, sans-serif; 
-                                padding: 20px;
-                                max-width: 800px;
-                                margin: 0 auto;
+                            body {
+                                -webkit-print-color-adjust: exact;
+                                print-color-adjust: exact;
                             }
-                            .logo {
-                                text-align: center;
-                                margin-bottom: 20px;
-                            }
-                            .logo img {
-                                height: 80px;
-                                width: auto;
-                            }
-                            .header { 
-                                text-align: center; 
-                                margin-bottom: 30px;
-                                border-bottom: 2px solid #333;
-                                padding-bottom: 20px;
-                            }
-                            .section { 
-                                margin-bottom: 20px;
-                                padding: 15px;
-                                background: #f8f9fa;
-                                border-radius: 5px;
-                            }
-                            .section-title { 
-                                font-weight: bold;
-                                border-bottom: 1px solid #dee2e6;
-                                margin-bottom: 10px;
-                                padding-bottom: 5px;
-                                color: #2c5282;
-                            }
-                            .row { 
-                                display: flex;
-                                margin-bottom: 8px;
-                                padding: 4px 0;
-                            }
-                            .label { 
-                                font-weight: bold;
-                                width: 150px;
-                                color: #4a5568;
-                            }
-                            .footer {
-                                margin-top: 40px;
-                                text-align: center;
-                                font-size: 0.9em;
-                                color: #666;
-                            }
-                            .watermark {
-                                position: fixed;
-                                bottom: 10px;
-                                right: 10px;
-                                opacity: 0.1;
-                                transform: rotate(-45deg);
-                                font-size: 60px;
-                                z-index: -1;
-                            }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="logo">
-                            <img src="/logo.png" alt="School Logo"/>
-                        </div>
-                        <div class="header">
-                            <h1>Registration Receipt</h1>
-                            <p>Registration ID: ${registration.id}</p>
-                            <p>Date: ${new Date().toLocaleDateString()}</p>
+                        }
+                        
+                        * {
+                            margin: 0;
+                            padding: 0;
+                            box-sizing: border-box;
+                        }
+                        
+                        body { 
+                            font-family: 'Times New Roman', serif;
+                            line-height: 1.4;
+                            color: #2c3e50;
+                            background: #ffffff;
+                            padding: 20px;
+                            max-width: 800px;
+                            margin: 0 auto;
+                        }
+                        
+                        .receipt-container {
+                            border: 3px solid #1e40af;
+                            border-radius: 8px;
+                            overflow: hidden;
+                            background: #ffffff;
+                            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                        }
+                        
+                        .header-banner {
+                            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+                            color: white;
+                            padding: 20px;
+                            text-align: center;
+                            position: relative;
+                        }
+                        
+                        .header-banner::before {
+                            content: '';
+                            position: absolute;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            bottom: 0;
+                            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+                            opacity: 0.3;
+                        }
+                        
+                        .logo-section {
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 20px;
+                            margin-bottom: 15px;
+                            position: relative;
+                            z-index: 1;
+                        }
+                        
+                        .logo {
+                            width: 80px;
+                            height: 80px;
+                            background: white;
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+                        }
+                        
+                        .logo img {
+                            width: 60px;
+                            height: 60px;
+                            object-fit: contain;
+                        }
+                        
+                        .school-info {
+                            text-align: center;
+                            position: relative;
+                            z-index: 1;
+                        }
+                        
+                        .school-name {
+                            font-size: 28px;
+                            font-weight: bold;
+                            margin-bottom: 5px;
+                            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+                        }
+                        
+                        .school-subtitle {
+                            font-size: 16px;
+                            opacity: 0.9;
+                            font-style: italic;
+                        }
+                        
+                        .receipt-title {
+                            background: #f8fafc;
+                            border-bottom: 2px solid #e2e8f0;
+                            padding: 15px 20px;
+                            text-align: center;
+                        }
+                        
+                        .receipt-title h2 {
+                            font-size: 24px;
+                            color: #1e40af;
+                            margin-bottom: 8px;
+                            font-weight: bold;
+                        }
+                        
+                        .receipt-meta {
+                            display: flex;
+                            justify-content: space-between;
+                            font-size: 14px;
+                            color: #64748b;
+                        }
+                        
+                        .content-body {
+                            padding: 25px;
+                        }
+                        
+                        .info-grid {
+                            display: grid;
+                            grid-template-columns: 1fr 1fr;
+                            gap: 25px;
+                            margin-bottom: 25px;
+                        }
+                        
+                        .info-section {
+                            background: #f8fafc;
+                            border: 1px solid #e2e8f0;
+                            border-radius: 8px;
+                            padding: 20px;
+                            position: relative;
+                            overflow: hidden;
+                        }
+                        
+                        .info-section::before {
+                            content: '';
+                            position: absolute;
+                            top: 0;
+                            left: 0;
+                            width: 4px;
+                            height: 100%;
+                            background: linear-gradient(to bottom, #3b82f6, #1e40af);
+                        }
+                        
+                        .section-title {
+                            font-size: 16px;
+                            font-weight: bold;
+                            color: #1e40af;
+                            margin-bottom: 15px;
+                            padding-bottom: 8px;
+                            border-bottom: 1px solid #cbd5e1;
+                            display: flex;
+                            align-items: center;
+                            gap: 8px;
+                        }
+                        
+                        .section-icon {
+                            width: 20px;
+                            height: 20px;
+                            background: #1e40af;
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            color: white;
+                            font-size: 12px;
+                        }
+                        
+                        .info-row {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            margin-bottom: 10px;
+                            padding: 8px 0;
+                            border-bottom: 1px dotted #cbd5e1;
+                        }
+                        
+                        .info-row:last-child {
+                            border-bottom: none;
+                            margin-bottom: 0;
+                        }
+                        
+                        .info-label {
+                            font-weight: 600;
+                            color: #374151;
+                            font-size: 14px;
+                        }
+                        
+                        .info-value {
+                            color: #1f2937;
+                            font-weight: 500;
+                            text-align: right;
+                            font-size: 14px;
+                        }
+                        
+                        .exam-section {
+                            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+                            border: 2px solid #f59e0b;
+                            border-radius: 8px;
+                            padding: 20px;
+                            margin: 25px 0;
+                            text-align: center;
+                        }
+                        
+                        .exam-title {
+                            font-size: 20px;
+                            font-weight: bold;
+                            color: #92400e;
+                            margin-bottom: 15px;
+                        }
+                        
+                        .exam-details {
+                            display: grid;
+                            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                            gap: 15px;
+                        }
+                        
+                        .exam-item {
+                            background: rgba(255, 255, 255, 0.8);
+                            padding: 10px;
+                            border-radius: 5px;
+                            border: 1px solid rgba(245, 158, 11, 0.3);
+                        }
+                        
+                        .exam-item-label {
+                            font-weight: bold;
+                            color: #92400e;
+                            font-size: 12px;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                        }
+                        
+                        .exam-item-value {
+                            font-size: 16px;
+                            color: #451a03;
+                            margin-top: 2px;
+                        }
+                        
+                        .payment-section {
+                            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+                            border: 2px solid #10b981;
+                            border-radius: 8px;
+                            padding: 20px;
+                            margin: 20px 0;
+                        }
+                        
+                        .payment-title {
+                            font-size: 18px;
+                            font-weight: bold;
+                            color: #047857;
+                            margin-bottom: 15px;
+                            text-align: center;
+                        }
+                        
+                        .status-badge {
+                            display: inline-block;
+                            padding: 6px 12px;
+                            border-radius: 20px;
+                            font-size: 12px;
+                            font-weight: bold;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                        }
+                        
+                        .status-confirmed {
+                            background: #d1fae5;
+                            color: #047857;
+                            border: 1px solid #10b981;
+                        }
+                        
+                        .status-pending {
+                            background: #fef3c7;
+                            color: #92400e;
+                            border: 1px solid #f59e0b;
+                        }
+                        
+                        .footer-section {
+                            background: #f1f5f9;
+                            padding: 20px;
+                            text-align: center;
+                            border-top: 2px solid #e2e8f0;
+                        }
+                        
+                        .footer-message {
+                            font-size: 16px;
+                            color: #475569;
+                            margin-bottom: 10px;
+                            font-style: italic;
+                        }
+                        
+                        .contact-info {
+                            font-size: 14px;
+                            color: #64748b;
+                        }
+                        
+                        .signatures {
+                            display: flex;
+                            justify-content: space-between;
+                            margin-top: 40px;
+                            padding-top: 20px;
+                            border-top: 1px solid #cbd5e1;
+                        }
+                        
+                        .signature-box {
+                            text-align: center;
+                            width: 200px;
+                        }
+                        
+                        .signature-line {
+                            border-bottom: 2px solid #374151;
+                            margin-bottom: 5px;
+                            height: 40px;
+                        }
+                        
+                        .signature-label {
+                            font-size: 12px;
+                            color: #6b7280;
+                            font-weight: 600;
+                        }
+                        
+                        .watermark {
+                            position: fixed;
+                            bottom: 20px;
+                            right: 20px;
+                            opacity: 0.05;
+                            transform: rotate(-15deg);
+                            font-size: 80px;
+                            font-weight: bold;
+                            color: #1e40af;
+                            z-index: -1;
+                            pointer-events: none;
+                        }
+                        
+                        .receipt-number {
+                            font-family: 'Courier New', monospace;
+                            font-weight: bold;
+                            font-size: 16px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="receipt-container">
+                        <!-- Header Banner -->
+                        <div class="header-banner">
+                            <div class="logo-section">
+                                <div class="logo">
+                                    <img src="/logo.png" alt="School Logo" onerror="this.style.display='none'"/>
+                                </div>
+                                <div class="school-info">
+                                    <div class="school-name">EXCELLENCE ACADEMY</div>
+                                    <div class="school-subtitle">Excellence in Education Since 1985</div>
+                                </div>
+                            </div>
                         </div>
                         
-                        <div class="section">
-                            <div class="section-title">Student Information</div>
-                            <div class="row">
-                                <span class="label">Name:</span>
-                                <span>${registration.first_name} ${registration.last_name}</span>
-                            </div>
-                            <div class="row">
-                                <span class="label">Class:</span>
-                                <span>${registration.class_applying_for}</span>
-                            </div>
-                            <div class="row">
-                                <span class="label">Email:</span>
-                                <span>${registration.email}</span>
-                            </div>
-                            <div class="row">
-                                <span class="label">Phone:</span>
-                                <span>${registration.phone_number}</span>
+                        <!-- Receipt Title -->
+                        <div class="receipt-title">
+                            <h2>OFFICIAL REGISTRATION RECEIPT</h2>
+                            <div class="receipt-meta">
+                                <span>Receipt No: <span class="receipt-number">#${registration.id || 'REG-' + Date.now()}</span></span>
+                                <span>Date: ${new Date().toLocaleDateString('en-US', { 
+                                    weekday: 'long', 
+                                    year: 'numeric', 
+                                    month: 'long', 
+                                    day: 'numeric' 
+                                })}</span>
                             </div>
                         </div>
                         
-                        <div class="section">
-                            <div class="section-title">Guardian Information</div>
-                            <div class="row">
-                                <span class="label">Name:</span>
-                                <span>${registration.guardian_name}</span>
+                        <!-- Content Body -->
+                        <div class="content-body">
+                            <!-- Student and Guardian Info Grid -->
+                            <div class="info-grid">
+                                <!-- Student Information -->
+                                <div class="info-section">
+                                    <div class="section-title">
+                                        <div class="section-icon">👨‍🎓</div>
+                                        Student Information
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Full Name:</span>
+                                        <span class="info-value">${registration.first_name || 'N/A'} ${registration.last_name || ''}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Class Applied:</span>
+                                        <span class="info-value">${registration.class_applying_for || 'N/A'}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Category:</span>
+                                        <span class="info-value">${registration.category || 'Regular'}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Phone Number:</span>
+                                        <span class="info-value">${registration.phone_number || 'N/A'}</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Guardian Information -->
+                                <div class="info-section">
+                                    <div class="section-title">
+                                        <div class="section-icon">👥</div>
+                                        Guardian Information
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Guardian Name:</span>
+                                        <span class="info-value">${registration.guardian_name || 'N/A'}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Relationship:</span>
+                                        <span class="info-value">${registration.relationship || 'Parent'}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Contact Number:</span>
+                                        <span class="info-value">${registration.guardian_phone_number || 'N/A'}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Front Desk Officer:</span>
+                                        <span class="info-value">${user?.full_name || 'Mrs. Sarah Johnson'}</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="row">
-                                <span class="label">Relationship:</span>
-                                <span>${registration.relationship}</span>
+                            
+                            <!-- Exam Information -->
+                            <div class="exam-section">
+                                <div class="exam-title">📋 3G.S.E.C. EXAMINATION DETAILS</div>
+                                <div class="exam-details">
+                                    <div class="exam-item">
+                                        <div class="exam-item-label">Exam Date</div>
+                                        <div class="exam-item-value">${'15th March, 2025'}</div>
+                                    </div>
+                                    <div class="exam-item">
+                                        <div class="exam-item-label">Venue</div>
+                                        <div class="exam-item-value">${'Main Hall, Block A'}</div>
+                                    </div>
+                                    <div class="exam-item">
+                                        <div class="exam-item-label">Time</div>
+                                        <div class="exam-item-value">'9:00 AM - 12:00 PM'</div>
+                                    </div>
+                                    <div class="exam-item">
+                                        <div class="exam-item-label">Reporting Time</div>
+                                        <div class="exam-item-value">${'8:30 AM'}</div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="row">
-                                <span class="label">Phone:</span>
-                                <span>${registration.guardian_phone_number}</span>
+                            
+                            <!-- Payment Information -->
+                            <div class="payment-section">
+                                <div class="payment-title">💳 Payment Details</div>
+                                <div class="info-grid">
+                                    <div class="info-row">
+                                        <span class="info-label">Registration Fee:</span>
+                                        <span class="info-value">$${'150.00'}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Payment Status:</span>
+                                        <span class="info-value">
+                                            <span class="status-badge ${(registration.status || 'confirmed').toLowerCase() === 'confirmed' ? 'status-confirmed' : 'status-pending'}">
+                                                ${registration.status || 'CONFIRMED'}
+                                            </span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Signatures -->
+                            <div class="signatures">
+                                <div class="signature-box">
+                                    <div class="signature-line"></div>
+                                    <div class="signature-label">Student/Guardian Signature</div>
+                                </div>
+                                <div class="signature-box">
+                                    <div class="signature-line"></div>
+                                    <div class="signature-label">Authorized Officer</div>
+                                </div>
                             </div>
                         </div>
                         
-                        <div class="section">
-                            <div class="section-title">Payment Details</div>
-                            <div class="row">
-                                <span class="label">Registration Fee:</span>
-                                <span>$XXX.XX</span>
+                        <!-- Footer -->
+                        <div class="footer-section">
+                            <div class="footer-message">
+                                Thank you for choosing Excellence Academy. We look forward to welcoming you to our academic family.
                             </div>
-                            <div class="row">
-                                <span class="label">Status:</span>
-                                <span>${registration.status}</span>
+                            <div class="contact-info">
+                                📧 admissions@excellenceacademy.edu | 📞 +1 (555) 123-4567 | 🌐 www.excellenceacademy.edu
                             </div>
                         </div>
-
-                        <div class="footer">
-                            <p>Thank you for choosing our institution</p>
-                            <p>For any queries, please contact: support@school.com</p>
-                        </div>
-
-                        <div class="watermark">
-                            OFFICIAL RECEIPT
-                        </div>
-                    </body>
-                </html>
-            `);
-            printWindow.document.close();
-            printWindow.print();
-        }
-    };
+                    </div>
+                    
+                    <!-- Watermark -->
+                    <div class="watermark">OFFICIAL</div>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+    }
+};
 
         const handlePrintTable = () => {
         const printWindow = window.open('', '_blank');
@@ -874,9 +1209,6 @@ const ApplicantManagement = () => {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => handlePrintPDF(registration)}>
-                                                    Download PDF
-                                                </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => handlePrintExcel(registration)}>
                                                     Download Excel
                                                 </DropdownMenuItem>

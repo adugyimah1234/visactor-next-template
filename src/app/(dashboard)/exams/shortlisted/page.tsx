@@ -42,16 +42,16 @@ type Student = {
   first_name: string;
   last_name: string;
   exam_score: number;
-  status: string;
+status: string;
   avatar?: string;
-dob: string;
-gender: string;
-category_id: number;
-scores: number,
-class_id: number;
-registration_date: string;
-admission_status: string;
-school_id: number;
+  dob: string;
+  gender: string;
+  category_id: number;
+  scores: number;
+  class_id: number;
+  registration_date: string;
+  admission_status: string;
+  school_id: number;
 };
 
 export default function ShortlistedPage() {
@@ -136,7 +136,7 @@ export default function ShortlistedPage() {
         <th className="p-3 border">Name</th>
         <th className="p-3 border">DOB</th>
         <th className="p-3 border">Score</th>
-        <th className="p-3 border">Status</th>
+        <th className="p-3 border">Status After Exams</th>
         <th className="p-3 border">Actions</th>
       </tr>
     </thead>
