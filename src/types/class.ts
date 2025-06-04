@@ -6,6 +6,7 @@
  * Basic class interface
  */
 export interface Class {
+  level: number | undefined;
   id: string;
   name: string;
   grade_level: string;

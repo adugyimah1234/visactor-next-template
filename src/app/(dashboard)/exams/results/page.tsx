@@ -34,6 +34,7 @@ export default function ResultsPage() {
   const [passMark, setPassMark] = useState<number>(50);
   const [classSlots, setClassSlots] = useState<Record<number, number>>({});
   const { token, user } = useAuth();
+const [selectedClassId, setSelectedClassId] = useState<number | ''>('');
 
   // Check if user is admin based on role name from roles table
   const isAdmin = userRole.toLowerCase() === 'admin' || userRole.toLowerCase() === 'administrator';
@@ -85,35 +86,14 @@ export default function ResultsPage() {
     setClassSlots(prev => ({ ...prev, [classId]: (prev[classId] ?? 0) + 1 }));
   };
 
-  const handleScoreChange = async (index: number, value: string) => {
-    try {
-      const updated = [...applicants];
-      const applicant = updated[index];
-      
-      // Handle empty string - keep as undefined/null, don't convert to 0 immediately
-      if (value === '' || value === null || value === undefined) {
-        applicant.scores = 0;
-      } else {
-        const numericScore = parseInt(value);
-        applicant.scores = isNaN(numericScore) ? 0 : numericScore;
-      }
-      
-      // Update local state first for immediate UI feedback
-      setApplicants(updated);
-      
-      // Only update backend if we have a valid numeric value or empty (to clear)
-      const scoreToSave = applicant.scores === undefined ? null : applicant.scores;
-      await registrationService.update(applicant.id as number, { scores: scoreToSave });
-      
-    } catch (error) {
-      console.error('Error updating score:', error);
-      toast.error('Failed to update score');
-      
-      // Revert the local state change on error
-      const revertedApplicants = await registrationService.getAll();
-      setApplicants(revertedApplicants);
-    }
-  };
+const handleScoreChange = async (index: number, value: string) => {
+    const updated = [...applicants];
+    updated[index].scores = parseFloat(value);
+    setApplicants(updated);
+    // Update backend immediately
+
+};
+
 
   const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -142,7 +122,11 @@ export default function ResultsPage() {
             
             // Update backend for each matched applicant
             try {
-              await registrationService.update(applicant.id as number, { scores: match.Score });
+              await registrationService.update(applicant.id as number, {
+  ...applicant, 
+  scores: match.Score, 
+});
+
             } catch (error) {
               console.error(`Error updating score for ${fullName}:`, error);
             }
@@ -159,73 +143,83 @@ export default function ResultsPage() {
     reader.readAsArrayBuffer(file);
   };
 
-  const handlePromote = async () => {
-    const passed = applicants.filter(a => 
-      (a.scores ?? 0) >= passMark && 
-      typeof a.class_id === 'number' && 
-      typeof a.school_id === 'number'
-    );
-    
-    let createdCount = 0;
-    const duplicates: string[] = [];
-    const errors: string[] = [];
+const handlePromote = async () => {
+  const updatedApplicants = [...applicants];
+  let createdCount = 0;
+  const duplicates: string[] = [];
+  const errors: string[] = [];
 
-    for (const applicant of passed) {
+  for (const applicant of updatedApplicants) {
+    const hasPassed = (applicant.scores ?? 0) >= passMark;
+const dob = applicant.date_of_birth 
+  ? format(new Date(applicant.date_of_birth), 'yyyy-MM-dd') 
+  : '';
+
+
+    // If passed and has required fields, create student
+    if (hasPassed && applicant.class_id && applicant.school_id) {
       const studentPayload = {
-        first_name: `${applicant.first_name}`,
-        last_name: `${applicant.last_name}`,
-        school_id: applicant.school_id ?? 0,
+        first_name: applicant.first_name,
+        last_name: applicant.last_name,
+        school_id: applicant.school_id,
         admission_status: 'admitted',
-        dob: format(new Date(applicant.date_of_birth ?? '0'), 'yyyy-MM-dd'),
-        gender: applicant.gender ?? '',
+        dob: dob,
+        gender: applicant.gender,
         scores: applicant.scores ?? 0,
         registration_date: format(new Date(applicant.registration_date ?? ''), 'yyyy-MM-dd'),
-        category_id: 2,
-        class_id: applicant.class_id ?? 0,
+        category_id: Number(applicant.category),
+        class_id: applicant.class_id,
         status: 'inactive',
-        id: 0,
-        middle_name: ''
+        id: applicant.id,
+        middle_name: applicant.middle_name ?? ''
       };
-      
+
       try {
         await studentService.create(studentPayload);
-        await registrationService.update(applicant.id as number, { status: 'approved' });
+
+await registrationService.updatePartial(applicant.id, {status: "approved"});
+
         createdCount++;
       } catch (err: any) {
-        console.error('Error promoting student:', err);
         if (err.response?.status === 400) {
-          duplicates.push(`${studentPayload.first_name} ${studentPayload.last_name}`);
+          duplicates.push(`${applicant.first_name} ${applicant.last_name}`);
         } else {
-          errors.push(`${studentPayload.first_name} ${studentPayload.last_name}`);
+          errors.push(`${applicant.first_name} ${applicant.last_name}`);
         }
       }
-    }
 
-    // Show appropriate messages
-    if (createdCount > 0) {
-      toast.success(`${createdCount} student(s) promoted successfully.`);
+    } else {
+      // If failed, update status to rejected
+      try {
+        await registrationService.updatePartial(applicant.id, {status: "rejected"});
+      } catch (err) {
+        console.error(`Failed to reject ${applicant.first_name} ${applicant.last_name}`, err);
+      }
     }
-    if (duplicates.length > 0) {
-      toast.warning(`Skipped ${duplicates.length} duplicate(s): ${duplicates.join(', ')}`);
-    }
-    if (errors.length > 0) {
-      toast.error(`Failed to promote ${errors.length} student(s): ${errors.join(', ')}`);
-    }
-    if (createdCount === 0 && duplicates.length === 0 && errors.length === 0) {
-      toast.info('No students were promoted.');
-    }
+  }
 
-    // Refresh applicants data to reflect status changes
-    try {
-      const refreshedApplicants = await registrationService.getAll();
-      setApplicants(refreshedApplicants);
-    } catch (error) {
-      console.error('Error refreshing applicants:', error);
-    }
-  };
+  // Show messages
+  if (createdCount > 0) toast.success(`${createdCount} student(s) promoted successfully.`);
+  if (duplicates.length > 0) toast.warning(`Duplicates: ${duplicates.join(', ')}`);
+  if (errors.length > 0) toast.error(`Errors: ${errors.join(', ')}`);
+
+  // Refresh to reflect changes
+  try {
+    const refreshedApplicants = await registrationService.getAll();
+    setApplicants(refreshedApplicants);
+  } catch (error) {
+    console.error('Error refreshing applicants:', error);
+  }
+};
+
 
   // Filter applicants based on index, not a separate variable
-  const pendingApplicants = applicants.filter((a) => a.status === "pending");
+ const pendingApplicants = applicants.filter((a) => {
+  const matchesStatus = a.status === "pending";
+  const matchesClass = selectedClassId === '' || a.class_id === selectedClassId;
+  return matchesStatus && matchesClass;
+});
+
 
   return (
     <div className="p-6 space-y-6">
@@ -259,6 +253,22 @@ export default function ResultsPage() {
           </Button>
         )}
       </div>
+<div className="flex items-center gap-4">
+  <label htmlFor="classFilter">Filter by Class:</label>
+  <select
+    id="classFilter"
+    className="border p-1 rounded"
+    value={selectedClassId}
+    onChange={(e) => setSelectedClassId(e.target.value ? parseInt(e.target.value) : '')}
+  >
+    <option value="">All Classes</option>
+    {classes.map((cls) => (
+      <option key={cls.id} value={cls.id}>
+        {cls.name} (Lvl {cls.level})
+      </option>
+    ))}
+  </select>
+</div>
 
       <Table>
         <TableHeader>
@@ -281,15 +291,20 @@ export default function ResultsPage() {
               <TableRow key={applicant.id}>
                 <TableCell>{applicant.first_name} {applicant.last_name}</TableCell>
                 <TableCell>
-                  <Input
-                    type="number"
-                    value={applicant.scores === undefined || applicant.scores === null ? '' : applicant.scores.toString()}
-                    onChange={(e) => {
-                      handleScoreChange(originalIndex, e.target.value);
-                    }}
-                    className="w-20"
-                    placeholder="0"
-                  />
+<Input
+  type="number"
+  value={applicant.scores === undefined || applicant.scores === null ? '' : applicant.scores.toString()}
+  onChange={(e) => {
+    const updated = [...applicants];
+    updated[originalIndex].scores = parseFloat(e.target.value);
+    setApplicants(updated); // update UI instantly
+  }}
+  onBlur={(e) => {
+    handleScoreChange(originalIndex, e.target.value); 
+  }}
+  className="w-20"
+  placeholder="0"
+/>
                 </TableCell>
                 <TableCell>
                   <select

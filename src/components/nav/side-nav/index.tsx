@@ -12,6 +12,8 @@ import {
   Search,
   BookOpen,
   CreditCard,
+  CircleDollarSign,
+  FileText,
   GraduationCap,
   LogOut,
   User,
@@ -57,7 +59,6 @@ const navigationItems: NavItem[] = [
     href: "/exams",
     children: [
       { name: "View Results", href: "/exams/results", icon: BookOpen },
-      { name: "Recordings", href: "/exams/recordings", icon: BookOpen },
       { name: "Shortlisted", href: "/exams/shortlisted", icon: BookOpen },
     ],
   },
@@ -73,11 +74,11 @@ const navigationItems: NavItem[] = [
   {
     name: "Fee Management",
     icon: CreditCard,
-    href: "/fees",
+    href: "/dashboard/fees",
     children: [
-      { name: "Record Payments", href: "/fees/records", icon: CreditCard },
-      { name: "Payment History", href: "/fees/payment-history", icon: CreditCard },
-      { name: "Invoices & Receipts", href: "/fees/invoices", icon: CreditCard },
+      { name: "Fee Structure", href: "/dashboard/fees?tab=fees", icon: CircleDollarSign },
+      { name: "Process Payment", href: "/dashboard/fees?tab=payments", icon: CreditCard },
+      { name: "Payment History", href: "/dashboard/fees?tab=history", icon: FileText },
     ],
   },
   {
@@ -85,10 +86,13 @@ const navigationItems: NavItem[] = [
     icon: Settings,
     href: "/admin",
     children: [
+      { name: "Overview", href: "/admin", icon: Settings },
       { name: "User Management", href: "/admin/user-management", icon: Settings },
+      { name: "Class & School Settings", href: "/admin/classes", icon: Settings },
       { name: "System Settings", href: "/admin/system-settings", icon: Settings },
-      { name: "Module Access", href: "/admin/module-access", icon: Settings },
-      { name: "Roles & Permissions", href: "/admin/roles", icon: Settings },
+
+      // { name: "Module Access", href: "/admin/module-access", icon: Settings },
+      // { name: "Roles & Permissions", href: "/admin/roles", icon: Settings },
     ],
   },
   { name: "Logout", icon: LogOut, href: "/logout" },
@@ -218,8 +222,11 @@ export default function SideNav() {
       {/* Logo */}
       <div className="flex h-16 items-center px-4">
         <div className={`flex items-center ${isOpen ? "justify-start" : "justify-center w-full"}`}>
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600">
-            <span className="text-xl font-bold text-white">DB</span>
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white">
+            <span className="text-xl font-bold text-white">
+            <Image src={"/logo.png"} alt={"logo"} width={40} height={40} className="h-8 w-8" />
+            <span className="sr-only">Logo</span>
+            </span>
           </div>
           {isOpen && <span className="ml-3 text-xl font-bold text-gray-900 dark:text-white">Dashboard</span>}
         </div>

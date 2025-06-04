@@ -14,15 +14,15 @@ const schoolService = {
   },
 
   // 🔹 Create/Update/Delete
-  create: async (school: Omit<School, "id">): Promise<{ id: number }> => {
+  create: async (school: Partial<Omit<School, "id">>): Promise<{ id: number }> => {
     const res = await api.post('/schools', school);
     return res.data;
   },
 
-  update: async (school: School): Promise<School> => {
-    const res =await api.put(`/schools/${school.id}`, school);
-    return res.data;
-  },
+update: async (id: number, school: Partial<Omit<School, "id">>): Promise<School> => {
+  const res = await api.put(`/schools/${id}`, school);
+  return res.data;
+},
 
   delete: async (id: number): Promise<void> => {
     await api.delete(`/schools/${id}`);

@@ -1,6 +1,7 @@
+/* eslint-disable no-console */
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Edit, Trash2 } from 'lucide-react';
+import classService from '@/services/class';
 
 interface Class {
   id: string;
@@ -38,11 +40,41 @@ export default function ClassSettings() {
   const [classes, setClasses] = useState<Class[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<Class | null>(null);
+const [className, setClassName] = useState('');
+const [section, setSection] = useState('');
+const [capacity, setCapacity] = useState<number>(0);
+const [school, setSchool] = useState('');
+const [academicYear, setAcademicYear] = useState('');
 
-  const handleAddClass = (newClass: Omit<Class, 'id'>) => {
-    setClasses(prev => [...prev, { ...newClass, id: Date.now().toString() }]);
+  const handleAddClass = async (newClass: Omit<Class, 'id'>) => {
+  try {
+    const created = await classService.create({
+      name: newClass.name,
+      level: 1, // or get this from another input if applicable
+      school_id: newClass.school === 'primary' ? 1 : 2, // example mapping
+      slots: newClass.capacity,
+    });
+    setClasses(prev => [...prev, {
+      ...newClass,
+      id: created.id.toString(),
+    }]);
     setIsDialogOpen(false);
-  };
+  } catch (error) {
+    console.error("Failed to create class", error);
+  }
+};
+
+useEffect(() => {
+  if (editingClass) {
+    setClassName(editingClass.name);
+    setSection(editingClass.section);
+    setCapacity(editingClass.capacity);
+    setSchool(editingClass.school);
+    setAcademicYear(editingClass.academicYear);
+    setIsDialogOpen(true);
+  }
+}, [editingClass]);
+
 
   return (
     <Card>
@@ -68,31 +100,29 @@ export default function ClassSettings() {
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="name">Class Name</Label>
-                <Input id="name" placeholder="e.g., Grade 1, Form 1" />
+<Input id="name" value={className} onChange={(e) => setClassName(e.target.value)} placeholder="e.g., Grade 1, Form 1" />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="section">Section</Label>
-                <Input id="section" placeholder="e.g., A, Red, Science" />
+                <Input id="section" value={section} onChange={(e) => setSection(e.target.value)} placeholder="e.g., A, Red, Science" />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="capacity">Capacity</Label>
-                <Input id="capacity" type="number" min="1" placeholder="Maximum students" />
+                <Input id="capacity" type="number" min="1" value={capacity} onChange={(e) => setCapacity(parseInt(e.target.value, 10))} placeholder="Maximum students" />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="school">School</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select school" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="primary">Primary School</SelectItem>
-                    <SelectItem value="secondary">Secondary School</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Select value={school} onValueChange={setSchool}>
+  <SelectTrigger><SelectValue placeholder="Select school" /></SelectTrigger>
+  <SelectContent>
+    <SelectItem value="primary">Primary School</SelectItem>
+    <SelectItem value="secondary">Secondary School</SelectItem>
+  </SelectContent>
+</Select>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="academicYear">Academic Year</Label>
-                <Select>
+                <Select value={academicYear} onValueChange={setAcademicYear}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select academic year" />
                   </SelectTrigger>
@@ -104,10 +134,76 @@ export default function ClassSettings() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button>Save Class</Button>
+<Button
+  variant="outline"
+  onClick={() => {
+    setIsDialogOpen(false);
+    setEditingClass(null);
+    setClassName('');
+    setSection('');
+    setCapacity(0);
+    setSchool('');
+    setAcademicYear('');
+  }}
+>
+  Cancel
+</Button>
+
+<Button
+  onClick={async () => {
+    const payload = {
+      name: className,
+      section,
+      capacity,
+      school,
+      academicYear,
+    };
+
+    try {
+      if (editingClass) {
+        const updated = await classService.update({
+          id: Number(editingClass.id),
+          name: payload.name,
+          level: 1,
+          school_id: school === 'primary' ? 1 : 2,
+          slots: payload.capacity,
+        });
+
+        setClasses(prev =>
+          prev.map(c =>
+            c.id === editingClass.id
+              ? { ...payload, id: editingClass.id }
+              : c
+          )
+        );
+      } else {
+        const created = await classService.create({
+          name: payload.name,
+          level: 1,
+          school_id: school === 'primary' ? 1 : 2,
+          slots: payload.capacity,
+        });
+
+        setClasses(prev => [
+          ...prev,
+          { ...payload, id: created.id.toString() },
+        ]);
+      }
+      setIsDialogOpen(false);
+      setEditingClass(null);
+      setClassName('');
+      setSection('');
+      setCapacity(0);
+      setSchool('');
+      setAcademicYear('');
+    } catch (err) {
+      console.error('Failed to save class', err);
+    }
+  }}
+>
+  {editingClass ? 'Update Class' : 'Save Class'}
+</Button>
+
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -143,9 +239,22 @@ export default function ClassSettings() {
                     <Button variant="ghost" size="icon" onClick={() => setEditingClass(cls)}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <Button
+  variant="ghost"
+  size="icon"
+  className="text-destructive"
+  onClick={async () => {
+    try {
+      await classService.delete(Number(cls.id));
+      setClasses(prev => prev.filter(c => c.id !== cls.id));
+    } catch (err) {
+      console.error("Failed to delete class", err);
+    }
+  }}
+>
+  <Trash2 className="h-4 w-4" />
+</Button>
+
                   </TableCell>
                 </TableRow>
               ))

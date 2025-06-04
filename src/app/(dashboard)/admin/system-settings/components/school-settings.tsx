@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -18,8 +19,8 @@ import {
 } from "@/components/ui/table";
 import { Loader2, PencilIcon, Trash2Icon } from 'lucide-react';
 import { toast } from "sonner";
-import * as schoolService from '@/services/schools';
 import type { School } from '@/types/school';
+import schoolService from '@/services/schools';
 
 const schoolFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -52,7 +53,7 @@ export default function SchoolSettings() {
   const fetchSchools = async () => {
     try {
       setLoading(true);
-      const data = await schoolService.getAllSchools();
+      const data = await schoolService.getAll();
       setSchools(data);
     } catch (error) {
       toast.error("Failed to fetch schools");
@@ -61,22 +62,23 @@ export default function SchoolSettings() {
     }
   };
 
-  const onSubmit = async (data: z.infer<typeof schoolFormSchema>) => {
-    try {
-      if (editing) {
-        await schoolService.updateSchool(editing, data);
-        toast.success("School updated successfully");
-      } else {
-        await schoolService.createSchool(data);
-        toast.success("School created successfully");
-      }
-      form.reset();
-      setEditing(null);
-      fetchSchools();
-    } catch (error) {
-      toast.error(editing ? "Failed to update school" : "Failed to create school");
+const onSubmit = async (data: z.infer<typeof schoolFormSchema>) => {
+  try {
+    if (editing) {
+      await schoolService.update(editing, data);
+      toast.success("School updated successfully");
+    } else {
+      await schoolService.create(data);
+      toast.success("School created successfully");
     }
-  };
+    form.reset();
+    setEditing(null);
+    fetchSchools();
+  } catch (error) {
+    toast.error(editing ? "Failed to update school" : "Failed to create school");
+  }
+};
+
 
   const handleEdit = (school: School) => {
     setEditing(school.id);
@@ -93,7 +95,7 @@ export default function SchoolSettings() {
     if (!confirm("Are you sure you want to delete this school?")) return;
     
     try {
-      await schoolService.deleteSchool(id);
+      await schoolService.delete(id);
       toast.success("School deleted successfully");
       fetchSchools();
     } catch (error) {

@@ -3,7 +3,7 @@ import api from '@/lib/axios';
 
 export interface academicYear {
   id: number;
-year: number;
+year: string;
 start_date: Date; 
 end_date: Date;
   created_at?: string;
@@ -11,13 +11,15 @@ end_date: Date;
 }
 
 export interface CreateAcademicYear {
-  id: number;
-year: number;
+  id?: number;
+year: string;
 start_date: Date; 
 end_date: Date;
   created_at?: string;
   updated_at?: string;
 }
+
+
 
 export const getAllAcademicYear = async (): Promise<academicYear[]> => {
   try {

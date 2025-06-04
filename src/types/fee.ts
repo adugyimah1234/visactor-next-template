@@ -9,7 +9,6 @@ export type FeeType = 'registration' | 'admission' | 'tuition' | 'exam';
 export interface Fee {
   id: number;
   category_id: number;
-  class_id: number;
   fee_type: FeeType;
   amount: number;
   description?: string;
@@ -19,6 +18,8 @@ export interface Fee {
 
 // Fee with related information (category and class names)
 export interface FeeWithDetails extends Fee {
+
+  status: string; // e.g., 'active', 'inactive'
   category_name?: string;
   class_name?: string;
   school_name?: string;
@@ -82,6 +83,8 @@ export interface CreateFeePayload {
   description?: string;
   effective_date?: string;
   school_id?: number;
+  academic_year_id: number; // <-- Add this
+
 }
 
 export interface UpdateFeePayload {

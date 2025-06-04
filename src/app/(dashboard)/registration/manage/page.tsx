@@ -153,86 +153,13 @@ const ApplicantManagement = () => {
             console.error(error);
         }
     }, []);
+    
+// results in '2022-06-23'
 
     useEffect(() => {
         fetchRegistrations();
     }, [fetchRegistrations]);
 
-    const addApplicant = useCallback(() => {
-        if (!name.trim() || !email.trim() || !phone.trim()) {
-            alert('Please fill in all fields.'); // Basic validation
-            return;
-        }
-        const newApplicant: Applicant = {
-            id: crypto.randomUUID(),
-            name,
-            email,
-            phone,
-            role,
-            status,
-            date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
-        };
-        setApplicants((prevApplicants) => [...prevApplicants, newApplicant]);
-        setOpen(false); // Close dialog
-        // Reset form fields
-        setName('');
-        setEmail('');
-        setPhone('');
-        setRole('');
-        setStatus('pending');
-    }, [name, email, phone, role, status]);
-
-    const addRegistration = useCallback(async () => {
-        if (!firstName.trim() || !lastName.trim() || !email.trim() || !phoneNumber.trim()) {
-            alert('Please fill in all fields.');
-            return;
-        }
-        const newRegistration: RegistrationData = {
-            id: Date.now(),
-            first_name: firstName,
-            last_name: lastName,
-            email,
-            phone_number: phoneNumber,
-            date_of_birth: dateOfBirth,
-            class_applying_for: classApplyingFor,
-            gender: gender as "Male" | "Female" | "Other",
-            address,
-            category: '',
-            academic_year: '',
-            guardian_name: guardianName,
-            relationship,
-            scores: 0,
-            status: 'pending',
-            guardian_phone_number: guardianPhoneNumber,
-            school_id: 0,
-            student_id: 0,
-            class_id: 0,
-            academic_year_id: 0
-        };
-        try {
-            await registrationService.create(newRegistration);
-            setIsRegistrationFormOpen(false);
-            // Reset form fields
-            setFirstName('');
-            setLastName('');
-            setEmail('');
-            setPhoneNumber('');
-            setDateOfBirth('');
-            setClassApplyingFor('');
-            setGender('Male');
-            setAddress('');
-            setGuardianName('');
-            setRelationship('');
-            setGuardianPhoneNumber('');
-            // Refresh registrations
-            fetchRegistrations();
-        } catch (error) {
-            console.error(error);
-        }
-    }, [
-        firstName, lastName, email, phoneNumber, dateOfBirth, classApplyingFor, gender,
-        address, guardianName, relationship, guardianPhoneNumber, fetchRegistrations
-    ]);
 
     const handleDeleteRegistration = async (id: number) => {
         try {
@@ -244,26 +171,13 @@ const ApplicantManagement = () => {
     };
 
     const handleUpdateRegistration = async (id: number, data: RegistrationData) => {
+
         try {
             const updatedRegistration = await registrationService.update(id, data);
             setRegistrations(registrations.map((registration) => (registration.id === id ? updatedRegistration : registration)));
         } catch (error) {
             console.error(error);
         }
-    };
-
-    const handleEdit = (applicant: Applicant) => {
-        setEditApplicant(applicant);
-        setName(applicant.name);
-        setEmail(applicant.email);
-        setPhone(applicant.phone);
-        setRole(applicant.role);
-        setStatus(applicant.status);
-        setOpen(true); // Reuse the dialog
-    };
-
-    const deleteApplicant = (id: string) => {
-        setApplicants(prevApplicants => prevApplicants.filter(app => app.id !== id));
     };
 
     const handleDeleteClick = (registration: RegistrationData) => {
@@ -289,41 +203,47 @@ const ApplicantManagement = () => {
         setSelectedRegistration(null);
     };
 
-    const confirmEdit = async () => {
-        if (selectedRegistration?.id) {
-            try {
-                await handleUpdateRegistration(selectedRegistration.id, {
-                    ...selectedRegistration,
-                    school_id: selectedRegistration.school_id,
-                    student_id: selectedRegistration.student_id,
-                    class_id: selectedRegistration.class_id,
-                    academic_year_id: selectedRegistration.academic_year_id,
-                    first_name: selectedRegistration.first_name,
-                    last_name: selectedRegistration.last_name,
-                    academic_year: selectedRegistration.academic_year ?? '',
-                    date_of_birth: selectedRegistration.date_of_birth,
-                    class_applying_for: selectedRegistration.class_applying_for,
-                    gender: selectedRegistration.gender,
-                    phone_number: selectedRegistration.phone_number,
-                    address: selectedRegistration.address,
-                    guardian_name: selectedRegistration.guardian_name,
-                    relationship: selectedRegistration.relationship,
-                    guardian_phone_number: selectedRegistration.guardian_phone_number,
-                    category: selectedRegistration.category ?? '',
-                    scores: selectedRegistration.scores ?? 0,
-                    status: selectedRegistration.status ?? 'Pending'
-                });
-                toast.success("Registration updated successfully");
-                // Refresh the registrations list
-                fetchRegistrations();
-            } catch (error) {
-                toast.error("Failed to update registration");
-                console.error(error);
-            }
+const confirmEdit = async () => {
+    if (selectedRegistration?.id) {
+        try {
+            const formattedDOB = new Date(selectedRegistration.date_of_birth || '')
+                .toISOString()
+                .split('T')[0]; // => 'YYYY-MM-DD'
+
+            await handleUpdateRegistration(selectedRegistration.id, {
+                ...selectedRegistration,
+                date_of_birth: formattedDOB, // ✅ use formatted date here
+                school_id: selectedRegistration.school_id,
+                student_id: selectedRegistration.student_id,
+                class_id: selectedRegistration.class_id,
+                academic_year_id: selectedRegistration.academic_year_id,
+                first_name: selectedRegistration.first_name,
+                last_name: selectedRegistration.last_name,
+                academic_year: selectedRegistration.academic_year ?? '',
+                class_applying_for: selectedRegistration.class_applying_for,
+                gender: selectedRegistration.gender,
+                phone_number: selectedRegistration.phone_number,
+                address: selectedRegistration.address,
+                guardian_name: selectedRegistration.guardian_name,
+                relationship: selectedRegistration.relationship,
+                guardian_phone_number: selectedRegistration.guardian_phone_number,
+                category: selectedRegistration.category ?? '',
+                scores: selectedRegistration.scores ?? 0,
+                status: selectedRegistration.status ?? 'Pending'
+            });
+
+            toast.success("Registration updated successfully");
+            fetchRegistrations();
+        } catch (error) {
+            toast.error("Failed to update registration");
+            console.error(error);
         }
-        setIsEditDialogOpen(false);
-        setSelectedRegistration(null);
-    };
+    }
+
+    setIsEditDialogOpen(false);
+    setSelectedRegistration(null);
+};
+
 
     // --- Sorting ---
     const sortedApplicants = React.useMemo(() => {
@@ -1144,6 +1064,22 @@ const handlePrint = (registration: RegistrationData) => {
                                     <span>Scores</span>
                                 </Button>
                             </TableHead>
+                                                        <TableHead>
+                                <Button
+                                    variant="ghost"
+                                    className="h-8 px-0 font-normal"
+                                >
+                                    <span>Payment</span>
+                                </Button>
+                            </TableHead>
+                                                        <TableHead>
+                                <Button
+                                    variant="ghost"
+                                    className="h-8 px-0 font-normal"
+                                >
+                                    <span>Payment Method</span>
+                                </Button>
+                            </TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -1193,9 +1129,20 @@ const handlePrint = (registration: RegistrationData) => {
                                     {registration.status}
                                     </Badge>
                                     </TableCell>
+
                                     <TableCell>
                                         {/* Show registration.scores if available, else blank */}
                                         {registration.scores ?? ''}
+                                    </TableCell>
+                                    <TableCell>
+                                    <Badge variant="secondary">
+                                    {registration.payment_status}
+                                    </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                    <Badge variant="secondary">
+                                    {registration.payment_type}
+                                    </Badge>
                                     </TableCell>
                                     <TableCell className="flex justify-end gap-2">
                                         <DropdownMenu>

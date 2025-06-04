@@ -1,28 +1,22 @@
 'use client';
 
-import { useState } from 'react';
 import { 
   Users, 
   School, 
   Settings, 
-  ShieldCheck, 
-  MessageSquare,
   CreditCard,
-  Calendar,
   Building
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import UserManagement from './user-management/page';
 import SystemSettings from './system-settings/page';
-import ModuleAccess from './module-access/page';
 import RolesPage from './roles/page';
 import SchoolManagement from './schools/page';
 import FeeManagement from './fees/page';
+import ExamManagement from './exam-management/page';
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState('overview');
 
   const adminStats = [
     { title: 'Total Users', value: '156', icon: Users },
@@ -77,9 +71,9 @@ export default function AdminDashboard() {
         <TabsContent value="fees">
           <FeeManagement />
         </TabsContent>
-        <TabsContent value="modules">
-          <ModuleAccess />
-        </TabsContent>
+        <TabsContent value="exams">
+  <ExamManagement />
+</TabsContent>
         <TabsContent value="roles">
           <RolesPage />
         </TabsContent>

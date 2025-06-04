@@ -1,6 +1,11 @@
-import { ClassData } from "@/services/class";
+import { type ClassData } from "@/services/class";
 
 export interface School {
+  phone: string | undefined;
+  website: string;
+  code: string | undefined;
+  capacity: number | undefined;
+  status: "active" | "inactive";
   id: number;
   name: string;
   address?: string;

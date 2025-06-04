@@ -44,13 +44,8 @@ import {
   Trash2,
   MoreVertical
 } from 'lucide-react';
-import { School as SchoolType, SchoolClass, Category } from '@/types/school';
-import {
-  getAllSchools,
-  createSchool,
-  updateSchool,
-  deleteSchool
-} from '@/services/schools';
+import { School as SchoolType } from '@/types/school';
+
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import {
   AlertDialog,
@@ -64,8 +59,10 @@ import {
   AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
-import { updateCategory, createCategory, deleteCategory, getAllCategories } from '@/services/categories';
-import { updateClass, createClass, deleteClass, Class, getClasses } from '@/services/class';
+import { updateCategory, createCategory, deleteCategory, getAllCategories, Category } from '@/services/categories';
+import classService from '@/services/class';
+import schoolService from '@/services/schools';
+import { Class } from '@/types/exam';
 
 // Update the schema definition
 // Define the Zod schema for form validation
@@ -105,17 +102,17 @@ export default function SchoolManagement() {
   const [editingSchool, setEditingSchool] = useState<SchoolType | null>(null);
   const { toast } = useToast();
 
-  const [classes, setClasses] = useState<SchoolClass[]>([]); // Initialize as empty array
+  const [classes, setClasses] = useState<Class[]>([]); // Initialize as empty array
   const [categories, setCategories] = useState<Category[]>([]); // Initialize as empty array
   const [isAddingClass, setIsAddingClass] = useState(false);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
-  const [editingClass, setEditingClass] = useState<SchoolClass | null>(null);
+  const [editingClass, setEditingClass] = useState<Class | null>(null);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
   const fetchClasses = async () => {
     try {
       setIsLoading(true);
-      const data = await getClasses();
+      const data = await classService.getAll();
       setClasses(Array.isArray(data) ? data : []); // Ensure we're setting an array
     } catch (error: any) {
       toast({
@@ -174,13 +171,13 @@ export default function SchoolManagement() {
     try {
       setIsLoading(true);
       if (editingSchool) {
-        await updateSchool(editingSchool.id, values);
+ await schoolService.update(editingSchool.id, data);
         toast({
           title: "Success",
           description: "School updated successfully"
         });
       } else {
-        await createSchool(values);
+        await schoolService.create(data);
         toast({
           title: "Success",
           description: "School created successfully"
@@ -229,7 +226,7 @@ export default function SchoolManagement() {
   const fetchSchools = async () => {
     try {
       setIsLoading(true);
-      const data = await getAllSchools();
+      const data = await schoolService.getAll();
       setSchools(data);
     } catch (error: any) {
       toast({
@@ -259,7 +256,7 @@ export default function SchoolManagement() {
 
   const handleDelete = async (id: number) => {
     try {
-      await deleteSchool(id);
+      await schoolService.delete(id);
       toast({
         title: "Success",
         description: "School deleted successfully"
@@ -274,33 +271,33 @@ export default function SchoolManagement() {
     }
   };
 
-  const handleClassSubmit: SubmitHandler<ClassFormValues> = async (values) => {
-    try {
-      if (editingClass) {
-        await updateClass(editingClass.id, values);
-        toast({
-          title: "Success",
-          description: "Class updated successfully"
-        });
-      } else {
-        await createClass(values);
-        toast({
-          title: "Success",
-          description: "Class created successfully"
-        });
-      }
-      setIsAddingClass(false);
-      setEditingClass(null);
-      classForm.reset();
-      fetchClasses();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
+  // const handleClassSubmit: SubmitHandler<ClassFormValues> = async (values) => {
+  //   try {
+  //     if (editingClass) {
+  //       await schoolService.update(editingClass.id);
+  //       toast({
+  //         title: "Success",
+  //         description: "Class updated successfully"
+  //       });
+  //     } else {
+  //       await schoolService.create(values);
+  //       toast({
+  //         title: "Success",
+  //         description: "Class created successfully"
+  //       });
+  //     }
+  //     setIsAddingClass(false);
+  //     setEditingClass(null);
+  //     classForm.reset();
+  //     fetchClasses();
+  //   } catch (error: any) {
+  //     toast({
+  //       title: "Error",
+  //       description: error.message,
+  //       variant: "destructive"
+  //     });
+  //   }
+  // };
 
    const handleCategorySubmit: SubmitHandler<CategoryFormValues> = async (values) => {
     try {
@@ -332,7 +329,7 @@ export default function SchoolManagement() {
 
   const handleClassDelete = async (id: number) => {
     try {
-      await deleteClass(id);
+      await classService.delete(id);
       toast({
         title: "Success",
         description: "Class deleted successfully"

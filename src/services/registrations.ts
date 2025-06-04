@@ -4,7 +4,7 @@ import api from "@/lib/axios";
 const API_BASE_URL = "/registrations";
 
 export interface RegistrationData {
-  id?: number;
+  id: number;
   school_id?: number;
   student_id?: number;
   class_id?: number;
@@ -14,7 +14,7 @@ export interface RegistrationData {
   academic_year: string;
   last_name: string;
   category: string;
-  date_of_birth: string | undefined;
+  date_of_birth: string | null;
   class_applying_for: string;
   gender: "Male" | "Female" | "Other";
   email?: string;
@@ -22,6 +22,8 @@ export interface RegistrationData {
   address: string;
   guardian_name: string;
   scores: number;
+  payment_type?: "cash" | "momo" | "credit card";
+  payment_status?: "unpaid" | "partial" | "paid";
   status: "pending" | "approved" | "rejected";
   relationship: string;
   guardian_phone_number: string;
@@ -92,6 +94,14 @@ const registrationService = {
     }
   },
 
+  async updatePartial(id: number, data: RegistrationUpdateInput): Promise<RegistrationData> {
+  try {
+    const response = await api.patch<RegistrationData>(`${API_BASE_URL}/${id}`, data);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.error || "Failed to update registration");
+  }
+},
   async getStats(startDate?: string, endDate?: string): Promise<RegistrationStats> {
     try {
       const registrations = await this.getAll();
@@ -142,5 +152,6 @@ const registrationService = {
     }
   }
 };
+
 
 export default registrationService;

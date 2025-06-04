@@ -18,6 +18,7 @@ import ClassSettings from './components/class-settings';
 import CategorySettings from './components/category-settings';
 import ProfileSettings from './components/profile-settings';
 import SecuritySettings from './components/security-settings';
+import AdminSchoolsPage from '../classes/page';
 
 export default function SystemSettings() {
   const [activeTab, setActiveTab] = useState('schools');
@@ -58,7 +59,6 @@ export default function SystemSettings() {
             Security
           </TabsTrigger>
         </TabsList>
-
         <TabsContent value="schools">
           <SchoolSettings />
         </TabsContent>
@@ -68,7 +68,7 @@ export default function SystemSettings() {
         </TabsContent>
 
         <TabsContent value="classes">
-          <ClassSettings />
+          <AdminSchoolsPage />
         </TabsContent>
 
         <TabsContent value="categories">
