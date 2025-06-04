@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 'use client';
 
 import { 
@@ -15,14 +16,47 @@ import RolesPage from './roles/page';
 import SchoolManagement from './schools/page';
 import FeeManagement from './fees/page';
 import ExamManagement from './exam-management/page';
+import { getAllUsers } from '@/services/users';
+import { useState, useEffect } from 'react';
+import schoolService from '@/services/schools';
 
 export default function AdminDashboard() {
+ const [totalUsers, setTotalUsers] = useState(0);
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activeSchools: 0,
+    feeCategories: 0,
+    systemModules: 0
+  });
+
+useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const [users, schools] = await Promise.all([
+          getAllUsers(),
+          schoolService.getAll()
+        ]);
+
+        setStats({
+          totalUsers: users.length,
+          activeSchools: schools.length,
+          feeCategories: 0, // Placeholder
+          systemModules: 0  // Placeholder
+        });
+      } catch (error) {
+        console.error("Error fetching admin stats", error);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
 
   const adminStats = [
-    { title: 'Total Users', value: '156', icon: Users },
-    { title: 'Active Schools', value: '12', icon: School },
-    { title: 'Fee Categories', value: '8', icon: CreditCard },
-    { title: 'System Modules', value: '15', icon: Settings }
+  { title: 'Total Users', value: stats.totalUsers, icon: Users },
+  { title: 'Active Schools', value: stats.activeSchools, icon: School },
+  { title: 'Fee Categories', value: stats.feeCategories, icon: CreditCard },
+  { title: 'System Modules', value: stats.systemModules, icon: Settings }
   ];
 
   return (

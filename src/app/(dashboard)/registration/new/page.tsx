@@ -23,31 +23,31 @@ import classService, { ClassData } from '@/services/class';
 import { Category, getAllCategories } from '@/services/categories';
 import { academicYear, getAllAcademicYear } from '@/services/academic_year';
 
-
 const NewRegistrationPage = () => {
     const [gender, setGender] = useState<"Male" | "Female" | "Other">('Male');
-    const [registrationData, setRegistrationData] = useState<RegistrationData>({
-        first_name: '',
-        last_name: '',
-        scores: 0,
-        status: 'pending',
-        email: '',
-        middle_name: '',
-        phone_number: '',
-        date_of_birth: '',
-        class_applying_for: '',
-        gender: gender as "Male" | "Female" | "Other",
-        academic_year: '',
-        category: '',
-        address: '',
-        guardian_name: '',
-        relationship: '',
-        guardian_phone_number: '',
-        school_id: 0, // Add a default value or get it from somewhere
-        student_id: 0, // Add a default value or get it from somewhere
-        class_id: 0, // Add a default value or get it from somewhere
-        academic_year_id: 0
-    });
+const [registrationData, setRegistrationData] = useState<Omit<RegistrationData, 'id'>>({
+    first_name: '',
+    last_name: '',
+    scores: 0,
+    status: 'pending',
+    email: '',
+    middle_name: '',
+    phone_number: '',
+    date_of_birth: '',
+    class_applying_for: '',
+    gender: gender as "Male" | "Female" | "Other",
+    academic_year: '',
+    category: '',
+    address: '',
+    guardian_name: '',
+    relationship: '',
+    guardian_phone_number: '',
+    school_id: 0,
+    student_id: 0,
+    class_id: 0,
+    academic_year_id: 0
+});
+
     const [date, setDate] = useState<Date>()
     const [loading, setLoading] = useState(false);
     const [academicYears, setAcademicYears] = useState<academicYear[]>([]); // State for academic years
@@ -138,7 +138,7 @@ async function loadSchools() {
         first_name: '',
         middle_name: '',
         last_name: '',
-        date_of_birth: undefined,
+        date_of_birth: '',
         class_applying_for: '',
         gender: 'Male',
         email: '',
@@ -192,7 +192,7 @@ async function loadSchools() {
                 gender: registrationData.gender as "Male" | "Female" | "Other",
                 email: registrationData.email || '',
                 phone_number: registrationData.phone_number || '',
-                category: registrationData.category || '',
+                category: registrationData.category,
                 address: registrationData.address || '',
                 guardian_name: registrationData.guardian_name || '',
                 relationship: registrationData.relationship || '',
@@ -383,20 +383,22 @@ async function loadSchools() {
                     <Label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Category <span className="text-red-500">*</span>
                     </Label>
-                    <Select
-                        onValueChange={(value) => handleChange('category', value)}
-                        value={registrationData.category}
-                        disabled={loading}
-                    >
+<Select
+  onValueChange={(value) => handleChange('category', parseInt(value))}
+  value={registrationData.category.toString()}
+  disabled={loading}
+>
+
                         <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select Category" />
                         </SelectTrigger>
                         <SelectContent>
-                        {categories.map((name, id) => (
-                         <SelectItem key={id} value={id.toString()}>
-                              {name.name}
-                         </SelectItem>
-                          ))}
+                        {categories.map((category) => (
+  <SelectItem key={category.id} value={category.id.toString()}>
+    {category.name}
+  </SelectItem>
+))}
+
                         </SelectContent>
                     </Select>
                 </div>

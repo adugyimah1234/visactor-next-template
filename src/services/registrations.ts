@@ -4,7 +4,7 @@ import api from "@/lib/axios";
 const API_BASE_URL = "/registrations";
 
 export interface RegistrationData {
-  id: number;
+  id?: number;
   school_id?: number;
   student_id?: number;
   class_id?: number;

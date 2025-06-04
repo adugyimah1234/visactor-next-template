@@ -900,7 +900,6 @@ const handlePrint = (registration: RegistrationData) => {
                                     <th>No.</th>
                                     <th>Date</th>
                                     <th>Name</th>
-                                    <th>Date of Birth</th>
                                     <th>Class</th>
                                     <th>Gender</th>
                                     <th>Scores</th>
@@ -918,13 +917,7 @@ const handlePrint = (registration: RegistrationData) => {
                                             })
                                             : ''}</td>
                                         <td>${registration.first_name} ${registration.middle_name} ${registration.last_name}</td>
-                                        <td>${registration.date_of_birth 
-                                            ? new Date(registration.date_of_birth).toLocaleDateString('en-US', {
-                                                year: 'numeric',
-                                                month: 'short',
-                                                day: '2-digit',
-                                            })
-                                            : ''}</td>
+                                       
                                         <td>${registration.class_applying_for}</td>
                                         <td>${registration.gender}</td>
                                         <td>${registration.scores ?? ''}</td>
@@ -1048,22 +1041,7 @@ const handlePrint = (registration: RegistrationData) => {
                                     <span>Gender</span>
                                 </Button>
                                 </TableHead>
-                                <TableHead>
-                                    <Button
-                                        variant="ghost"
-                                        className="h-8 px-0 font-normal"
-                                    >
-                                        <span>Status</span>
-                                    </Button>
-                                </TableHead>
-                            <TableHead>
-                                <Button
-                                    variant="ghost"
-                                    className="h-8 px-0 font-normal"
-                                >
-                                    <span>Scores</span>
-                                </Button>
-                            </TableHead>
+
                                                         <TableHead>
                                 <Button
                                     variant="ghost"
@@ -1124,16 +1102,7 @@ const handlePrint = (registration: RegistrationData) => {
                                             {registration.gender}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell>
-                                    <Badge variant="secondary">
-                                    {registration.status}
-                                    </Badge>
-                                    </TableCell>
-
-                                    <TableCell>
-                                        {/* Show registration.scores if available, else blank */}
-                                        {registration.scores ?? ''}
-                                    </TableCell>
+                                    
                                     <TableCell>
                                     <Badge variant="secondary">
                                     {registration.payment_status}

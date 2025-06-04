@@ -89,6 +89,18 @@ export default function ShortlistedPage() {
 const [studentToRemove, setStudentToRemove] = useState<Student | null>(null);
 const [showProfile, setShowProfile] = useState(false);
 const { toast } = useToast();
+const getCategoryName = (categoryId: number): string => {
+  switch (categoryId) {
+    case 1:
+      return 'SVC';
+    case 2:
+      return 'MOD';
+      case 3: 
+      return 'CIV';
+    default:
+      return 'Unknown';
+  }
+};
 
 const handleViewProfile = (student: Student) => {
   setSelectedStudent(student);
@@ -269,9 +281,9 @@ const getSchoolName = (schoolId: number): string => {
         <div><strong>Scores:</strong> {selectedStudent.scores}%</div>
         <div><strong>Admission Status:</strong> {selectedStudent.admission_status}</div>
         <div><strong>Status:</strong> {selectedStudent.status}</div>
-        <div><strong>Class ID:</strong> {selectedStudent.class_id}</div>
-        <div><strong>School ID:</strong> {selectedStudent.school_id}</div>
-        <div><strong>Category ID:</strong> {selectedStudent.category_id}</div>
+        <div><strong>Class ID:</strong> {getClassName(selectedStudent.class_id)} ({selectedStudent.class_id})</div>
+        <div><strong>School ID:</strong> {getSchoolName(selectedStudent.school_id)} ({selectedStudent.school_id})</div>
+        <div><strong>Category ID:</strong> {getCategoryName(selectedStudent.category_id)} ({selectedStudent.category_id})</div>
         <div><strong>Registered On:</strong> {selectedStudent.registration_date}</div>
       </div>
     )}

@@ -149,15 +149,15 @@ const handlePromote = async () => {
   const duplicates: string[] = [];
   const errors: string[] = [];
 
-  for (const applicant of updatedApplicants) {
-    const hasPassed = (applicant.scores ?? 0) >= passMark;
-const dob = applicant.date_of_birth 
-  ? format(new Date(applicant.date_of_birth), 'yyyy-MM-dd') 
-  : '';
+for (const applicant of updatedApplicants) {
+  const hasPassed = (applicant.scores ?? 0) >= passMark;
 
+  const dob = applicant.date_of_birth 
+    ? format(new Date(applicant.date_of_birth), 'yyyy-MM-dd') 
+    : '';
 
-    // If passed and has required fields, create student
-    if (hasPassed && applicant.class_id && applicant.school_id) {
+  if (hasPassed) {
+    if (applicant.class_id && applicant.school_id) {
       const studentPayload = {
         first_name: applicant.first_name,
         last_name: applicant.last_name,
@@ -170,15 +170,12 @@ const dob = applicant.date_of_birth
         category_id: Number(applicant.category),
         class_id: applicant.class_id,
         status: 'inactive',
-        id: applicant.id,
         middle_name: applicant.middle_name ?? ''
       };
 
       try {
         await studentService.create(studentPayload);
-
-await registrationService.updatePartial(applicant.id, {status: "approved"});
-
+        await registrationService.updatePartial(applicant.id ?? 0, { status: "approved" });
         createdCount++;
       } catch (err: any) {
         if (err.response?.status === 400) {
@@ -187,16 +184,19 @@ await registrationService.updatePartial(applicant.id, {status: "approved"});
           errors.push(`${applicant.first_name} ${applicant.last_name}`);
         }
       }
-
     } else {
-      // If failed, update status to rejected
-      try {
-        await registrationService.updatePartial(applicant.id, {status: "rejected"});
-      } catch (err) {
-        console.error(`Failed to reject ${applicant.first_name} ${applicant.last_name}`, err);
-      }
+      // skip if missing class/school
+      console.warn(`Skipping ${applicant.first_name} due to missing class/school`);
+    }
+  } else {
+    try {
+      await registrationService.updatePartial(applicant.id ?? 0, { status: "rejected" });
+    } catch (err) {
+      console.error(`Failed to reject ${applicant.first_name} ${applicant.last_name}`, err);
     }
   }
+}
+
 
   // Show messages
   if (createdCount > 0) toast.success(`${createdCount} student(s) promoted successfully.`);

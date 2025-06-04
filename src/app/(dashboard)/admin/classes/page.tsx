@@ -16,18 +16,18 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
 
 import schoolService from "@/services/schools";
 import classService, { ClassData } from "@/services/class";
 import { School } from "@/types/school";
+import { Toaster, toast } from 'sonner';
 
 interface ClassWithSlots extends ClassData {
   slots: number;
 }
 
 export default function AdminSchoolsPage() {
-  const { toast } = useToast();
+
 
   // List of all schools
   const [schools, setSchools] = useState<School[]>([]);
@@ -131,17 +131,9 @@ function addClass() {
         await classService.delete(id);
       }
       setClasses((prev) => prev.filter((cls) => cls.id !== id));
-      toast({
-        title: "Class deleted",
-        description: "Class deleted successfully",
-        variant: "default",
-      });
+      toast.success("Class deleted successfully");
     } catch {
-      toast({
-        title: "Error",
-        description: "Failed to delete class",
-        variant: "destructive",
-      });
+      toast.error("Failed to delete class");
     }
     setLoading(false);
   }
@@ -154,17 +146,9 @@ function addClass() {
       setSchools((prev) => prev.filter((s) => s.id !== id));
       setSelectedSchool(null);
       setClasses([]);
-      toast({
-        title: "School deleted",
-        description: "School deleted successfully",
-        variant: "default",
-      });
+      toast.success("School deleted successfully");
     } catch {
-      toast({
-        title: "Error",
-        description: "Failed to delete school",
-        variant: "destructive",
-      });
+      toast.error("Failed to delete school");
     }
     setLoading(false);
   }
@@ -176,7 +160,11 @@ function addClass() {
     setError(null);
 
     try {
-      if (!selectedSchool.name) throw new Error("School name is required");
+if (!selectedSchool.name.trim()) {
+  toast.error("School name is required.");
+  setSaving(false);
+  return;
+}
 
       // Save or update school
       let savedSchool = selectedSchool;
@@ -186,7 +174,12 @@ function addClass() {
       setSelectedSchool(savedSchool);
       setSchools((prev) => [...prev, savedSchool]);
     } else {
-      await schoolService.update(selectedSchool);
+      await schoolService.update(selectedSchool.id, {
+        name: selectedSchool.name,
+        address: selectedSchool.address,
+        phone_number: selectedSchool.phone_number,
+        email: selectedSchool.email,
+      });
       savedSchool = selectedSchool;
       setSchools((prev) =>
         prev.map((s) => (s.id === savedSchool.id ? savedSchool : s))
@@ -196,7 +189,12 @@ function addClass() {
       // Save or update classes
 const classRequests = classes.map((cls) => {
   if (!cls.name) throw new Error("Class name is required");
-  if (!cls.level) throw new Error("Class level is required");
+  if (cls.level === null || cls.level === undefined || isNaN(cls.level)) {
+  throw new Error("Class level is required");
+}
+  if (cls.slots === null || cls.slots === undefined || isNaN(cls.slots)) {
+    throw new Error("Class slots are required");
+  }
 
   const payload: Omit<ClassData, "id" | "school_name"> = {
     name: cls.name,
@@ -220,38 +218,37 @@ const classRequests = classes.map((cls) => {
 
       await Promise.all(classRequests);
 
-      toast({
-        title: "Success",
-        description: "School and classes saved successfully!",
-        variant: "default",
-      });
+      toast.success("School and classes saved successfully!");
     } catch (error: any) {
       setError(error.message || "Failed to save data.");
-      toast({
-        title: "Error",
-        description: error.message || "Failed to save data. Please try again.",
-        variant: "destructive",
-      });
+      toast.error(error.message || "Failed to save data. Please try again.");
     } finally {
       setSaving(false);
     }
   }
 
   // Add new school (blank form)
-  function addSchool() {
-    setSelectedSchool({
-      id: 0,
-      name: "",
-      address: "",
-      phone_number: "",
-      email: "",
-    });
-    setClasses([]);
-  }
+ function addSchool() {
+  setSelectedSchool({
+    id: 0,
+    name: "",
+    address: "",
+    phone_number: "",
+    email: "",
+    phone: "",
+    website: "",
+    code: "",
+    capacity: 0,
+    status: "active", // or whatever default fits
+  });
+  setClasses([]);
+}
+
 
   return (
     <div className="max-w-7xl mx-auto p-6 flex gap-6">
       {/* Left sidebar: Schools list */}
+      <Toaster position="top-right" richColors />
       <Card className="w-1/3 max-h-[80vh] overflow-auto">
         <CardHeader>
           <CardTitle>Schools</CardTitle>
