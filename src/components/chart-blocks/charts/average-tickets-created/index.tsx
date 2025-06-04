@@ -273,7 +273,7 @@ export default function ProfessionalDashboard() {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-full mx-auto">
           <div className="bg-red-50 border border-red-200 rounded-lg p-6 flex items-center gap-3">
             <AlertCircle className="h-6 w-6 text-red-600" />
             <div>
@@ -287,8 +287,8 @@ export default function ProfessionalDashboard() {
   }
 
   return (
-    <div className="min-h-screen  p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen">
+      <div className="max-w-full mx-auto space-y-4">
         
         {/* Header */}
         <div className="flex items-center justify-between">
