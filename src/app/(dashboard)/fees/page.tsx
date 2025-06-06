@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { type FC } from 'react';
 import { 
   Download, 
   Plus, 
@@ -15,13 +14,12 @@ import {
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { 
   Dialog, 
   DialogContent, 
   DialogDescription, 
-  DialogFooter, 
   DialogHeader, 
   DialogTitle,
   DialogTrigger 
@@ -31,7 +29,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -126,7 +123,7 @@ export default function FeesPage() {
       
       toast({
         title: "Export Successful",
-        description: `The ${activeTab} report has been downloaded.`,
+        description: `The GHC{activeTab} report has been downloaded.`,
       });
     } catch (error) {
       console.error('Error exporting report:', error);

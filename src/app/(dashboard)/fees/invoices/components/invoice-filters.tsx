@@ -117,7 +117,7 @@ export function InvoiceFilters({ onFilterChange, currentFilters }: InvoiceFilter
       {currentFilters.status && (
         <Badge variant="outline" className="ml-2">
           Status: {Array.isArray(currentFilters.status) 
-            ? `${currentFilters.status.length} selected` 
+            ? `GHC{currentFilters.status.length} selected` 
             : currentFilters.status.replace('_', ' ')}
         </Badge>
       )}
@@ -158,7 +158,7 @@ export function InvoiceFilters({ onFilterChange, currentFilters }: InvoiceFilter
                 <Button 
                   variant="outline" 
                   size="sm"
-                  className={`justify-start ${localFilters.status === 'draft' ? 'border-primary' : ''}`}
+                  className={`justify-start GHC{localFilters.status === 'draft' ? 'border-primary' : ''}`}
                   onClick={() => handleStatusFilter('draft')}
                 >
                   <Badge variant="secondary" className="mr-2">Draft</Badge>
@@ -167,7 +167,7 @@ export function InvoiceFilters({ onFilterChange, currentFilters }: InvoiceFilter
                 <Button 
                   variant="outline" 
                   size="sm"
-                  className={`justify-start ${localFilters.status === 'sent' ? 'border-primary' : ''}`}
+                  className={`justify-start GHC{localFilters.status === 'sent' ? 'border-primary' : ''}`}
                   onClick={() => handleStatusFilter('sent')}
                 >
                   <Badge variant="secondary" className="mr-2">Sent</Badge>
@@ -176,7 +176,7 @@ export function InvoiceFilters({ onFilterChange, currentFilters }: InvoiceFilter
                 <Button 
                   variant="outline" 
                   size="sm"
-                  className={`justify-start ${localFilters.status === 'paid' ? 'border-primary' : ''}`}
+                  className={`justify-start GHC{localFilters.status === 'paid' ? 'border-primary' : ''}`}
                   onClick={() => handleStatusFilter('paid')}
                 >
                   <Badge variant="default" className="mr-2">Paid</Badge>
@@ -185,7 +185,7 @@ export function InvoiceFilters({ onFilterChange, currentFilters }: InvoiceFilter
                 <Button 
                   variant="outline" 
                   size="sm"
-                  className={`justify-start ${localFilters.status === 'partially_paid' ? 'border-primary' : ''}`}
+                  className={`justify-start GHC{localFilters.status === 'partially_paid' ? 'border-primary' : ''}`}
                   onClick={() => handleStatusFilter('partially_paid')}
                 >
                   <Badge variant="outline" className="mr-2">Partial</Badge>
@@ -194,7 +194,7 @@ export function InvoiceFilters({ onFilterChange, currentFilters }: InvoiceFilter
                 <Button 
                   variant="outline" 
                   size="sm"
-                  className={`justify-start ${localFilters.status === 'overdue' ? 'border-primary' : ''}`}
+                  className={`justify-start GHC{localFilters.status === 'overdue' ? 'border-primary' : ''}`}
                   onClick={() => handleStatusFilter('overdue')}
                 >
                   <Badge variant="destructive" className="mr-2">Overdue</Badge>
@@ -203,7 +203,7 @@ export function InvoiceFilters({ onFilterChange, currentFilters }: InvoiceFilter
                 <Button 
                   variant="outline" 
                   size="sm"
-                  className={`justify-start ${Array.isArray(localFilters.status) ? 'border-primary' : ''}`}
+                  className={`justify-start GHC{Array.isArray(localFilters.status) ? 'border-primary' : ''}`}
                   onClick={() => handleStatusFilter(['paid', 'partially_paid'])}
                 >
                   <Check className="h-4 w-4 mr-2" />

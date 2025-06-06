@@ -7,6 +7,7 @@ export interface ClassData {
   school_id: number;
   school_name?: string;
   slots: number;
+  capacity: number;
 }
 
 const classService = {

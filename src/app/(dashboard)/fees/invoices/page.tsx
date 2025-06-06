@@ -68,6 +68,8 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import registrationService, { type RegistrationData } from '@/services/registrations';
 import { toast } from 'sonner';
+import { getExams } from '@/services/exam';
+import { Exam } from '@/types/exam';
 
 // Types based on your backend structure
 interface Receipt {
@@ -100,14 +102,16 @@ interface ReceiptFilters {
 }
 
 interface CreateReceiptData {
-  student_id: number;
-  payment_id?: number;
+  student_id?: number | undefined;
+  registration_id?: number | undefined;
+  payment_id?: number | undefined;
   receipt_type: string;
   amount: number;
   date_issued?: string;
   venue?: string;
   exam_date?: string;
-  class_id?: number;
+  class_id?: number | undefined;
+  exam_id?: number | undefined;
 }
 
 export default function ReceiptManagement() {
@@ -154,6 +158,8 @@ const fetchReceipts = useCallback(async () => {
   useEffect(() => {
     fetchReceipts();
   }, [fetchReceipts]);
+
+
 
   // Handle search
   const handleSearch = (e: React.FormEvent) => {
@@ -204,7 +210,7 @@ const fetchReceipts = useCallback(async () => {
           break;
       }
     } catch (error) {
-      console.error(`Error performing action ${actionType}:`, error);
+      console.error(`Error performing action GHC{actionType}:`, error);
       alert('Action failed');
     } finally {
       setProcessingAction(null);
@@ -239,43 +245,73 @@ const fetchReceipts = useCallback(async () => {
     });
   };
 
+const [exams, setExams] = useState<Exam[]>([]);
+useEffect(() => {
+  async function loadExams() {
+    try {
+      const data = await getExams();
+      setExams(data);
+    } catch (err) {
+      console.error("Failed to fetch exams", err);
+    }
+  }
+  loadExams();
+}, []);
   // Create Receipt Form Component
-  const CreateReceiptForm = () => {
-    const [formData, setFormData] = useState<CreateReceiptData>({
-      student_id: 0,
+const CreateReceiptForm = () => {
+  const [formData, setFormData] = useState<CreateReceiptData>({
+  student_id: undefined,
+  registration_id: undefined,
+  payment_id: undefined,
+  receipt_type: '',
+  amount: 0,
+  date_issued: new Date().toISOString().split('T')[0], // Default to today
+  venue: '',
+  exam_id: undefined,
+  class_id: undefined,
+  exam_date: ''
+});
+
+    const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  try {
+    // Clean up the payload before sending
+    const payload = { ...formData };
+    if (!payload.student_id) delete payload.student_id;
+    if (!payload.registration_id) delete payload.registration_id;
+
+    if (!payload.student_id && !payload.registration_id) {
+      alert("Please select a student or registration");
+      return;
+    }
+
+    await createReceipt(payload);
+    
+    setFormData({
+      student_id: undefined,
+      registration_id: undefined,
       receipt_type: '',
       amount: 0
     });
+    setShowCreateDialog(false);
+    fetchReceipts();
 
-    const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      
-      try {
-        // Simulate API call
-                await createReceipt(formData);
-        // Reset form and close dialog
-        setFormData({
-          student_id: 0,
-          receipt_type: '',
-          amount: 0
-        });
-        setShowCreateDialog(false);
-        fetchReceipts();
-        
-        alert('Receipt created successfully!');
-      } catch (error) {
-        alert('Failed to create receipt');
-      }
-    };
+    alert('Receipt created successfully!');
+  } catch (error) {
+    alert('Failed to create receipt');
+  }
+};
+
 
     return (
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
   <label className="block text-sm font-medium mb-1">Student</label>
   <Select
-    value={formData.student_id ? formData.student_id.toString() : ""}
+    value={formData.registration_id ? formData.registration_id.toString() : ""}
     onValueChange={(value) =>
-      setFormData({ ...formData, student_id: parseInt(value) })
+      setFormData({ ...formData, registration_id: parseInt(value) })
     }
   >
     <SelectTrigger>
@@ -283,8 +319,8 @@ const fetchReceipts = useCallback(async () => {
     </SelectTrigger>
     <SelectContent>
       {students.map((student) => (
-        <SelectItem key={student.id} value={student.id.toString()}>
-          {`${student.first_name} ${student.middle_name || ""} ${student.last_name}`}
+        <SelectItem key={student.id} value={student.id.toString() || '0'}>
+          {`GHC{student.first_name} GHC{student.middle_name || ""} GHC{student.last_name}`}
         </SelectItem>
       ))}
     </SelectContent>
@@ -292,6 +328,7 @@ const fetchReceipts = useCallback(async () => {
 </div>
 
         
+
         <div>
           <label className="block text-sm font-medium mb-1">Receipt Type</label>
           <Select value={formData.receipt_type} onValueChange={(value) => setFormData({...formData, receipt_type: value})}>
@@ -306,7 +343,28 @@ const fetchReceipts = useCallback(async () => {
             </SelectContent>
           </Select>
         </div>
-        
+        {formData.receipt_type === 'registration' || formData.receipt_type === 'exam' ? (
+  <div>
+    <label className="block text-sm font-medium mb-1">Exam</label>
+    <Select
+      value={formData.exam_id?.toString() || ""}
+      onValueChange={(value) => setFormData({ ...formData, exam_id: parseInt(value) })}
+    >
+      <SelectTrigger>
+        <SelectValue placeholder="Select exam" />
+      </SelectTrigger>
+      <SelectContent>
+        {/* TODO: Replace with your real list of exams */}
+        {exams.map((exam) => (
+  <SelectItem key={exam.id} value={exam.id.toString()}>
+    {exam.name}
+  </SelectItem>
+))}
+        {/* ...more exams */}
+      </SelectContent>
+    </Select>
+  </div>
+) : null}
         <div>
           <label className="block text-sm font-medium mb-1">Amount</label>
           <Input
@@ -319,14 +377,38 @@ const fetchReceipts = useCallback(async () => {
           />
         </div>
         
-        <div>
-          <label className="block text-sm font-medium mb-1">Venue (Optional)</label>
-          <Input
-            value={formData.venue || ''}
-            onChange={(e) => setFormData({...formData, venue: e.target.value})}
-            placeholder="Enter venue"
-          />
-        </div>
+<div>
+  <label className="block text-sm font-medium mb-1">Exam</label>
+  <Select
+    value={formData.exam_id?.toString() || ""}
+    onValueChange={(value) => {
+      const selectedExam = exams.find(exam => exam.id === parseInt(value));
+      setFormData({
+        ...formData,
+        exam_id: selectedExam?.id,
+        venue: selectedExam?.venue || '',
+        exam_date: selectedExam?.date || ''
+      });
+    }}
+  >
+    <SelectTrigger>
+      <SelectValue placeholder="Select exam" />
+    </SelectTrigger>
+    <SelectContent>
+      {exams.map((exam) => (
+        <SelectItem key={exam.id} value={exam.id.toString()}>
+          {exam.name}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+</div>
+{formData.venue && (
+  <p className="text-sm text-muted-foreground mt-1">
+    Venue: {formData.venue}
+  </p>
+)}
+
         
         <div className="flex justify-end space-x-2 pt-4">
           <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)}>
@@ -342,7 +424,7 @@ const fetchReceipts = useCallback(async () => {
 
   // Receipt Details Component
   const ReceiptDetails = ({ receipt }: { receipt: Receipt }) => {
-    const receiptNumber = `R-${receipt.id.toString().padStart(6, '0')}`;
+    const receiptNumber = `R-GHC{receipt.id.toString().padStart(6, '0')}`;
     
     return (
       <div className="space-y-6">

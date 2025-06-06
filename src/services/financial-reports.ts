@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from 'axios';
 import { format, subDays, subMonths, startOfMonth, endOfMonth, getYear } from 'date-fns';
 import { Fee, FeeType } from '../types/fee';
@@ -5,7 +7,7 @@ import { Invoice, InvoiceStatus } from './invoice';
 import { Payment, PaymentStatus } from './payment-processing';
 
 // Base API URL
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api';
 
 // Period types for reports
 export type ReportPeriod = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom';

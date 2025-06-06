@@ -73,7 +73,7 @@ export default function FinancialRecordsPage() {
               <CardContent>
                 <div className="flex justify-between items-center">
                   <div className="text-2xl font-bold">
-                    ${record.amount.toLocaleString()}
+                    GHC{record.amount.toLocaleString()}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {new Date(record.date).toLocaleDateString()}

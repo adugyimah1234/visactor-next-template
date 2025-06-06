@@ -1,8 +1,9 @@
+/* eslint-disable no-console */
 import axios from 'axios';
 import { Fee } from '../types/fee';
 
 // Base API URL
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api';
 
 // Invoice status types
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled' | 'partially_paid';

@@ -1,3 +1,4 @@
+/* eslint-disable react/jsx-no-undef */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -8,6 +9,7 @@ import { useRouter } from 'next/navigation'; // Import useRouter
 import { EyeIcon, EyeOffIcon, LockIcon, MailIcon, ArrowRightIcon } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth'; // Import your useAuth hook
 import { Loader } from '@/components/ui/loader'; // Import Loader component
+import Image from "next/image";
 
 export default function ProfessionalLogin() {
   const { signIn, loading, error: authError } = useAuth(); // Use signIn and states from the hook
@@ -61,8 +63,10 @@ export default function ProfessionalLogin() {
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <div className="text-center mb-10">
-            <div className="h-12 w-12 rounded-xl bg-indigo-600 flex items-center justify-center mx-auto mb-4">
-              <div className="font-bold text-2xl text-white">DB</div>
+            <div className="h-10 w-16 rounded-xl  flex items-center justify-center mx-auto mb-8">
+              <div className="font-bold  text-white">
+              <Image src="/logo.png" alt="Logo" width={55} height={48} className='w-28 h-20'/>
+              </div>
             </div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Sign in to Dashboard</h1>
             <p className="mt-2 text-gray-600 dark:text-gray-400">Enter your credentials to access your account</p>

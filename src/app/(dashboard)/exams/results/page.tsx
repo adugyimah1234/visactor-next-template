@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable no-console */
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Table,
   TableBody,
@@ -24,6 +24,7 @@ import { type School } from '@/types/school';
 import { format } from 'date-fns';
 import { Toaster, toast } from 'sonner';
 import { getAllRoles, Role } from '@/services/roles';
+import { Class } from '@/types/class';
 
 export default function ResultsPage() {
   const [applicants, setApplicants] = useState<RegistrationData[]>([]);
@@ -35,6 +36,9 @@ export default function ResultsPage() {
   const [classSlots, setClassSlots] = useState<Record<number, number>>({});
   const { token, user } = useAuth();
 const [selectedClassId, setSelectedClassId] = useState<number | ''>('');
+const [selectedAppliedClass, setSelectedAppliedClass] = useState<string>('');
+const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null);
+const [availableClasses, setAvailableClasses] = useState<Class[]>([]);
 
   // Check if user is admin based on role name from roles table
   const isAdmin = userRole.toLowerCase() === 'admin' || userRole.toLowerCase() === 'administrator';
@@ -65,35 +69,74 @@ const [selectedClassId, setSelectedClassId] = useState<number | ''>('');
     fetchInitial();
   }, [token, user?.role_id]);
 
-  const handleSchoolChange = async (index: number, schoolId: number) => {
-    if (typeof schoolId === 'number') {
-      const filtered = await classService.getBySchool(schoolId);
-      setClasses(filtered);
-    } else {
-      setClasses([]);
+const handleSchoolChange = async (index: number, schoolId: number) => {
+  if (typeof schoolId === 'number') {
+    const filtered = await classService.getBySchool(schoolId);
+
+    // Count how many students are already in each class from the students table
+    const slotMap: Record<number, number> = {};
+    for (const cls of filtered) {
+      try {
+        // Get actual count from students table for this class
+        const studentsInClass = await studentService.getById(cls.id);
+        slotMap[cls.id] = studentsInClass.length;
+      } catch (error) {
+        console.error(`Error fetching students for class ${cls.id}:`, error);
+        slotMap[cls.id] = 0;
+      }
     }
-    const updated = [...applicants];
-    updated[index].school_id = schoolId;
-    updated[index].class_id = undefined;
-    setApplicants(updated);
-  };
 
-  const handleClassSelect = (index: number, classId: number) => {
-    const updated = [...applicants];
-    updated[index].class_id = classId;
-    setApplicants(updated);
+    setClasses(filtered);
+    setClassSlots(slotMap);
+  } else {
+    setClasses([]);
+    setClassSlots({});
+  }
 
-    setClassSlots(prev => ({ ...prev, [classId]: (prev[classId] ?? 0) + 1 }));
-  };
+  const updated = [...applicants];
+  updated[index].school_id = schoolId;
+  updated[index].class_id = undefined; // Reset class selection
+  setApplicants(updated);
+};
+
+const handleClassSelect = async (index: number, classId: number) => {
+  const cls = classes.find((c) => c.id === classId);
+  
+  // Get current count from students table
+  let currentStudentCount = 0;
+  try {
+    const studentsInClass = await studentService.getById(classId);
+    currentStudentCount = studentsInClass.length;
+  } catch (error) {
+    console.error(`Error fetching students for class ${classId}:`, error);
+    currentStudentCount = classSlots[classId] || 0;
+  }
+
+  if (cls && cls.slots !== undefined && currentStudentCount >= cls.slots) {
+    toast.warning(`Class "${cls.name}" is full (${currentStudentCount}/${cls.slots} slots).`);
+    return;
+  }
+
+  const updated = [...applicants];
+  const previousClassId = updated[index].class_id;
+
+  // Update the applicant's class
+  updated[index].class_id = classId;
+  setApplicants(updated);
+
+  // Update the slot count display
+  setClassSlots(prev => ({
+    ...prev,
+    [classId]: currentStudentCount,
+  }));
+};
 
 const handleScoreChange = async (index: number, value: string) => {
     const updated = [...applicants];
     updated[index].scores = parseFloat(value);
     setApplicants(updated);
     // Update backend immediately
-
 };
-
 
   const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -157,7 +200,14 @@ for (const applicant of updatedApplicants) {
     : '';
 
   if (hasPassed) {
-    if (applicant.class_id && applicant.school_id) {
+if (applicant.class_id && applicant.school_id) {
+  const selectedClass = classes.find(c => c.id === applicant.class_id);
+  const currentSlotCount = classSlots[applicant.class_id] || 0;
+
+  if (selectedClass && selectedClass.slots !== undefined && currentSlotCount >= selectedClass.slots) {
+    toast.warning(`Class "${selectedClass.name}" is full. Skipping ${applicant.first_name}.`);
+    continue; // Skip if class is full
+  }
       const studentPayload = {
         first_name: applicant.first_name,
         last_name: applicant.last_name,
@@ -172,10 +222,16 @@ for (const applicant of updatedApplicants) {
         status: 'inactive',
         middle_name: applicant.middle_name ?? ''
       };
-
+      
+      setClassSlots(prev => ({
+        ...prev,
+        [applicant.class_id!]: (prev[applicant.class_id!] || 0) + 1,
+      }));
       try {
-        await studentService.create(studentPayload);
-        await registrationService.updatePartial(applicant.id ?? 0, { status: "approved" });
+        await Promise.all ([
+          studentService.create(studentPayload),
+          registrationService.updatePartial(applicant.id ?? 0, { status: "approved" })
+        ]);
         createdCount++;
       } catch (err: any) {
         if (err.response?.status === 400) {
@@ -197,7 +253,6 @@ for (const applicant of updatedApplicants) {
   }
 }
 
-
   // Show messages
   if (createdCount > 0) toast.success(`${createdCount} student(s) promoted successfully.`);
   if (duplicates.length > 0) toast.warning(`Duplicates: ${duplicates.join(', ')}`);
@@ -212,14 +267,82 @@ for (const applicant of updatedApplicants) {
   }
 };
 
+const handleSinglePromote = async (applicant: RegistrationData) => {
+  if (!applicant.class_id || !applicant.school_id) {
+    toast.warning(`Please assign a class and school for ${applicant.first_name} first.`);
+    return;
+  }
+
+  const selectedClass = classes.find((cls) => cls.id === applicant.class_id);
+  const currentCount = applicants.filter(
+    (a) => a.class_id === applicant.class_id && a.status === 'approved'
+  ).length;
+
+  if (selectedClass && selectedClass.slots !== undefined && currentCount >= selectedClass.slots) {
+    toast.error(`Class "${selectedClass.name}" is full (${selectedClass.slots} slots). Cannot promote ${applicant.first_name}.`);
+    return;
+  }
+
+  const hasPassed = (applicant.scores ?? 0) >= passMark;
+
+  if (!hasPassed) {
+    toast.warning(`${applicant.first_name} did not meet the pass mark.`);
+    return;
+  }
+
+  try {
+    const dob = applicant.date_of_birth 
+      ? format(new Date(applicant.date_of_birth), 'yyyy-MM-dd') 
+      : '';
+
+    const studentPayload = {
+      first_name: applicant.first_name,
+      last_name: applicant.last_name,
+      school_id: applicant.school_id,
+      admission_status: 'admitted',
+      dob: dob,
+      gender: applicant.gender,
+      scores: applicant.scores ?? 0,
+      registration_date: format(new Date(applicant.registration_date ?? ''), 'yyyy-MM-dd'),
+      category_id: Number(applicant.category),
+      class_id: applicant.class_id,
+      status: 'inactive',
+      middle_name: applicant.middle_name ?? ''
+    };
+
+    await Promise.all([
+      studentService.create(studentPayload),
+      registrationService.updatePartial(applicant.id ?? 0, { status: "approved" })
+    ]);
+
+    toast.success(`${applicant.first_name} promoted successfully.`);
+
+    // Refresh list
+    const refreshedApplicants = await registrationService.getAll();
+    setApplicants(refreshedApplicants);
+  } catch (err: any) {
+    if (err.response?.status === 400) {
+      toast.warning(`Duplicate entry: ${applicant.first_name} ${applicant.last_name}`);
+    } else {
+      toast.error(`Failed to promote ${applicant.first_name}`);
+      console.error(`Promotion error for ${applicant.first_name}:`, err);
+    }
+  }
+};
 
   // Filter applicants based on index, not a separate variable
- const pendingApplicants = applicants.filter((a) => {
-  const matchesStatus = a.status === "pending";
-  const matchesClass = selectedClassId === '' || a.class_id === selectedClassId;
-  return matchesStatus && matchesClass;
-});
+const pendingApplicants = useMemo(() => {
+  return applicants.filter((a) => {
+    const matchesStatus = a.status === 'pending';
+    const matchesClass = selectedClassId === '' || a.class_id === selectedClassId;
+    const matchesAppliedClass = selectedAppliedClass === '' || a.class_applying_for === selectedAppliedClass;
+    return matchesStatus && matchesClass && matchesAppliedClass;
+  });
+}, [applicants, selectedClassId, selectedAppliedClass]);
 
+const uniqueAppliedClasses = Array.from(
+  new Set(applicants.map((a) => a.class_applying_for).filter(Boolean))
+);
 
   return (
     <div className="p-6 space-y-6">
@@ -253,58 +376,63 @@ for (const applicant of updatedApplicants) {
           </Button>
         )}
       </div>
-<div className="flex items-center gap-4">
-  <label htmlFor="classFilter">Filter by Class:</label>
-  <select
-    id="classFilter"
-    className="border p-1 rounded"
-    value={selectedClassId}
-    onChange={(e) => setSelectedClassId(e.target.value ? parseInt(e.target.value) : '')}
-  >
-    <option value="">All Classes</option>
-    {classes.map((cls) => (
-      <option key={cls.id} value={cls.id}>
-        {cls.name} (Lvl {cls.level})
-      </option>
-    ))}
-  </select>
-</div>
+
+      <div className="flex items-center gap-4">
+        <label htmlFor="appliedClassFilter">Filter by Applied Class:</label>
+        <select
+          id="appliedClassFilter"
+          className="border p-1 rounded"
+          value={selectedAppliedClass}
+          onChange={(e) => setSelectedAppliedClass(e.target.value)}
+        >
+          <option value="">All</option>
+          {uniqueAppliedClasses.map((clsName) => (
+            <option key={clsName} value={clsName}>
+              {clsName}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Name</TableHead>
+            <TableHead>Class Applied For</TableHead>
             <TableHead>Score</TableHead>
             <TableHead>School</TableHead>
             <TableHead>Class</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Action</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {pendingApplicants.map((applicant, idx) => {
+          {pendingApplicants.map((applicant) => {
             // Use the original applicant index for state updates
             const originalIndex = applicants.findIndex(a => a.id === applicant.id);
             const passed = (applicant.scores ?? 0) >= passMark;
-            const availableClasses = classes.filter(c => c.school_id === applicant.school_id);
 
             return (
               <TableRow key={applicant.id}>
-                <TableCell>{applicant.first_name} {applicant.last_name}</TableCell>
+                <TableCell>{applicant.first_name} {applicant.middle_name} {applicant.last_name}</TableCell>
                 <TableCell>
-<Input
-  type="number"
-  value={applicant.scores === undefined || applicant.scores === null ? '' : applicant.scores.toString()}
-  onChange={(e) => {
-    const updated = [...applicants];
-    updated[originalIndex].scores = parseFloat(e.target.value);
-    setApplicants(updated); // update UI instantly
-  }}
-  onBlur={(e) => {
-    handleScoreChange(originalIndex, e.target.value); 
-  }}
-  className="w-20"
-  placeholder="0"
-/>
+                  {applicant.class_applying_for || 'N/A'}
+                </TableCell>
+                <TableCell>
+                  <Input
+                    type="number"
+                    value={applicant.scores === undefined || applicant.scores === null ? '' : applicant.scores.toString()}
+                    onChange={(e) => {
+                      const updated = [...applicants];
+                      updated[originalIndex].scores = parseFloat(e.target.value);
+                      setApplicants(updated); // update UI instantly
+                    }}
+                    onBlur={(e) => {
+                      handleScoreChange(originalIndex, e.target.value); 
+                    }}
+                    className="w-20"
+                    placeholder="0"
+                  />
                 </TableCell>
                 <TableCell>
                   <select
@@ -322,14 +450,15 @@ for (const applicant of updatedApplicants) {
                   <select
                     title="Select Class"
                     aria-label="Select Class"
-                    className="border p-1 rounded"
                     value={applicant.class_id ?? ''}
                     onChange={(e) => handleClassSelect(originalIndex, parseInt(e.target.value))}
-                    disabled={!applicant.school_id}
+                    className="border p-1 rounded w-full"
                   >
-                    <option value="">--Select--</option>
-                    {availableClasses.map(c => (
-                      <option key={c.id} value={c.id}>{c.name} (Lvl {c.level})</option>
+                    <option value="">Select Class</option>
+                    {classes.map((cls) => (
+                      <option key={cls.id} value={cls.id}>
+                        {cls.name} ({classSlots[cls.id] ?? 0}/{cls.slots})
+                      </option>
                     ))}
                   </select>
                 </TableCell>
@@ -338,6 +467,17 @@ for (const applicant of updatedApplicants) {
                     <span className="text-green-600 font-bold">Passed</span>
                   ) : (
                     <span className="text-red-600">Failed</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {applicant.status === 'pending' && (
+                    <Button
+                      onClick={() => handleSinglePromote(applicant)}
+                      size="sm"
+                      className="bg-green-600 text-white"
+                    >
+                      Promote
+                    </Button>
                   )}
                 </TableCell>
               </TableRow>

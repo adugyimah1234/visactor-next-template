@@ -74,11 +74,11 @@ const navigationItems: NavItem[] = [
   {
     name: "Fee Management",
     icon: CreditCard,
-    href: "/dashboard/fees",
+    href: "/fees",
     children: [
-      { name: "Fee Structure", href: "/dashboard/fees?tab=fees", icon: CircleDollarSign },
-      { name: "Process Payment", href: "/dashboard/fees?tab=payments", icon: CreditCard },
-      { name: "Payment History", href: "/dashboard/fees?tab=history", icon: FileText },
+      { name: "Fee Structure", href: "/fees", icon: CircleDollarSign },
+      { name: "Process Payment", href: "/fees", icon: CreditCard },
+      { name: "Payment History", href: "/fees", icon: FileText },
     ],
   },
   {

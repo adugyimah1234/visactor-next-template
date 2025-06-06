@@ -54,7 +54,7 @@ export function InvoiceActions({
       switch (actionType) {
         case 'view':
           // Navigate to details page
-          window.open(`/dashboard/fees/invoices/${invoiceId}`, '_blank');
+          window.open(`/dashboard/fees/invoices/GHC{invoiceId}`, '_blank');
           break;
         
         case 'download':
@@ -91,7 +91,7 @@ export function InvoiceActions({
           break;
       }
     } catch (error) {
-      console.error(`Error performing action ${actionType}:`, error);
+      console.error(`Error performing action GHC{actionType}:`, error);
       toast({
         variant: "destructive",
         title: "Action Failed",

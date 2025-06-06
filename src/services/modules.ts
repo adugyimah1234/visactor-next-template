@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
-import { Module, UserModuleAccess } from '@/types/module';
+import axios, { type AxiosError, type AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import { type Module, UserModuleAccess } from '@/types/module';
 
 /**
  * API Response Types

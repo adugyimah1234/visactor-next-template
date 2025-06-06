@@ -5,9 +5,7 @@ import {
   Users, 
   School, 
   Settings, 
-  CreditCard,
-  Building
-} from 'lucide-react';
+  CreditCard} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UserManagement from './user-management/page';
@@ -21,7 +19,6 @@ import { useState, useEffect } from 'react';
 import schoolService from '@/services/schools';
 
 export default function AdminDashboard() {
- const [totalUsers, setTotalUsers] = useState(0);
   const [stats, setStats] = useState({
     totalUsers: 0,
     activeSchools: 0,

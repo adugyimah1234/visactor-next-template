@@ -76,7 +76,7 @@ export default function PaymentHistoryPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ${payment.amount.toLocaleString()}
+                GHC{payment.amount.toLocaleString()}
               </div>
               <p className="text-xs text-muted-foreground">
                 {format(new Date(payment.date), "MMM dd, yyyy")}

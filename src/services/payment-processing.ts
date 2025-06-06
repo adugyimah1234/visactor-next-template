@@ -1,7 +1,9 @@
+/* eslint-disable import/no-anonymous-default-export */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from 'axios';
 
 // Base API URL
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api';
 
 // Payment method types
 export type PaymentMethodType = 'cash' | 'credit_card' | 'debit_card' | 'bank_transfer' | 'check' | 'online_payment' | 'mobile_payment' | 'other';
