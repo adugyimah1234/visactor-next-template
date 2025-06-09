@@ -205,7 +205,7 @@ async function loadSchools() {
             // Optionally, reset the form or redirect the user
             setRegistrationData(initialRegistrationData);
             setDate(undefined);
-            setSelectedAcademicYearId(null); // Reset the selected academic year
+            // setSelectedAcademicYearId(0); // Reset the selected academic year
             toast.success(`Registration successful!`);
         } catch (error: any) {
             toast.error(error.message || "An error occurred during registration.");

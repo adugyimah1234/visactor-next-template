@@ -1,21 +1,22 @@
+/* eslint-disable react/jsx-no-comment-textnodes */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable no-case-declarations */
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable no-console */
 'use client';
-import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  FileText, 
-  Plus, 
-  Search, 
-  MoreHorizontal, 
-  AlertCircle, 
-  Calendar, 
-  Download, 
-  Mail, 
-  Loader2, 
-  ArrowUpDown, 
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  FileText,
+  Plus,
+  Search,
+  MoreHorizontal,
+  AlertCircle,
+  Calendar,
+  Download,
+  Mail,
+  Loader2,
+  ArrowUpDown,
   Check,
   X,
   Printer,
@@ -23,7 +24,8 @@ import {
   Filter,
   User,
   CreditCard,
-  RefreshCw
+  RefreshCw,
+  ChevronsUpDown
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,14 +33,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -69,13 +71,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import registrationService, { type RegistrationData } from '@/services/registrations';
 import { toast } from 'sonner';
 import { getExams } from '@/services/exam';
-import { Exam } from '@/types/exam';
+import type { Exam } from '@/types/exam'; // Changed to import type
+import { Label } from '@radix-ui/react-label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
+import { ScrollArea } from '@radix-ui/react-scroll-area';
+import registrations from '@/services/registrations';
+import StudentSelect from './components/StudentSelect';
 
 // Types based on your backend structure
 interface Receipt {
   id: number;
   student_id: number;
-  payment_id?: number;
+  payment_id?: number | null;
   receipt_type: 'registration' | 'admission' | 'tuition' | 'exam';
   amount: number;
   issued_by?: number;
@@ -90,6 +99,10 @@ interface Receipt {
   issued_by_name?: string;
   school_name?: string;
   payment_date?: string;
+  payment_type?: string;
+  payment_method?: string;
+  registration_first_name?: string;
+  registration_last_name?: string;
   amount_paid?: number;
 }
 
@@ -102,16 +115,17 @@ interface ReceiptFilters {
 }
 
 interface CreateReceiptData {
-  student_id?: number | undefined;
-  registration_id?: number | undefined;
-  payment_id?: number | undefined;
+  student_id?: number; // Changed from number | string to number only as per createReceipt expected payload
+  registration_id?: number;
+  payment_id?: number;
   receipt_type: string;
   amount: number;
   date_issued?: string;
   venue?: string;
   exam_date?: string;
-  class_id?: number | undefined;
-  exam_id?: number | undefined;
+  class_id?: number;
+  exam_id?: number;
+  payment_type?: string;
 }
 
 export default function ReceiptManagement() {
@@ -170,7 +184,7 @@ const fetchReceipts = useCallback(async () => {
   // Handle receipt actions
   const handleAction = async (actionType: string, receiptId: number) => {
     setProcessingAction(receiptId);
-    
+
     try {
       switch (actionType) {
         case 'view':
@@ -180,7 +194,7 @@ const fetchReceipts = useCallback(async () => {
             setShowReceiptDetails(true);
           }
           break;
-        
+
         case 'print':
   try {
     const html = await getPrintableReceipt(receiptId);
@@ -196,13 +210,13 @@ const fetchReceipts = useCallback(async () => {
     toast("Failed to generate printable receipt.");
   }
   break;
-        
+
         case 'download':
           // Simulate download
           await new Promise(resolve => setTimeout(resolve, 1000));
           alert('Receipt downloaded as PDF!');
           break;
-        
+
         case 'email':
           // Simulate email
           await new Promise(resolve => setTimeout(resolve, 1000));
@@ -230,9 +244,9 @@ const fetchReceipts = useCallback(async () => {
 
   // Format currency
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-GH', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'GHS'
     }).format(amount);
   };
 
@@ -269,8 +283,15 @@ const CreateReceiptForm = () => {
   venue: '',
   exam_id: undefined,
   class_id: undefined,
-  exam_date: ''
+  exam_date: '',
+  payment_type: '',
+
 });
+const [openStudentCombobox, setOpenStudentCombobox] = useState(false);
+const [studentSearchQuery, setStudentSearchQuery] = useState('');
+const [loadingStudents, setLoadingStudents] = useState(false);
+
+
 
     const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -278,68 +299,120 @@ const CreateReceiptForm = () => {
   try {
     // Clean up the payload before sending
     const payload = { ...formData };
-    if (!payload.student_id) delete payload.student_id;
-    if (!payload.registration_id) delete payload.registration_id;
+    if (payload.student_id === undefined) delete payload.student_id; // Ensure it's not present if undefined
+    if (payload.registration_id === undefined) delete payload.registration_id; // Ensure it's not present if undefined
 
-    if (!payload.student_id && !payload.registration_id) {
+    if (payload.student_id === undefined && payload.registration_id === undefined) {
       alert("Please select a student or registration");
       return;
     }
 
     await createReceipt(payload);
-    
+
     setFormData({
-      student_id: undefined,
-      registration_id: undefined,
+      student_id: formData.student_id,
+      registration_id: formData.registration_id,
       receipt_type: '',
-      amount: 0
+      amount: 0,
+      date_issued: new Date().toISOString().split('T')[0],
+      venue: '',
+      payment_type: formData.payment_type,
+      exam_id: undefined,
+      class_id: undefined,
+      exam_date: ''
     });
     setShowCreateDialog(false);
     fetchReceipts();
 
-    alert('Receipt created successfully!');
+    toast.success('Receipt created successfully!');
+
   } catch (error) {
-    alert('Failed to create receipt');
+    toast.error('Failed to create receipt');
   }
 };
 
+const filteredStudents = useMemo(() => {
+  return studentSearchQuery.trim()
+    ? students.filter((s) =>
+        `${s.first_name} ${s.middle_name ?? ''} ${s.last_name}`
+          .toLowerCase()
+          .includes(studentSearchQuery.toLowerCase())
+      )
+    : students;
+}, [students, studentSearchQuery]);
+
+const handleStudentSelect = (id: number) => {
+  setFormData((prev) => ({ ...prev, registration_id: id }));
+  setOpenStudentCombobox(false);
+};
 
     return (
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-  <label className="block text-sm font-medium mb-1">Student</label>
+<div className="grid grid-cols-4 items-center gap-4 relative">
+  <Label htmlFor="student-search" className="text-right">
+    Student
+  </Label>
+
+  <div className="col-span-3 relative">
+    <Input
+      id="student-search"
+      type="text"
+      placeholder="Type to search student..."
+      value={studentSearchQuery}
+      onChange={(e) => setStudentSearchQuery(e.target.value)}
+      onFocus={() => setOpenStudentCombobox(true)}
+    />
+
+    {/* Dropdown list */}
+    {openStudentCombobox && filteredStudents.length > 0 && (
+      <ul className="absolute z-50  border rounded shadow-md w-full mt-1 max-h-48 overflow-y-auto">
+        {filteredStudents.map((student) => (
+          <li
+            key={student.id}
+            className="px-4 py-2   cursor-pointer"
+            onClick={() => {
+              handleStudentSelect(student.id ?? 0);
+              setStudentSearchQuery(
+                `${student.first_name} ${student.middle_name ?? ""} ${student.last_name}`
+              );
+              setOpenStudentCombobox(false);
+            }}
+          >
+            {student.first_name} {student.middle_name ?? ""} {student.last_name}
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+</div>
+
+<div>
+  <label className="block text-sm font-medium mb-1">Payment Type</label>
   <Select
-    value={formData.registration_id ? formData.registration_id.toString() : ""}
-    onValueChange={(value) =>
-      setFormData({ ...formData, registration_id: parseInt(value) })
-    }
+    value={formData.payment_type}
+    onValueChange={(value) => setFormData({ ...formData, payment_type: value })}
   >
     <SelectTrigger>
-      <SelectValue placeholder="Select student" />
+      <SelectValue placeholder="Select payment type" />
     </SelectTrigger>
     <SelectContent>
-      {students.map((student) => (
-        <SelectItem key={student.id} value={student.id.toString() || '0'}>
-          {`GHC{student.first_name} GHC{student.middle_name || ""} GHC{student.last_name}`}
-        </SelectItem>
-      ))}
+      <SelectItem value="cash">Cash</SelectItem>
+      <SelectItem value="momo">Mobile Money</SelectItem>
+      <SelectItem value="bank">Bank Transfer</SelectItem>
     </SelectContent>
   </Select>
 </div>
 
-        
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Receipt Type</label>
-          <Select value={formData.receipt_type} onValueChange={(value) => setFormData({...formData, receipt_type: value})}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select receipt type" />
-            </SelectTrigger>
-            <SelectContent>
+<div>
+  <label className="block text-sm font-medium mb-1">Receipt Type</label>
+  <Select value={formData.receipt_type} onValueChange={(value) => setFormData({...formData, receipt_type: value})}>
+    <SelectTrigger>
+      <SelectValue placeholder="Select receipt type" />
+    </SelectTrigger>
+    <SelectContent>
               <SelectItem value="tuition">Tuition</SelectItem>
               <SelectItem value="registration">Registration</SelectItem>
-              <SelectItem value="admission">Admission</SelectItem>
-              <SelectItem value="exam">Exam</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -376,40 +449,14 @@ const CreateReceiptForm = () => {
             required
           />
         </div>
-        
-<div>
-  <label className="block text-sm font-medium mb-1">Exam</label>
-  <Select
-    value={formData.exam_id?.toString() || ""}
-    onValueChange={(value) => {
-      const selectedExam = exams.find(exam => exam.id === parseInt(value));
-      setFormData({
-        ...formData,
-        exam_id: selectedExam?.id,
-        venue: selectedExam?.venue || '',
-        exam_date: selectedExam?.date || ''
-      });
-    }}
-  >
-    <SelectTrigger>
-      <SelectValue placeholder="Select exam" />
-    </SelectTrigger>
-    <SelectContent>
-      {exams.map((exam) => (
-        <SelectItem key={exam.id} value={exam.id.toString()}>
-          {exam.name}
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-</div>
+
 {formData.venue && (
   <p className="text-sm text-muted-foreground mt-1">
     Venue: {formData.venue}
   </p>
 )}
 
-        
+
         <div className="flex justify-end space-x-2 pt-4">
           <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)}>
             Cancel
@@ -424,8 +471,8 @@ const CreateReceiptForm = () => {
 
   // Receipt Details Component
   const ReceiptDetails = ({ receipt }: { receipt: Receipt }) => {
-    const receiptNumber = `R-GHC{receipt.id.toString().padStart(6, '0')}`;
-    
+    const receiptNumber = `R-${receipt.id.toString().padStart(6, '0')}`;
+
     return (
       <div className="space-y-6">
         <div className="text-center border-b pb-4">
@@ -433,12 +480,25 @@ const CreateReceiptForm = () => {
           <p className="text-sm text-muted-foreground">Official Receipt</p>
           <p className="font-mono text-lg">{receiptNumber}</p>
         </div>
-        
+
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className="text-sm font-medium">Student Name</p>
             <p className="text-sm text-muted-foreground">{receipt.student_name}</p>
           </div>
+          {receipt.payment_type && (
+  <div>
+    <p className="text-sm font-medium">Payment Type</p>
+    <p className="text-sm text-muted-foreground">{receipt.payment_type}</p>
+  </div>
+)}
+
+{receipt.payment_method && (
+  <div>
+    <p className="text-sm font-medium">Payment Method</p>
+    <p className="text-sm text-muted-foreground">{receipt.payment_method}</p>
+  </div>
+)}
           <div>
             <p className="text-sm font-medium">Class</p>
             <p className="text-sm text-muted-foreground">{receipt.class_name}</p>
@@ -462,7 +522,7 @@ const CreateReceiptForm = () => {
             <p className="text-sm text-muted-foreground">{receipt.issued_by_name}</p>
           </div>
         </div>
-        
+
         {receipt.payment_date && (
           <div className="border-t pt-4">
             <p className="text-sm font-medium">Payment Information</p>
@@ -478,7 +538,7 @@ const CreateReceiptForm = () => {
             </div>
           </div>
         )}
-        
+
         <div className="flex justify-end space-x-2 pt-4">
           <Button variant="outline" onClick={() => handleAction('print', receipt.id)}>
             <Printer className="mr-2 h-4 w-4" />
@@ -519,7 +579,7 @@ const CreateReceiptForm = () => {
           <h1 className="text-2xl font-bold">Receipt Management</h1>
           <p className="text-muted-foreground">Manage and track payment receipts</p>
         </div>
-        
+
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
             <Button>
@@ -560,7 +620,7 @@ const CreateReceiptForm = () => {
                 Search
               </Button>
             </form>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
@@ -621,72 +681,91 @@ const CreateReceiptForm = () => {
                   <TableHead>Amount</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead>Payment Type</TableHead>
+                  <TableHead className="w-24">
+                    <div className="flex items-center justify-between">
+                      Actions
+                      <Button variant="ghost" size="sm" onClick={() => fetchReceipts()}>
+                        <RefreshCw className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {receipts.map((receipt) => (
-                  <TableRow key={receipt.id}>
-                    <TableCell className="font-mono">
-                      R-{receipt.id.toString().padStart(6, '0')}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{receipt.student_name}</p>
-                        <p className="text-sm text-muted-foreground">{receipt.class_name}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge {...getReceiptTypeBadge(receipt.receipt_type)}>
-                        {getReceiptTypeBadge(receipt.receipt_type).label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {formatCurrency(receipt.amount)}
-                    </TableCell>
-                    <TableCell>{formatDate(receipt.date_issued)}</TableCell>
-                    <TableCell>
-                      <Badge variant={receipt.payment_id ? 'default' : 'secondary'}>
-                        {receipt.payment_id ? 'Paid' : 'Issued'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            {processingAction === receipt.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <MoreHorizontal className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          <DropdownMenuItem onClick={() => handleAction('view', receipt.id)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleAction('print', receipt.id)}>
-                            <Printer className="mr-2 h-4 w-4" />
-                            Print
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleAction('download', receipt.id)}>
-                            <Download className="mr-2 h-4 w-4" />
-                            Download PDF
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleAction('email', receipt.id)}>
-                            <Mail className="mr-2 h-4 w-4" />
-                            Email Receipt
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
+  {receipts.map((receipt) => {
+    const student = students.find(
+      (r) => r.student_id === receipt.student_id
+    );
+
+    return (
+      <TableRow key={receipt.id}>
+        <TableCell className="font-mono">
+          R-{receipt.id.toString().padStart(6, '0')}
+        </TableCell>
+        <TableCell>
+          <div>
+            <p className="font-medium">{receipt.student_name}</p>
+            <p className="text-sm text-muted-foreground">{receipt.class_name}</p>
+          </div>
+        </TableCell>
+        <TableCell>
+          <Badge {...getReceiptTypeBadge(receipt.receipt_type)}>
+            {getReceiptTypeBadge(receipt.receipt_type).label}
+          </Badge>
+        </TableCell>
+        <TableCell className="font-medium">
+          {formatCurrency(receipt.amount)}
+        </TableCell>
+        <TableCell>{formatDate(receipt.date_issued)}</TableCell>
+        <TableCell>
+          <Badge variant={receipt.payment_method === 'Paid' ? 'default' : 'secondary'}>
+            {receipt.payment_method || 'Paid'}
+          </Badge>
+        </TableCell>
+        <TableCell>
+          <Badge variant={receipt.payment_type ? 'default' : 'secondary'}>
+            {receipt.payment_type || 'cash'}
+          </Badge>
+</TableCell>
+        <TableCell>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm">
+                {processingAction === receipt.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <MoreHorizontal className="h-4 w-4" />
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleAction('view', receipt.id)}>
+                <Eye className="mr-2 h-4 w-4" />
+                View Details
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAction('print', receipt.id)}>
+                <Printer className="mr-2 h-4 w-4" />
+                Print
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAction('download', receipt.id)}>
+                <Download className="mr-2 h-4 w-4" />
+                Download PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAction('email', receipt.id)}>
+                <Mail className="mr-2 h-4 w-4" />
+                Email Receipt
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </TableCell>
+      </TableRow>
+    );
+  })}
+</TableBody>
             </Table>
           )}
-          
+
           {!loading && receipts.length === 0 && (
             <div className="text-center py-8">
               <FileText className="mx-auto h-12 w-12 text-muted-foreground" />

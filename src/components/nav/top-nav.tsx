@@ -24,7 +24,7 @@ export default function TopNav({ title }: { title: string }) {
   // Add these states for loading
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
-  const [isLoadingSettings, setIsLoadingSettings] = useState(false);
+  const [isLoadingSettings] = useState(false);
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
 
   useEffect(() => {
@@ -228,7 +228,7 @@ export default function TopNav({ title }: { title: string }) {
               </button>
             </div>
             <nav className="space-y-1">
-              <a href="/dashboard" className="block px-3 py-2 rounded-md bg-primary/10 text-primary">Dashboard</a>
+              <a href="/dashboard" className="block px-3 py-2 rounded-md bg-primary/10 text-primary">3 GARRISON EDUCATION CENTRE</a>
               {/* Add mobile links for other dashboard pages */}
             </nav>
           </div>

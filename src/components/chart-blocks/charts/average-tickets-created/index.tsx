@@ -6,7 +6,6 @@ import {
   TrendingUp, 
   TrendingDown, 
   UserCheck, 
-  UserX, 
   Clock,
   Calendar,
   Activity,
@@ -17,8 +16,6 @@ import {
   AreaChart, 
   Bar,
   BarChart,
-  Line,
-  LineChart,
   CartesianGrid, 
   XAxis, 
   YAxis, 
@@ -76,7 +73,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
   };
 
   return (
-    <div className=" rounded-xl border  p-6 shadow-sm hover:shadow-md transition-shadow">
+    <div className=" rounded-xl border p-6 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
@@ -469,7 +466,7 @@ export default function ProfessionalDashboard() {
                         />
                         <span className="text-sm text-gray-600">{item.name}</span>
                       </div>
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className="text-sm font-medium text-gray-600">
                         {item.value} ({Math.round((item.value / (stats?.totalRegistered ?? 1)) * 100)}%)
                       </span>
                     </div>

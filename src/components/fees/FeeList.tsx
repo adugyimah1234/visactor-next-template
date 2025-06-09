@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+/* eslint-disable react-hooks/exhaustive-deps */
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -30,7 +32,6 @@ import {
   MoreHorizontal, 
   Pencil, 
   Trash2, 
-  Plus, 
   FilterX, 
   FileDown,
   Loader2
@@ -46,7 +47,6 @@ import {
 
 import { 
   getAllFees, 
-  updateFee, 
   deleteFee 
 } from '@/services/fee';
 import { getAllCategories } from '@/services/categories';
@@ -55,7 +55,6 @@ import { getAllAcademicYear } from '@/services/academic_year';
 
 import { 
   type FeeWithDetails, 
-  type FeeType,
   type FeeQueryParams
 } from '@/types/fee';
 import { type Category } from '@/types/exam';

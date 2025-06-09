@@ -71,6 +71,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from 'sonner';
+import schoolService from '@/services/schools';
 
 // ...other imports...
 interface Applicant {
@@ -112,13 +113,18 @@ const ApplicantManagement = () => {
     const [relationship, setRelationship] = useState('');
     const [guardianPhoneNumber, setGuardianPhoneNumber] = useState('');
     const { user } = useAuth(); // Get the current user
-
+    
+    const [selectedClass, setSelectedClass] = useState<string>('All');
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [selectedRegistration, setSelectedRegistration] = useState<RegistrationData | null>(null);
-
+const [selectedSchool, setSelectedSchool] = useState<string>('All');
     const [pageSize, setPageSize] = useState(10);
     const [totalPages, setTotalPages] = useState(0);
+const [selectedSchoolId, setSelectedSchoolId] = useState<string>(''); // store ID, not name
+const [selectedClass, setSelectedClass] = useState<string>(''); // class string like 'JHS 1'
+
+const [schools, setSchools] = useState<{ id: number, name: string }[]>([]);
 
         // Add this helper function inside your component or in a separate utils file
     const getPaginationRange = (current: number, total: number) => {
@@ -159,6 +165,38 @@ const ApplicantManagement = () => {
     useEffect(() => {
         fetchRegistrations();
     }, [fetchRegistrations]);
+
+useEffect(() => {
+  const fetchSchools = async () => {
+    try {
+      const response = await schoolService.getAll(); // adjust based on your actual API
+      setSchools(response);
+    } catch (error) {
+      console.error('Error fetching schools:', error);
+    }
+  };
+  fetchSchools();
+}, []);
+
+const getSchoolName = (id: number | undefined | null): string => {
+  const school = schools.find(s => s.id === id);
+  return school ? school.name : 'Unknown';
+};
+
+const classOptionsForSelectedSchool = registrations
+  .filter(r => r.school_id?.toString() === selectedSchoolId)
+  .map(r => r.class_applying_for)
+  .filter(Boolean);
+
+const uniqueClasses = Array.from(new Set(classOptionsForSelectedSchool));
+
+const schoolOptions = Array.from(new Set(
+  registrations.map(r => getSchoolName(r.school_id)).filter(Boolean)
+));
+
+const classOptions = Array.from(
+  new Set(registrations.map(r => r.class_applying_for).filter(Boolean))
+);
 
 
     const handleDeleteRegistration = async (id: number) => {
@@ -263,13 +301,20 @@ const confirmEdit = async () => {
     }, [applicants, sortConfig]);
 
     // --- Filtering ---
-    const filteredRegistrations = registrations.filter(registration =>
-    (registration.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        registration.last_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        registration.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        registration.phone_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        registration.class_applying_for?.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
+const filteredRegistrations = registrations.filter((r) => {
+  const matchesSearch = (
+    r.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    r.last_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    r.class_applying_for?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const matchesClass = selectedClass === 'All' || r.class_applying_for === selectedClass;
+  const matchesSchool = selectedSchool === 'All' || getSchoolName(r.school_id) === selectedSchool;
+
+  return matchesSearch && matchesClass && matchesSchool;
+});
+
+
 
     // --- Pagination ---
     const indexOfLastItem = currentPage * itemsPerPage;
@@ -957,26 +1002,70 @@ const handlePrint = (registration: RegistrationData) => {
                         className="w-full md:w-64"
                     />
                 </div>
-                <div className="flex items-center gap-y-2">
-                    <Button
-                        onClick={() => router.push('/registration/new')}
-                        className="bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-2"
-                        disabled={loading}
-                    >
-                        <Plus className="w-4 h-4" />
-                        Add Registration
-                    </Button>
-                    {loading && <Loader className="ml-2" />}
-                </div>
-                <div className="flex items-center gap-y-2">
-                    <Button
-                        onClick={handlePrintTable}
-                        className="bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-2"
-                    >
-                        <Printer className="w-4 h-4" />
-                        Print Table
-                    </Button>
-                </div>
+                <Select value={selectedClass} onValueChange={setSelectedClass}>
+  <SelectTrigger className="w-48">
+    <SelectValue placeholder="Filter by Class" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="All">All Classes</SelectItem>
+    {classOptions.map((cls, i) => (
+      <SelectItem key={i} value={cls}>{cls}</SelectItem>
+    ))}
+  </SelectContent>
+</Select>
+<Select value={selectedSchoolId} onValueChange={setSelectedSchoolId}>
+    <SelectTrigger className="w-48">
+      <SelectValue placeholder="Select School" />
+    </SelectTrigger>
+    <SelectContent>
+      {schools.map((school) => (
+        <SelectItem key={school.id} value={school.id.toString()}>
+          {school.name}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+<Select
+    value={selectedClass}
+    onValueChange={setSelectedClass}
+    disabled={!selectedSchoolId}
+  >
+    <SelectTrigger className="w-48">
+      <SelectValue placeholder="Select Class" />
+    </SelectTrigger>
+    <SelectContent>
+      {uniqueClasses.map((cls, i) => (
+        <SelectItem key={i} value={cls}>{cls}</SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+<Button
+    onClick={handlePrintSelectedClass}
+    disabled={!selectedSchoolId || !selectedClass}
+    className="bg-blue-600 text-white hover:bg-blue-700"
+  >
+    Print by Class
+  </Button>
+  <div className="flex items-center gap-y-2">
+  <Button
+  onClick={handlePrintTable}
+  className="bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-2"
+  >
+  <Printer className="w-4 h-4" />
+  Print Table
+  </Button>
+  </div>
+  <div className="flex items-center gap-y-2">
+      <Button
+          onClick={() => router.push('/registration/new')}
+          className="bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-2"
+          disabled={loading}
+      >
+          <Plus className="w-4 h-4" />
+          Add Registration
+      </Button>
+      {loading && <Loader className="ml-2" />}
+  </div>
             </div>
 
             {/* Table */}

@@ -1,15 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { 
   Clipboard,
-  GraduationCap,
   Users,
   Calendar,
   CheckCircle2,
-  XCircle,
   Clock,
-  Search,
   Filter,
   Download
 } from 'lucide-react';

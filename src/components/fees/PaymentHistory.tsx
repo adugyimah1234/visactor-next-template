@@ -8,7 +8,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from '@/components/ui/card';
 import {
   Table,
@@ -32,7 +31,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -43,12 +41,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { format, subDays } from 'date-fns';
@@ -64,7 +56,6 @@ import {
   Calendar,
   Receipt,
   Eye,
-  Download,
   RotateCcw,
   RefreshCcw,
   ChevronLeft,
@@ -81,7 +72,7 @@ import {
   type PaymentWithDetails,
   type PaymentFilterParams
 } from '@/services/payment-processing';
-import { getReceipt, getPrintableReceipt } from '@/services/receipt';
+import { getPrintableReceipt } from '@/services/receipt';
 import { getStudents } from '@/services/students';
 
 // Student type

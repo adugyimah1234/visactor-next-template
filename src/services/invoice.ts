@@ -1,6 +1,7 @@
+/* eslint-disable import/no-anonymous-default-export */
 /* eslint-disable no-console */
 import axios from 'axios';
-import { Fee } from '../types/fee';
+import { type Fee } from '../types/fee';
 
 // Base API URL
 const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api';
@@ -335,6 +336,25 @@ export const downloadInvoicePdf = async (id: number): Promise<void> => {
 };
 
 /**
+ * Trigger bulk tuition invoice generation
+ * @returns Response message
+ */
+export const generateTuitionInvoices = async (): Promise<{ message: string }> => {
+  try {
+    const response = await axios.post<{ message: string }>(
+      `${API_URL}/invoices/generate-tuition`
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.error || 'Failed to generate tuition invoices');
+    }
+    throw error;
+  }
+};
+
+
+/**
  * Get invoices summary - counts by status
  * @param schoolId Optional school ID
  * @returns Invoice summary statistics
@@ -393,6 +413,7 @@ export default {
   sendInvoiceByEmail,
   getInvoicePdfUrl,
   downloadInvoicePdf,
-  getInvoicesSummary
+  getInvoicesSummary,
+  generateTuitionInvoices
 };
 

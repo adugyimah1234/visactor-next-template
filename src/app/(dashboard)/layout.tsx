@@ -9,7 +9,7 @@ export default function DashboardLayout({
 }) {
   return (<>
       <DashboardProvider>
-<TopNav title="Dashboard" />
+<TopNav title="3 GARRISON EDUCATION CENTRE" />
     <div className="flex h-screen"> {/* Ensure a flex container for sidebar and main */}
       <SideNav />
         

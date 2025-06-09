@@ -37,8 +37,6 @@ export default function ResultsPage() {
   const { token, user } = useAuth();
 const [selectedClassId, setSelectedClassId] = useState<number | ''>('');
 const [selectedAppliedClass, setSelectedAppliedClass] = useState<string>('');
-const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null);
-const [availableClasses, setAvailableClasses] = useState<Class[]>([]);
 
   // Check if user is admin based on role name from roles table
   const isAdmin = userRole.toLowerCase() === 'admin' || userRole.toLowerCase() === 'administrator';
@@ -268,6 +266,18 @@ if (applicant.class_id && applicant.school_id) {
 };
 
 const handleSinglePromote = async (applicant: RegistrationData) => {
+  const hasPassed = (applicant.scores ?? 0) >= passMark;
+
+  // ❌ If failed, reject and stop here (no need to check class or school)
+  if (!hasPassed) {
+    await registrationService.updatePartial(applicant.id ?? 0, { status: "rejected" });
+    toast.warning(`${applicant.first_name} did not meet the pass mark and has been rejected.`);
+    const refreshedApplicants = await registrationService.getAll();
+    setApplicants(refreshedApplicants);
+    return;
+  }
+
+  // ✅ Passed, now ensure class and school are set
   if (!applicant.class_id || !applicant.school_id) {
     toast.warning(`Please assign a class and school for ${applicant.first_name} first.`);
     return;
@@ -280,13 +290,6 @@ const handleSinglePromote = async (applicant: RegistrationData) => {
 
   if (selectedClass && selectedClass.slots !== undefined && currentCount >= selectedClass.slots) {
     toast.error(`Class "${selectedClass.name}" is full (${selectedClass.slots} slots). Cannot promote ${applicant.first_name}.`);
-    return;
-  }
-
-  const hasPassed = (applicant.scores ?? 0) >= passMark;
-
-  if (!hasPassed) {
-    toast.warning(`${applicant.first_name} did not meet the pass mark.`);
     return;
   }
 
@@ -317,7 +320,6 @@ const handleSinglePromote = async (applicant: RegistrationData) => {
 
     toast.success(`${applicant.first_name} promoted successfully.`);
 
-    // Refresh list
     const refreshedApplicants = await registrationService.getAll();
     setApplicants(refreshedApplicants);
   } catch (err: any) {
@@ -329,6 +331,7 @@ const handleSinglePromote = async (applicant: RegistrationData) => {
     }
   }
 };
+
 
   // Filter applicants based on index, not a separate variable
 const pendingApplicants = useMemo(() => {

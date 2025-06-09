@@ -6,15 +6,12 @@ import {
   Calendar, 
   Users, 
   Tag, 
-  Settings,
   UserCog,
   KeyRound
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SchoolSettings from './components/school-settings';
 import AcademicYearSettings from './components/academic-year-settings';
-import ClassSettings from './components/class-settings';
 import CategorySettings from './components/category-settings';
 import ProfileSettings from './components/profile-settings';
 import SecuritySettings from './components/security-settings';

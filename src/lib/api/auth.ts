@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, type NextResponse } from 'next/server';
 import { AuthorizationError } from './errors';
 import { errorResponse } from './response';
 
@@ -48,6 +48,7 @@ export function requireAuth() {
       
       // Add the user to the request context
       return { user };
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       return errorResponse('Authentication failed', 401);
     }

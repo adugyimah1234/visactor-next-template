@@ -1,4 +1,5 @@
-import { ApiError, ErrorCode, HttpStatus } from './types';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { type ApiError, ErrorCode, HttpStatus } from './types';
 
 /**
  * Base API error class

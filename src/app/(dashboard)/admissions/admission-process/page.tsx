@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable no-console */
 'use client';
 
@@ -22,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Search, Filter } from 'lucide-react';
-import { School, Student, getQualifiedStudents, getSchools, assignSchool } from '@/services/admissions';
+import { type School, type Student, getQualifiedStudents, getSchools, assignSchool } from '@/services/admissions';
 
 export default function AdmissionProcess() {
   const [students, setStudents] = useState<Student[]>([]);

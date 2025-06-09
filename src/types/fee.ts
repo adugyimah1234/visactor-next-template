@@ -21,6 +21,8 @@ export interface FeeWithDetails extends Fee {
 
   status: string; // e.g., 'active', 'inactive'
   category_name?: string;
+  academic_year_id?: number; // Added for academic year context
+  class_id?: number;
   class_name?: string;
   school_name?: string;
 }
@@ -90,6 +92,7 @@ export interface CreateFeePayload {
 export interface UpdateFeePayload {
   category_id?: number;
   class_id?: number;
+  academic_year_id?: number; // Added for academic year context
   fee_type?: FeeType;
   amount?: number;
   description?: string;

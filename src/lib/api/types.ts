@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Standard API response interface
  * All API endpoints should return responses that follow this structure

@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable no-console */
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -31,7 +33,7 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select';
-import { Pencil, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 // Services
 import { updateFee } from '@/services/fee';

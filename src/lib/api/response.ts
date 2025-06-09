@@ -1,5 +1,7 @@
+/* eslint-disable no-console */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
-import { ApiError, ApiMeta, ApiResponse, HttpStatus } from './types';
+import { type ApiError, type ApiMeta, type ApiResponse, HttpStatus } from './types';
 import { ApiException, normalizeError } from './errors';
 
 /**

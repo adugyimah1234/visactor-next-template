@@ -1,3 +1,6 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable no-console */
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -41,7 +44,7 @@ import classService, { type ClassData } from '@/services/class';
 import { getAllAcademicYear, type academicYear } from '@/services/academic_year';
 
 // Types
-import { type FeeType, type CreateFeePayload } from '@/types/fee';
+import { type CreateFeePayload } from '@/types/fee';
 import { type Category } from '@/types/exam';
 
 // Form schema with validation

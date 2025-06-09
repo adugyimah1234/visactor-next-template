@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/consistent-type-imports */
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
-import { User, getAllUsers, updateUser, createUser } from '@/services/users';
+import { User, getAllUsers, updateUser, createUser, deleteUser } from '@/services/users';
 import {
   Table,
   TableBody,
@@ -33,16 +35,19 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Filter, MoreVertical } from 'lucide-react';
+import { Plus, Search, MoreVertical } from 'lucide-react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { useToast } from '@/hooks/use-toast';
-
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 const userFormSchema = z.object({
-  username: z.string()
-    .min(3, "Username must be at least 3 characters"),
   full_name: z.string()
     .min(2, "Full name must be at least 2 characters"),
   email: z.string()
@@ -62,7 +67,10 @@ export default function UserManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [roles, setRoles] = useState<Role[]>([]);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingUserId, setEditingUserId] = useState<number | null>(null);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [confirmDeleteUserId, setConfirmDeleteUserId] = useState<number | null>(null);
   const { toast } = useToast();
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
@@ -147,11 +155,42 @@ export default function UserManagement() {
     }
   };
 
+  const handleEdit = (user: User) => {
+  setEditingUser(user);
+  form.reset({
+    full_name: user.full_name,
+    email: user.email,
+    password: "", // Optional: ask user to reset password manually
+    role_id: user.role_id,
+    school_id: user.school_id,
+  });
+};
+
+  const handleDelete = async (userId: number) => {
+  try {
+    setIsLoading(true);
+    await deleteUser(userId);
+    await fetchUsers();
+    toast({
+      title: "User deleted",
+      description: "User has been removed from the system",
+    });
+  } catch (error: any) {
+    toast({
+      title: "Error",
+      description: error.message || "Failed to delete user",
+      variant: "destructive",
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
   const onSubmit = async (values: UserFormValues) => {
     try {
       setIsLoading(true);
       await createUser({
-        username: values.username,
         full_name: values.full_name,
         email: values.email,
         password: values.password,
@@ -186,6 +225,7 @@ export default function UserManagement() {
       user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase())
     )
+
     .filter(user => {
       if (roleFilter === 'all') return true;
       return user.role_id === roleFilter;
@@ -207,7 +247,7 @@ export default function UserManagement() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-                       <Select 
+             <Select 
               value={String(roleFilter)} 
               onValueChange={(value) => {
                 setRoleFilter(value === 'all' ? value : Number(value));
@@ -256,23 +296,7 @@ export default function UserManagement() {
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="username"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Username</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="johndoe" 
-                            {...field} 
-                            value={field.value || ""} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+
                   <FormField
                     control={form.control}
                     name="email"
@@ -344,7 +368,7 @@ export default function UserManagement() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           )}
-          
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -379,11 +403,169 @@ export default function UserManagement() {
                     </Badge>
                   </TableCell>
                   <TableCell>{new Date(user.created_at!).toLocaleDateString()}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+<TableCell className="text-right">
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <Button variant="ghost" size="icon">
+        <MoreVertical className="h-4 w-4" />
+      </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent align="end">
+      <DropdownMenuItem onClick={() => handleEdit(user)}>
+        Edit
+      </DropdownMenuItem>
+<DropdownMenuItem
+  onClick={() => setConfirmDeleteUserId(user.id)}
+  className="text-red-600"
+>
+  Delete
+</DropdownMenuItem>
+
+    </DropdownMenuContent>
+  </DropdownMenu>
+</TableCell>
+<Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Edit User</DialogTitle>
+      <DialogDescription>Update the user's details</DialogDescription>
+    </DialogHeader>
+
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit(async (values) => {
+          if (!editingUser) return;
+
+          try {
+            setIsLoading(true);
+            await updateUser(editingUser.id, values);
+            toast({
+              title: "Updated",
+              description: "User info updated successfully",
+            });
+            setEditingUser(null);
+            await fetchUsers();
+          } catch (err: any) {
+            toast({
+              title: "Error",
+              description: "Failed to update user",
+              variant: "destructive",
+            });
+          } finally {
+            setIsLoading(false);
+          }
+        })}
+        className="space-y-4"
+      >
+        <FormField
+          control={form.control}
+          name="full_name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Full Name</FormLabel>
+              <FormControl>
+                <Input placeholder="John Doe" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input type="email" placeholder="john@example.com" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Password</FormLabel>
+              <FormControl>
+                <Input type="password" placeholder="••••••••" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="role_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Role</FormLabel>
+              <Select
+                value={field.value?.toString()}
+                onValueChange={(value) => field.onChange(Number(value))}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {roles.map((role) => (
+                    <SelectItem key={role.id} value={String(role.id)}>
+                      {role.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setEditingUser(null)}>
+            Cancel
+          </Button>
+          <Button type="submit">Update User</Button>
+        </DialogFooter>
+      </form>
+    </Form>
+  </DialogContent>
+</Dialog>
+
+
+<Dialog open={!!confirmDeleteUserId} onOpenChange={() => setConfirmDeleteUserId(null)}>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Confirm Deletion</DialogTitle>
+      <DialogDescription>
+        Are you sure you want to permanently delete this user? This action cannot be undone.
+      </DialogDescription>
+    </DialogHeader>
+    <DialogFooter>
+      <Button variant="outline" onClick={() => setConfirmDeleteUserId(null)}>
+        Cancel
+      </Button>
+      <Button
+        variant="destructive"
+        onClick={() => {
+          if (confirmDeleteUserId) {
+            handleDelete(confirmDeleteUserId);
+            setConfirmDeleteUserId(null);
+          }
+        }}
+      >
+        Delete
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
                 </TableRow>
               ))}
               {filteredUsers.length === 0 && (

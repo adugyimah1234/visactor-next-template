@@ -174,34 +174,7 @@ export default function ProfessionalLogin() {
           <div className="mt-8">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300 dark:border-gray-700"></div>
               </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-                  Or continue with
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-3 gap-3">
-              {['Google', 'Microsoft', 'Apple'].map((provider) => (
-                <button
-                  key={provider}
-                  type="button"
-                  disabled={socialLoading === provider}
-                  onClick={() => {
-                    setSocialLoading(provider);
-                    // Your social login logic here
-                  }}
-                  className="w-full flex items-center justify-center py-2.5 border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {socialLoading === provider ? (
-                    <Loader className="h-5 w-5" />
-                  ) : (
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{provider}</span>
-                  )}
-                </button>
-              ))}
             </div>
           </div>
 

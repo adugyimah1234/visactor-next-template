@@ -1,10 +1,11 @@
+/* eslint-disable import/no-anonymous-default-export */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from 'axios';
-import { format, subDays, subMonths, startOfMonth, endOfMonth, getYear } from 'date-fns';
-import { Fee, FeeType } from '../types/fee';
-import { Invoice, InvoiceStatus } from './invoice';
-import { Payment, PaymentStatus } from './payment-processing';
+import { format, subDays, subMonths, startOfMonth, getYear } from 'date-fns';
+import { type FeeType } from '../types/fee';
+import { type InvoiceStatus } from './invoice';
 
 // Base API URL
 const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api';

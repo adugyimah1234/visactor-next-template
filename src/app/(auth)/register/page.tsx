@@ -1,4 +1,6 @@
 /* eslint-disable no-console */
+'use client';
+import React from 'react';
 import { useState } from 'react';
 import { Eye, EyeOff, Lock, Mail, User, Check, ArrowRight } from 'lucide-react';
 

@@ -8,7 +8,7 @@ import { useState } from "react";
 
 export default function Navigation() {
   const pathname = usePathname();
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
 
   return (
     <nav className="flex flex-grow flex-col gap-y-1 p-2">

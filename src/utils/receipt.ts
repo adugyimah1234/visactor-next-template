@@ -1,4 +1,7 @@
-import { ReceiptWithDetails } from '../types/fee';
+/* eslint-disable import/no-anonymous-default-export */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable no-console */
+import { type ReceiptWithDetails } from '../types/fee';
 
 /**
  * Open a printable receipt in a new window

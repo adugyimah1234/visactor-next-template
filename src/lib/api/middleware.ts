@@ -1,9 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable no-console */
+import { type NextRequest, NextResponse } from 'next/server';
+import { type z } from 'zod';
 import crypto from 'crypto';
 import { ValidationError } from './errors';
 import { errorResponse, withErrorHandling } from './response';
-import { ApiResponse } from './types';
 
 // Helper function to get client IP from request headers
 function getClientIp(req: NextRequest): string {
@@ -177,7 +179,6 @@ export function csrfProtection() {
     
     // Check for CSRF token in headers
     const csrfToken = req.headers.get('X-CSRF-Token');
-    const sessionToken = req.cookies.get('session_token')?.value;
     
     // In a real implementation, you would verify the CSRF token against the session
     // For demonstration purposes, we'll just check if a token exists
@@ -206,7 +207,6 @@ export function rateLimit(options: {
     windowMs = 60 * 1000, // 1 minute by default
     maxRequests = 60, // 60 requests per minute by default
     keyGenerator = (req) => getClientIp(req), // Default to IP-based rate limiting
-    skipFailedRequests = false,
     handler,
     includeHeaders = true
   } = options;
@@ -300,13 +300,11 @@ export function logRequest(options: {
 } = {}) {
   const { 
     logLevel = 'info',
-    includeHeaders = false,
-    includeTiming = true 
-  } = options;
+    includeHeaders = false  } = options;
   
   return async function loggerMiddleware(
     req: NextRequest,
-    context: any = {}
+    _context: any = {}
   ): Promise<{ requestId: string, requestStartTime: number }> {
     const start = Date.now();
     const method = req.method;

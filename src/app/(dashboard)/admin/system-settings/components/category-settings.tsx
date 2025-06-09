@@ -35,7 +35,7 @@ interface Category {
 }
 
 export default function CategorySettings() {
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories] = useState<Category[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   return (

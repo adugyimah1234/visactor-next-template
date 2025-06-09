@@ -15,15 +15,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, CheckCircle2, Info, RefreshCw } from "lucide-react";
+import { AlertCircle, Info, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getAllUsers } from '@/services/users';
 import { getUserModuleAccess, updateModuleAccess, getAllModules } from '@/services/modules';
 import { useToast } from '@/hooks/use-toast';
-import { Module } from '@/types/module';
-import { User } from '@/types/user';
+import { type Module } from '@/types/module';
+import { type User } from '@/types/user';
 
 // Type for pending updates to show loading state per checkbox
 interface PendingUpdate {
@@ -55,6 +55,7 @@ export default function ModuleAccess() {
   useEffect(() => {
     fetchUsers();
     fetchModules();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load user module access when user is selected
@@ -65,6 +66,7 @@ export default function ModuleAccess() {
       // Clear module access if no user is selected
       setModuleAccess({});
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedUser]);
 
   /**

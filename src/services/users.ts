@@ -24,7 +24,6 @@ export interface UpdateUserPayload {
 }
 
 export interface CreateUserDTO {
-  username: string;
   full_name: string;
   email: string;
   password: string;
@@ -68,6 +67,18 @@ export const getAllUsers = async (): Promise<User[]> => {
     }
     console.error("Error fetching users:", error);
     throw new Error(error.response?.data?.error || "Failed to fetch users");
+  }
+};
+
+export const deleteUser = async (userId: number): Promise<void> => {
+  try {
+    await api.delete(`/users/${userId}`);
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      throw new Error('Authentication required');
+    }
+    console.error("Error deleting user:", error);
+    throw new Error(error.response?.data?.error || "Failed to delete user");
   }
 };
 

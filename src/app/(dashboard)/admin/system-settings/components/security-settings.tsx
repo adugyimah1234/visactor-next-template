@@ -7,9 +7,8 @@ import * as z from "zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import { Loader2, Shield } from 'lucide-react';
 import { toast } from "sonner";
 
@@ -35,13 +34,14 @@ export default function SecuritySettings() {
     },
   });
 
-  async function onSubmit(data: z.infer<typeof passwordFormSchema>) {
+  async function onSubmit(_data: z.infer<typeof passwordFormSchema>) {
     try {
       setIsUpdating(true);
       // API call to change password would go here
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
       toast.success("Password changed successfully");
       form.reset();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       toast.error("Failed to change password");
     } finally {
@@ -124,7 +124,7 @@ export default function SecuritySettings() {
             <div className="space-y-1">
               <p className="font-medium">Two-factor authentication</p>
               <p className="text-sm text-muted-foreground">
-                Secure your account with 2FA. When enabled, you'll be required to enter a code from your authenticator app.
+                Secure your account with 2FA. When enabled, you&apos;ll be required to enter a code from your authenticator app.
               </p>
             </div>
             <Switch

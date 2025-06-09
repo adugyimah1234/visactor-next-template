@@ -8,7 +8,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
 import {
   Card,
   CardContent,
@@ -54,7 +53,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Edit, Trash2, Tag } from 'lucide-react';
+import { Plus, Edit, Trash2 } from 'lucide-react';
 import { 
   Category,
   getAllCategories,

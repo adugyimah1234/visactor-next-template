@@ -170,7 +170,7 @@ export function InlineLoader({
 
   return (
     <div
-      className={`relative ${sizeClass} ${className}`}
+      className={`relative ${sizeClass} ${className} flex items-center justify-center`}
       role="status"
       aria-label="Loading"
     >
@@ -192,7 +192,7 @@ export function LoaderOverlay({
 }: Pick<LoaderProps, "text" | "variant" | "color">) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
-      <div className="rounded-lg bg-white p-8 shadow-xl dark:bg-gray-800">
+      <div className="rounded-lg text-center bg-white p-8 shadow-xl dark:bg-gray-800">
         <Loader
           size="lg"
           variant={variant}

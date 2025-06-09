@@ -76,9 +76,9 @@ const navigationItems: NavItem[] = [
     icon: CreditCard,
     href: "/fees",
     children: [
-      { name: "Fee Structure", href: "/fees", icon: CircleDollarSign },
-      { name: "Process Payment", href: "/fees", icon: CreditCard },
-      { name: "Payment History", href: "/fees", icon: FileText },
+      { name: "Fee Structure", href: "/fees/invoices", icon: CircleDollarSign },
+      { name: "Process Payment", href: "/fees/payment-history", icon: CreditCard },
+      { name: "Payment History", href: "/fees/records", icon: FileText },
     ],
   },
   {
@@ -141,7 +141,7 @@ export default function SideNav() {
 
       try {
         const roles = await getAllRoles();
-        const userRole = roles.find((role) => role.id === user.role_id);
+        const userRole = { ...roles.find(role => Number(role.id) === user.role_id) };
         const roleName = userRole?.name?.toLowerCase() || "";
         const allowedItems = filterNavItemsByRole(roleName, navigationItems);
         setFilteredNavItems(allowedItems);
@@ -228,7 +228,7 @@ export default function SideNav() {
             <span className="sr-only">Logo</span>
             </span>
           </div>
-          {isOpen && <span className="ml-3 text-xl font-bold text-gray-900 dark:text-white">Dashboard</span>}
+          {isOpen && <span className="ml-3 text-xl font-bold text-gray-900 dark:text-white">USER ID: 3GEC00{user?.id}</span>}
         </div>
       </div>
 

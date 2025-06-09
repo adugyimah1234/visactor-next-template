@@ -1,5 +1,3 @@
-import { User } from './user';
-import { School } from './school';
 
 // Student profile types
 export interface StudentProfile {
