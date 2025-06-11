@@ -6,11 +6,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader } from "@/components/ui/loader";
-import { 
-    ChevronLeft, 
-    ChevronRight, 
-    ChevronFirst, 
-    ChevronLast 
+import {
+    ChevronLeft,
+    ChevronRight,
+    ChevronFirst,
+    ChevronLast
 } from 'lucide-react';
 import {
     Table,
@@ -113,33 +113,31 @@ const ApplicantManagement = () => {
     const [relationship, setRelationship] = useState('');
     const [guardianPhoneNumber, setGuardianPhoneNumber] = useState('');
     const { user } = useAuth(); // Get the current user
-    
+
     const [selectedClass, setSelectedClass] = useState<string>('All');
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [selectedRegistration, setSelectedRegistration] = useState<RegistrationData | null>(null);
-const [selectedSchool, setSelectedSchool] = useState<string>('All');
+    const [selectedSchool, setSelectedSchool] = useState<string>('All');
     const [pageSize, setPageSize] = useState(10);
     const [totalPages, setTotalPages] = useState(0);
-const [selectedSchoolId, setSelectedSchoolId] = useState<string>(''); // store ID, not name
-const [selectedClass, setSelectedClass] = useState<string>(''); // class string like 'JHS 1'
+    const [selectedSchoolId, setSelectedSchoolId] = useState<string>(''); // store ID, not name
+    const [schools, setSchools] = useState<{ id: number, name: string }[]>([]);
 
-const [schools, setSchools] = useState<{ id: number, name: string }[]>([]);
-
-        // Add this helper function inside your component or in a separate utils file
+    // Add this helper function inside your component or in a separate utils file
     const getPaginationRange = (current: number, total: number) => {
         if (total <= 7) {
             return Array.from({ length: total }, (_, i) => i + 1);
         }
-    
+
         if (current <= 3) {
             return [1, 2, 3, 4, '...', total];
         }
-    
+
         if (current >= total - 2) {
             return [1, '...', total - 3, total - 2, total - 1, total];
         }
-    
+
         return [
             1,
             '...',
@@ -159,44 +157,44 @@ const [schools, setSchools] = useState<{ id: number, name: string }[]>([]);
             console.error(error);
         }
     }, []);
-    
-// results in '2022-06-23'
+
+    // results in '2022-06-23'
 
     useEffect(() => {
         fetchRegistrations();
     }, [fetchRegistrations]);
 
-useEffect(() => {
-  const fetchSchools = async () => {
-    try {
-      const response = await schoolService.getAll(); // adjust based on your actual API
-      setSchools(response);
-    } catch (error) {
-      console.error('Error fetching schools:', error);
-    }
-  };
-  fetchSchools();
-}, []);
+    useEffect(() => {
+        const fetchSchools = async () => {
+            try {
+                const response = await schoolService.getAll(); // adjust based on your actual API
+                setSchools(response);
+            } catch (error) {
+                console.error('Error fetching schools:', error);
+            }
+        };
+        fetchSchools();
+    }, []);
 
-const getSchoolName = (id: number | undefined | null): string => {
-  const school = schools.find(s => s.id === id);
-  return school ? school.name : 'Unknown';
-};
+    const getSchoolName = (id: number | undefined | null): string => {
+        const school = schools.find(s => s.id === id);
+        return school ? school.name : 'Unknown';
+    };
 
-const classOptionsForSelectedSchool = registrations
-  .filter(r => r.school_id?.toString() === selectedSchoolId)
-  .map(r => r.class_applying_for)
-  .filter(Boolean);
+    const classOptionsForSelectedSchool = registrations
+        .filter(r => r.school_id?.toString() === selectedSchoolId)
+        .map(r => r.class_applying_for)
+        .filter(Boolean);
 
-const uniqueClasses = Array.from(new Set(classOptionsForSelectedSchool));
+    const uniqueClasses = Array.from(new Set(classOptionsForSelectedSchool));
 
-const schoolOptions = Array.from(new Set(
-  registrations.map(r => getSchoolName(r.school_id)).filter(Boolean)
-));
+    const schoolOptions = Array.from(new Set(
+        registrations.map(r => getSchoolName(r.school_id)).filter(Boolean)
+    ));
 
-const classOptions = Array.from(
-  new Set(registrations.map(r => r.class_applying_for).filter(Boolean))
-);
+    const classOptions = Array.from(
+        new Set(registrations.map(r => r.class_applying_for).filter(Boolean))
+    );
 
 
     const handleDeleteRegistration = async (id: number) => {
@@ -241,46 +239,46 @@ const classOptions = Array.from(
         setSelectedRegistration(null);
     };
 
-const confirmEdit = async () => {
-    if (selectedRegistration?.id) {
-        try {
-            const formattedDOB = new Date(selectedRegistration.date_of_birth || '')
-                .toISOString()
-                .split('T')[0]; // => 'YYYY-MM-DD'
+    const confirmEdit = async () => {
+        if (selectedRegistration?.id) {
+            try {
+                const formattedDOB = new Date(selectedRegistration.date_of_birth || '')
+                    .toISOString()
+                    .split('T')[0]; // => 'YYYY-MM-DD'
 
-            await handleUpdateRegistration(selectedRegistration.id, {
-                ...selectedRegistration,
-                date_of_birth: formattedDOB, // ✅ use formatted date here
-                school_id: selectedRegistration.school_id,
-                student_id: selectedRegistration.student_id,
-                class_id: selectedRegistration.class_id,
-                academic_year_id: selectedRegistration.academic_year_id,
-                first_name: selectedRegistration.first_name,
-                last_name: selectedRegistration.last_name,
-                academic_year: selectedRegistration.academic_year ?? '',
-                class_applying_for: selectedRegistration.class_applying_for,
-                gender: selectedRegistration.gender,
-                phone_number: selectedRegistration.phone_number,
-                address: selectedRegistration.address,
-                guardian_name: selectedRegistration.guardian_name,
-                relationship: selectedRegistration.relationship,
-                guardian_phone_number: selectedRegistration.guardian_phone_number,
-                category: selectedRegistration.category ?? '',
-                scores: selectedRegistration.scores ?? 0,
-                status: selectedRegistration.status ?? 'Pending'
-            });
+                await handleUpdateRegistration(selectedRegistration.id, {
+                    ...selectedRegistration,
+                    date_of_birth: formattedDOB, // ✅ use formatted date here
+                    school_id: selectedRegistration.school_id,
+                    student_id: selectedRegistration.student_id,
+                    class_id: selectedRegistration.class_id,
+                    academic_year_id: selectedRegistration.academic_year_id,
+                    first_name: selectedRegistration.first_name,
+                    last_name: selectedRegistration.last_name,
+                    academic_year: selectedRegistration.academic_year ?? '',
+                    class_applying_for: selectedRegistration.class_applying_for,
+                    gender: selectedRegistration.gender,
+                    phone_number: selectedRegistration.phone_number,
+                    address: selectedRegistration.address,
+                    guardian_name: selectedRegistration.guardian_name,
+                    relationship: selectedRegistration.relationship,
+                    guardian_phone_number: selectedRegistration.guardian_phone_number,
+                    category: selectedRegistration.category ?? '',
+                    scores: selectedRegistration.scores ?? 0,
+                    status: selectedRegistration.status ?? 'Pending'
+                });
 
-            toast.success("Registration updated successfully");
-            fetchRegistrations();
-        } catch (error) {
-            toast.error("Failed to update registration");
-            console.error(error);
+                toast.success("Registration updated successfully");
+                fetchRegistrations();
+            } catch (error) {
+                toast.error("Failed to update registration");
+                console.error(error);
+            }
         }
-    }
 
-    setIsEditDialogOpen(false);
-    setSelectedRegistration(null);
-};
+        setIsEditDialogOpen(false);
+        setSelectedRegistration(null);
+    };
 
 
     // --- Sorting ---
@@ -301,20 +299,18 @@ const confirmEdit = async () => {
     }, [applicants, sortConfig]);
 
     // --- Filtering ---
-const filteredRegistrations = registrations.filter((r) => {
-  const matchesSearch = (
-    r.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    r.last_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    r.class_applying_for?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    const filteredRegistrations = registrations.filter((r) => {
+        const matchesSearch = (
+            r.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            r.last_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            r.class_applying_for?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
 
-  const matchesClass = selectedClass === 'All' || r.class_applying_for === selectedClass;
-  const matchesSchool = selectedSchool === 'All' || getSchoolName(r.school_id) === selectedSchool;
+        const matchesClass = selectedClass === 'All' || r.class_applying_for === selectedClass;
+        const matchesSchool = selectedSchool === 'All' || getSchoolName(r.school_id) === selectedSchool;
 
-  return matchesSearch && matchesClass && matchesSchool;
-});
-
-
+        return matchesSearch && matchesClass && matchesSchool;
+    });
 
     // --- Pagination ---
     const indexOfLastItem = currentPage * itemsPerPage;
@@ -369,10 +365,10 @@ const filteredRegistrations = registrations.filter((r) => {
         URL.revokeObjectURL(url);
     };
 
-const handlePrint = (registration: RegistrationData) => {
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-        printWindow.document.write(`
+    const handlePrint = (registration: RegistrationData) => {
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(`
             <html>
                 <head>
                     <title>Official School Registration Receipt</title>
@@ -744,12 +740,12 @@ const handlePrint = (registration: RegistrationData) => {
                             <h2>OFFICIAL REGISTRATION RECEIPT</h2>
                             <div class="receipt-meta">
                                 <span>Receipt No: <span class="receipt-number">#${registration.id || 'REG-' + Date.now()}</span></span>
-                                <span>Date: ${new Date().toLocaleDateString('en-US', { 
-                                    weekday: 'long', 
-                                    year: 'numeric', 
-                                    month: 'long', 
-                                    day: 'numeric' 
-                                })}</span>
+                                <span>Date: ${new Date().toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            })}</span>
                             </div>
                         </div>
                         
@@ -877,12 +873,12 @@ const handlePrint = (registration: RegistrationData) => {
                 </body>
             </html>
         `);
-        printWindow.document.close();
-        printWindow.print();
-    }
-};
+            printWindow.document.close();
+            printWindow.print();
+        }
+    };
 
-        const handlePrintTable = () => {
+    const handlePrintTable = () => {
         const printWindow = window.open('', '_blank');
         if (printWindow) {
             printWindow.document.write(`
@@ -954,13 +950,13 @@ const handlePrint = (registration: RegistrationData) => {
                                 ${filteredRegistrations.map((registration, idx) => `
                                     <tr>
                                         <td>${idx + 1}</td>
-                                        <td>${registration.registration_date 
-                                            ? new Date(registration.registration_date).toLocaleDateString('en-US', {
-                                                year: 'numeric',
-                                                month: 'short',
-                                                day: '2-digit',
-                                            })
-                                            : ''}</td>
+                                        <td>${registration.registration_date
+                    ? new Date(registration.registration_date).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: '2-digit',
+                    })
+                    : ''}</td>
                                         <td>${registration.first_name} ${registration.middle_name} ${registration.last_name}</td>
                                        
                                         <td>${registration.class_applying_for}</td>
@@ -984,121 +980,91 @@ const handlePrint = (registration: RegistrationData) => {
 
     // --- UI ---
     return (
-        <div className="p-4 md:p-8">
-            <h1 className="text-2xl md:text-4xl font-bold text-gray-800 dark:text-gray-200 mb-4 md:mb-6 flex items-center gap-2">
-                <Users className="w-6 h-6 md:w-8 md:h-8" />
+        <div className= "p-4 md:p-8" >
+        <h1 className="text-2xl md:text-4xl font-bold text-gray-800 dark:text-gray-200 mb-4 md:mb-6 flex items-center gap-2" >
+            <Users className="w-6 h-6 md:w-8 md:h-8" />
                 Applicant Management
-            </h1>
+                    </h1>
 
-            {/* Search and Add Button */}
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
-                <div className="flex items-center gap-2 w-full md:w-auto">
-                    <Search className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                    <Input
+    {/* Search and Add Button */ }
+    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6" >
+        <div className="flex items-center gap-2 w-full md:w-auto" >
+            <Search className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                <Input
                         type="text"
-                        placeholder="Search applicants..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full md:w-64"
-                    />
-                </div>
-                <Select value={selectedClass} onValueChange={setSelectedClass}>
-  <SelectTrigger className="w-48">
-    <SelectValue placeholder="Filter by Class" />
-  </SelectTrigger>
-  <SelectContent>
-    <SelectItem value="All">All Classes</SelectItem>
-    {classOptions.map((cls, i) => (
-      <SelectItem key={i} value={cls}>{cls}</SelectItem>
-    ))}
-  </SelectContent>
-</Select>
-<Select value={selectedSchoolId} onValueChange={setSelectedSchoolId}>
-    <SelectTrigger className="w-48">
-      <SelectValue placeholder="Select School" />
-    </SelectTrigger>
-    <SelectContent>
-      {schools.map((school) => (
-        <SelectItem key={school.id} value={school.id.toString()}>
-          {school.name}
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-<Select
-    value={selectedClass}
-    onValueChange={setSelectedClass}
-    disabled={!selectedSchoolId}
-  >
-    <SelectTrigger className="w-48">
-      <SelectValue placeholder="Select Class" />
-    </SelectTrigger>
-    <SelectContent>
-      {uniqueClasses.map((cls, i) => (
-        <SelectItem key={i} value={cls}>{cls}</SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-<Button
-    onClick={handlePrintSelectedClass}
-    disabled={!selectedSchoolId || !selectedClass}
-    className="bg-blue-600 text-white hover:bg-blue-700"
-  >
-    Print by Class
-  </Button>
-  <div className="flex items-center gap-y-2">
-  <Button
-  onClick={handlePrintTable}
-  className="bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-2"
-  >
-  <Printer className="w-4 h-4" />
-  Print Table
-  </Button>
-  </div>
-  <div className="flex items-center gap-y-2">
-      <Button
-          onClick={() => router.push('/registration/new')}
-          className="bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-2"
-          disabled={loading}
-      >
-          <Plus className="w-4 h-4" />
-          Add Registration
-      </Button>
-      {loading && <Loader className="ml-2" />}
-  </div>
-            </div>
+    placeholder = "Search applicants..."
+    value = { searchQuery }
+    onChange = {(e) => setSearchQuery(e.target.value)}
+className = "w-full md:w-64"
+    />
+    </div>
+    < Select value = { selectedClass } onValueChange = { setSelectedClass } >
+        <SelectTrigger className="w-48" >
+            <SelectValue placeholder="Filter by Class" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="All" > All Classes </SelectItem>
+{
+    classOptions.map((cls, i) => (
+        <SelectItem key= { i } value = { cls } > { cls } </SelectItem>
+    ))
+}
+</SelectContent>
+    </Select>
 
-            {/* Table */}
-            <div className="rounded-md border">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-[50px]">No.</TableHead>
-                            <TableHead>
-                                <Button
+    < div className = "flex items-center gap-y-2" >
+        <Button
+  onClick={ handlePrintTable }
+className = "bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-2"
+    >
+    <Printer className="w-4 h-4" />
+        Print Class List
+            </Button>
+            </div>
+            < div className = "flex items-center gap-y-2" >
+                <Button
+          onClick={ () => router.push('/registration/new') }
+className = "bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-2"
+disabled = { loading }
+    >
+    <Plus className="w-4 h-4" />
+        Add Registration
+            </Button>
+{ loading && <Loader className="ml-2" />}
+</div>
+    </div>
+
+{/* Table */ }
+<div className="rounded-md border" >
+    <Table>
+    <TableHeader>
+    <TableRow>
+    <TableHead className="w-[50px]" > No.</TableHead>
+        < TableHead >
+        <Button
                                     variant="ghost"
-                                    className="h-8 px-0 font-normal"
-                                >
-                                    <span>Date</span>
-                                </Button>
-                            </TableHead>
-                            <TableHead className="w-[100px]">
-                                <Button
+className = "h-8 px-0 font-normal"
+    >
+    <span>Date </span>
+    </Button>
+    </TableHead>
+    < TableHead className = "w-[100px]" >
+        <Button
                                     variant="ghost"
-                                    className="h-8 px-0 font-normal"
-                                >
-                                    <span>First Name</span>
-                                </Button>
-                            </TableHead>
-                            <TableHead>
-                                <Button
+className = "h-8 px-0 font-normal"
+    >
+    <span>First Name </span>
+        </Button>
+        </TableHead>
+        < TableHead >
+        <Button
                                     variant="ghost"
-                                    className="h-8 px-0 font-normal"
-                                >
-                                    <span>Last Name</span>
-                                </Button>
-                            </TableHead>
-                            {/* <TableHead>
+className = "h-8 px-0 font-normal"
+    >
+    <span>Last Name </span>
+        </Button>
+        </TableHead>
+{/* <TableHead>
                                 <Button
                                     variant="ghost"
                                     className="h-8 px-0 font-normal"
@@ -1106,291 +1072,304 @@ const handlePrint = (registration: RegistrationData) => {
                                     <span>Email</span>
                                 </Button>
                             </TableHead> */}
-                            <TableHead>
-                            <Button
+<TableHead>
+    <Button
                             variant="ghost"
-                            className="h-8 px-0 font-normal"
-                            >
-                            <span>Date of Birth</span>
-                            </Button>
-                            </TableHead>
-                            <TableHead>
-                            <Button
+className = "h-8 px-0 font-normal"
+    >
+    <span>Date of Birth </span>
+        </Button>
+        </TableHead>
+        < TableHead >
+        <Button
                             variant="ghost"
-                            className="h-8 px-0 font-normal"
-                                >
-                                    <span>Class Applying For</span>
-                                </Button>
-                            </TableHead>
-                            <TableHead>
-                                <Button
+className = "h-8 px-0 font-normal"
+    >
+    <span>Class Applying For </span>
+        </Button>
+        </TableHead>
+        < TableHead >
+        <Button
                                     variant="ghost"
-                                    className="h-8 px-0 font-normal"
-                                >
-                                    <span>Gender</span>
-                                </Button>
-                                </TableHead>
+className = "h-8 px-0 font-normal"
+    >
+    <span>Gender </span>
+    </Button>
+    </TableHead>
 
-                                                        <TableHead>
-                                <Button
+    < TableHead >
+    <Button
                                     variant="ghost"
-                                    className="h-8 px-0 font-normal"
-                                >
-                                    <span>Payment</span>
-                                </Button>
-                            </TableHead>
-                                                        <TableHead>
-                                <Button
+className = "h-8 px-0 font-normal"
+    >
+    <span>Payment </span>
+    </Button>
+    </TableHead>
+    < TableHead >
+    <Button
                                     variant="ghost"
-                                    className="h-8 px-0 font-normal"
+className = "h-8 px-0 font-normal"
+    >
+    <span>Payment Method </span>
+        </Button>
+        </TableHead>
+        < TableHead className = "text-right" > Actions </TableHead>
+            </TableRow>
+            </TableHeader>
+            < TableBody >
+            <AnimatePresence>
+            {
+                currentItems.map((registration, idx) => (
+                    <motion.tr
+                                    key= { registration.id?.toString() }
+                                    initial = {{ opacity: 0, x: -20 }}
+animate = {{ opacity: 1, x: 0 }}
+exit = {{ opacity: 0, x: 20 }}
+transition = {{ duration: 0.2 }}
                                 >
-                                    <span>Payment Method</span>
-                                </Button>
-                            </TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <AnimatePresence>
-                            {currentItems.map((registration, idx) => (
-                                <motion.tr
-                                    key={registration.id?.toString()}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: 20 }}
-                                    transition={{ duration: 0.2 }}
-                                >
-                                    <TableCell>{idx + 1}</TableCell>
-                                    <TableCell>
-                                        {/* Format registration.registration_date as "MMM dd, yyyy" if available */}
-                                        {registration.registration_date
-                                            ? new Date(registration.registration_date).toLocaleDateString('en-US', {
-                                                year: 'numeric',
-                                                month: 'short',
-                                                day: '2-digit',
-                                            })
-                                            : ''}
-                                    </TableCell>
-                                    <TableCell className="font-medium">{registration.first_name}</TableCell>
-                                    <TableCell>{registration.last_name}</TableCell>
-                                    {/* <TableCell>{registration.email}</TableCell> */}
-                                    {/* <TableCell>{registration.phone_number}</TableCell> */}
-                                    <TableCell>
-                                        {/* Format date_of_birth as "MMM dd, yyyy" if available */}
-                                        {registration.date_of_birth
-                                            ? new Date(registration.date_of_birth).toLocaleDateString('en-US', {
-                                                year: 'numeric',
-                                                month: 'short',
-                                                day: '2-digit',
-                                            })
-                                            : ''}
-                                    </TableCell>
-                                    <TableCell>{registration.class_applying_for}</TableCell>
-                                    <TableCell>
-                                        <Badge variant="secondary">
-                                            {registration.gender}
-                                        </Badge>
-                                    </TableCell>
-                                    
-                                    <TableCell>
-                                    <Badge variant="secondary">
-                                    {registration.payment_status}
-                                    </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                    <Badge variant="secondary">
-                                    {registration.payment_type}
-                                    </Badge>
-                                    </TableCell>
-                                    <TableCell className="flex justify-end gap-2">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button
+    <TableCell>{ idx + 1}</TableCell>
+        <TableCell>
+{/* Format registration.registration_date as "MMM dd, yyyy" if available */ }
+{
+    registration.registration_date
+    ? new Date(registration.registration_date).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit',
+    })
+    : ''
+}
+</TableCell>
+    < TableCell className = "font-medium" > { registration.first_name } </TableCell>
+        < TableCell > { registration.last_name } </TableCell>
+{/* <TableCell>{registration.email}</TableCell> */ }
+{/* <TableCell>{registration.phone_number}</TableCell> */ }
+<TableCell>
+    {/* Format date_of_birth as "MMM dd, yyyy" if available */ }
+{
+    registration.date_of_birth
+    ? new Date(registration.date_of_birth).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit',
+    })
+    : ''
+}
+</TableCell>
+    < TableCell > { registration.class_applying_for } </TableCell>
+    < TableCell >
+    <Badge variant="secondary" >
+        { registration.gender }
+        </Badge>
+        </TableCell>
+
+        < TableCell >
+        <Badge variant="secondary" >
+            { registration.payment_status }
+            </Badge>
+            </TableCell>
+            < TableCell >
+            <Badge variant="secondary" >
+                { registration.payment_type }
+                </Badge>
+                </TableCell>
+                < TableCell className = "flex justify-end gap-2" >
+                    <DropdownMenu>
+                    <DropdownMenuTrigger asChild >
+                    <Button
                                                     variant="outline"
-                                                    size="icon"
-                                                    className="hover:bg-gray-200 dark:hover:bg-gray-700"
-                                                >
-                                                    <Download className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => handlePrintExcel(registration)}>
-                                                    Download Excel
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handlePrint(registration)}>
-                                                    Print Receipt
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                        {user?.role_id === 1 && (
-                                            <>
-                                                <Button
+size = "icon"
+className = "hover:bg-gray-200 dark:hover:bg-gray-700"
+    >
+    <Download className="h-4 w-4" />
+        </Button>
+        </DropdownMenuTrigger>
+        < DropdownMenuContent align = "end" >
+            <DropdownMenuItem onClick={ () => handlePrintExcel(registration) }>
+                Download Excel
+                    </DropdownMenuItem>
+                    < DropdownMenuItem onClick = {() => handlePrint(registration)}>
+                        Print Receipt
+                            </DropdownMenuItem>
+                            </DropdownMenuContent>
+                            </DropdownMenu>
+{
+    user?.role_id === 1 && (
+        <>
+        <Button
                                                     variant="outline"
-                                                    size="icon"
-                                                    onClick={() => handleEditClick(registration)}
-                                                    className="hover:bg-gray-200 dark:hover:bg-gray-700"
-                                                >
-                                                    <Edit className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="destructive"
-                                                    size="icon"
-                                                    onClick={() => handleDeleteClick(registration)}
-                                                    className="hover:bg-red-700"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </>
+    size = "icon"
+    onClick = {() => handleEditClick(registration)
+}
+className = "hover:bg-gray-200 dark:hover:bg-gray-700"
+    >
+    <Edit className="h-4 w-4" />
+        </Button>
+        < Button
+variant = "destructive"
+size = "icon"
+onClick = {() => handleDeleteClick(registration)}
+className = "hover:bg-red-700"
+    >
+    <Trash2 className="h-4 w-4" />
+        </Button>
+        </>
                                         )}
-                                    </TableCell>
-                                </motion.tr>
+</TableCell>
+    </motion.tr>
                             ))}
-                        </AnimatePresence>
-                    </TableBody>
-                </Table>
-            </div>
+</AnimatePresence>
+    </TableBody>
+    </Table>
+    </div>
 
-            {/* Pagination */}            {/* Enhanced Pagination */}
-            {filteredRegistrations.length > 0 && (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 px-4">
-                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                        <span>Rows per page:</span>
-                        <Select
-                            value={pageSize.toString()}
-                            onValueChange={(value) => {
-                                setPageSize(Number(value));
-                                setCurrentPage(1);
-                            }}
+{/* Pagination */ } {/* Enhanced Pagination */ }
+{
+    filteredRegistrations.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 px-4" >
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400" >
+                <span>Rows per page: </span>
+                    < Select
+    value = { pageSize.toString() }
+    onValueChange = {(value) => {
+        setPageSize(Number(value));
+        setCurrentPage(1);
+    }
+}
                         >
-                            <SelectTrigger className="h-8 w-[70px]">
-                                <SelectValue>{pageSize}</SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                                {[5, 10, 20, 50, 100].map((size) => (
-                                    <SelectItem key={size} value={size.toString()}>
-                                        {size}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <span>
-                            {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredRegistrations.length)} of{" "}
-                            {filteredRegistrations.length} items
-                        </span>
-                    </div>
-            
-                    <div className="flex items-center gap-2">
-                        <Button
+    <SelectTrigger className="h-8 w-[70px]" >
+        <SelectValue>{ pageSize } </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+{
+    [5, 10, 20, 50, 100].map((size) => (
+        <SelectItem key= { size } value = { size.toString() } >
+        { size }
+        </SelectItem>
+    ))
+}
+</SelectContent>
+    </Select>
+    <span>
+{ indexOfFirstItem + 1 } -{ Math.min(indexOfLastItem, filteredRegistrations.length) } of{ " " }
+{ filteredRegistrations.length } items
+    </span>
+    </div>
+
+    < div className = "flex items-center gap-2" >
+        <Button
                             variant="outline"
-                            size="sm"
-                            onClick={() => setCurrentPage(1)}
-                            disabled={currentPage === 1}
-                            className="hidden sm:flex"
+size = "sm"
+onClick = {() => setCurrentPage(1)}
+disabled = { currentPage === 1}
+className = "hidden sm:flex"
+    >
+    <span className="sr-only" > Go to first page </span>
+        < ChevronFirst className = "h-4 w-4" />
+            </Button>
+            < Button
+variant = "outline"
+size = "sm"
+onClick = {() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+disabled = { currentPage === 1}
                         >
-                            <span className="sr-only">Go to first page</span>
-                            <ChevronFirst className="h-4 w-4" />
-                        </Button>
+    <span className="sr-only" > Go to previous page </span>
+        < ChevronLeft className = "h-4 w-4" />
+            </Button>
+
+            < div className = "flex items-center gap-2" >
+                {
+                    getPaginationRange(currentPage, Math.ceil(filteredRegistrations.length / pageSize)).map((page, i) => (
+                        <React.Fragment key= { i } >
+                            { page === '...' ? (
+                                <span className= "px-2" >...</span>
+                    ) : (
                         <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                            disabled={currentPage === 1}
-                        >
-                            <span className="sr-only">Go to previous page</span>
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-            
-                        <div className="flex items-center gap-2">
-                            {getPaginationRange(currentPage, Math.ceil(filteredRegistrations.length / pageSize)).map((page, i) => (
-                                <React.Fragment key={i}>
-                                    {page === '...' ? (
-                                        <span className="px-2">...</span>
-                                    ) : (
-                                        <Button
-                                            variant={currentPage === page ? 'default' : 'outline'}
-                                            size="sm"
-                                            onClick={() => paginate(Number(page))}
-                                            className={cn(
+                                            variant={ currentPage === page ? 'default' : 'outline'}
+                        size = "sm"
+                                            onClick = {() => paginate(Number(page))}
+                        className = {
+                            cn(
                                                 "hidden sm:flex",
-                                                currentPage === page
-                                                    ? "bg-blue-500 text-white hover:bg-blue-600"
-                                                    : "hover:bg-gray-100 dark:hover:bg-gray-800"
-                                            )}
+                                currentPage === page
+                            ? "bg-blue-500 text-white hover:bg-blue-600"
+                            : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                    )}
                                         >
-                                            {page}
-                                        </Button>
+    { page }
+    </Button>
                                     )}
-                                </React.Fragment>
+</React.Fragment>
                             ))}
-                        </div>
-            
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredRegistrations.length / pageSize)))}
-                            disabled={currentPage === Math.ceil(filteredRegistrations.length / pageSize)}
+</div>
+
+    < Button
+variant = "outline"
+size = "sm"
+onClick = {() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredRegistrations.length / pageSize)))}
+disabled = { currentPage === Math.ceil(filteredRegistrations.length / pageSize)}
                         >
-                            <span className="sr-only">Go to next page</span>
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setCurrentPage(Math.ceil(filteredRegistrations.length / pageSize))}
-                            disabled={currentPage === Math.ceil(filteredRegistrations.length / pageSize)}
-                            className="hidden sm:flex"
-                        >
-                            <span className="sr-only">Go to last page</span>
-                            <ChevronLast className="h-4 w-4" />
-                        </Button>
-                    </div>
-                </div>
+    <span className="sr-only" > Go to next page </span>
+        < ChevronRight className = "h-4 w-4" />
+            </Button>
+            < Button
+variant = "outline"
+size = "sm"
+onClick = {() => setCurrentPage(Math.ceil(filteredRegistrations.length / pageSize))}
+disabled = { currentPage === Math.ceil(filteredRegistrations.length / pageSize)}
+className = "hidden sm:flex"
+    >
+    <span className="sr-only" > Go to last page </span>
+        < ChevronLast className = "h-4 w-4" />
+            </Button>
+            </div>
+            </div>
             )}
 
-                        {/* Delete Confirmation Dialog */}
-            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure you want to delete this registration?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the registration
-                            for {selectedRegistration?.first_name} {selectedRegistration?.last_name}.
+{/* Delete Confirmation Dialog */ }
+<AlertDialog open={ isDeleteDialogOpen } onOpenChange = { setIsDeleteDialogOpen } >
+    <AlertDialogContent>
+    <AlertDialogHeader>
+    <AlertDialogTitle>Are you sure you want to delete this registration ? </AlertDialogTitle>
+        <AlertDialogDescription>
+                            This action cannot be undone.This will permanently delete the registration
+for { selectedRegistration?.first_name } { selectedRegistration?.last_name }.
                         </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={confirmDelete}
-                            className="bg-red-600 hover:bg-red-700"
-                        >
-                            Delete
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-            
-            {/* Edit Confirmation Dialog */}
-            <AlertDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Confirm Edit Registration</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Are you sure you want to edit the registration for{' '}
-                            {selectedRegistration?.first_name} {selectedRegistration?.last_name}?
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => setIsEditDialogOpen(false)}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={confirmEdit}
-                            className="bg-blue-600 hover:bg-blue-700"
-                        >
-                            Edit
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-        </div>
+    </AlertDialogHeader>
+    < AlertDialogFooter >
+    <AlertDialogCancel onClick= {() => setIsDeleteDialogOpen(false)}> Cancel </AlertDialogCancel>
+        < AlertDialogAction
+onClick = { confirmDelete }
+className = "bg-red-600 hover:bg-red-700"
+    >
+    Delete
+    </AlertDialogAction>
+    </AlertDialogFooter>
+    </AlertDialogContent>
+    </AlertDialog>
+
+{/* Edit Confirmation Dialog */ }
+<AlertDialog open={ isEditDialogOpen } onOpenChange = { setIsEditDialogOpen } >
+    <AlertDialogContent>
+    <AlertDialogHeader>
+    <AlertDialogTitle>Confirm Edit Registration </AlertDialogTitle>
+        <AlertDialogDescription>
+          Are you sure you want to edit the registration for{ ' '}
+         { selectedRegistration?.first_name } { selectedRegistration?.last_name } ?
+        </AlertDialogDescription>
+        </AlertDialogHeader>
+        < AlertDialogFooter >
+        <AlertDialogCancel onClick= {() => setIsEditDialogOpen(false)}> Cancel </AlertDialogCancel>
+            < AlertDialogAction
+onClick = { confirmEdit }
+className = "bg-blue-600 hover:bg-blue-700"
+    >
+    Edit
+    </AlertDialogAction>
+    </AlertDialogFooter>
+    </AlertDialogContent>
+    </AlertDialog>
+    </div>
     );
 };
 

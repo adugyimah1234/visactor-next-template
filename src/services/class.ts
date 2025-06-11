@@ -8,6 +8,7 @@ export interface ClassData {
   school_name?: string;
   slots: number;
   capacity: number;
+  students_count: number;
 }
 
 const classService = {

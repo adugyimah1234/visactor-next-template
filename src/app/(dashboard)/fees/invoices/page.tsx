@@ -79,32 +79,12 @@ import { cn } from '@/lib/utils';
 import { ScrollArea } from '@radix-ui/react-scroll-area';
 import registrations from '@/services/registrations';
 import StudentSelect from './components/StudentSelect';
+import studentService from '@/services/students';
+import { Student } from '@/types/student';
+import { Receipt } from '@/types/receipt';
 
 // Types based on your backend structure
-interface Receipt {
-  id: number;
-  student_id: number;
-  payment_id?: number | null;
-  receipt_type: 'registration' | 'admission' | 'tuition' | 'exam';
-  amount: number;
-  issued_by?: number;
-  date_issued: string;
-  venue?: string;
-  logo_url?: string;
-  exam_date?: string;
-  class_id?: number;
-  school_id?: number;
-  student_name?: string;
-  class_name?: string;
-  issued_by_name?: string;
-  school_name?: string;
-  payment_date?: string;
-  payment_type?: string;
-  payment_method?: string;
-  registration_first_name?: string;
-  registration_last_name?: string;
-  amount_paid?: number;
-}
+
 
 interface ReceiptFilters {
   search?: string;
@@ -129,6 +109,7 @@ interface CreateReceiptData {
 }
 
 export default function ReceiptManagement() {
+
   // State management
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
@@ -141,11 +122,14 @@ export default function ReceiptManagement() {
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const [showReceiptDetails, setShowReceiptDetails] = useState(false);
   const [students, setStudents] = useState<RegistrationData[]>([]);
+  const [realStudents, setRealStudents] = useState<Student[]>([]);
 
 useEffect(() => {
   async function loadStudents() {
     try {
-      const data = await registrationService.getAll();
+      const data = await 
+      registrationService.getAll();
+
       setStudents(data);
     } catch (err) {
       console.error("Failed to fetch students", err);
@@ -173,6 +157,13 @@ const fetchReceipts = useCallback(async () => {
     fetchReceipts();
   }, [fetchReceipts]);
 
+useEffect(() => {
+  const fetchData = async () => {
+    const res = await studentService.getAll(); // ✅ fetch from student table
+    setRealStudents(res);
+  };
+  fetchData();
+}, []);
 
 
   // Handle search
@@ -234,10 +225,10 @@ const fetchReceipts = useCallback(async () => {
   // Get receipt type badge variant
   const getReceiptTypeBadge = (type: string) => {
     const variants = {
-      tuition: { variant: 'default' as const, label: 'Tuition' },
+      levy: { variant: 'default' as const, label: 'Levy' },
       registration: { variant: 'secondary' as const, label: 'Registration' },
-      admission: { variant: 'outline' as const, label: 'Admission' },
-      exam: { variant: 'destructive' as const, label: 'Exam' }
+      textBooks: { variant: 'outline' as const, label: 'Text Books' },
+      exerciseBooks: { variant: 'destructive' as const, label: 'Exercise Books' }
     };
     return variants[type as keyof typeof variants] || { variant: 'default' as const, label: type };
   };
@@ -274,7 +265,7 @@ useEffect(() => {
   // Create Receipt Form Component
 const CreateReceiptForm = () => {
   const [formData, setFormData] = useState<CreateReceiptData>({
-  student_id: undefined,
+  student_id: 0,
   registration_id: undefined,
   payment_id: undefined,
   receipt_type: '',
@@ -291,43 +282,50 @@ const [openStudentCombobox, setOpenStudentCombobox] = useState(false);
 const [studentSearchQuery, setStudentSearchQuery] = useState('');
 const [loadingStudents, setLoadingStudents] = useState(false);
 
-
-
-    const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
 
   try {
-    // Clean up the payload before sending
     const payload = { ...formData };
-    if (payload.student_id === undefined) delete payload.student_id; // Ensure it's not present if undefined
-    if (payload.registration_id === undefined) delete payload.registration_id; // Ensure it's not present if undefined
 
-    if (payload.student_id === undefined && payload.registration_id === undefined) {
-      alert("Please select a student or registration");
-      return;
+    // Enforce strict association
+    if (payload.receipt_type === "registration") {
+      if (!payload.registration_id) {
+        toast.error("Please select a registration for this receipt.");
+        return;
+      }
+      delete payload.student_id; // remove any student_id accidentally set
+    } else {
+      if (!payload.student_id) {
+        toast.error("Please select a student for this receipt.");
+        return;
+      }
+      delete payload.registration_id; // remove any registration_id accidentally set
     }
 
     await createReceipt(payload);
 
+    toast.success("Receipt created successfully!");
+    setShowCreateDialog(false);
+    fetchReceipts();
+
+    // Reset form
     setFormData({
-      student_id: formData.student_id,
-      registration_id: formData.registration_id,
+      student_id: undefined,
+      registration_id: undefined,
       receipt_type: '',
       amount: 0,
       date_issued: new Date().toISOString().split('T')[0],
       venue: '',
-      payment_type: formData.payment_type,
+      payment_type: '',
       exam_id: undefined,
       class_id: undefined,
       exam_date: ''
     });
-    setShowCreateDialog(false);
-    fetchReceipts();
-
-    toast.success('Receipt created successfully!');
 
   } catch (error) {
-    toast.error('Failed to create receipt');
+    console.error(error);
+    toast.error("Failed to create receipt");
   }
 };
 
@@ -342,13 +340,17 @@ const filteredStudents = useMemo(() => {
 }, [students, studentSearchQuery]);
 
 const handleStudentSelect = (id: number) => {
-  setFormData((prev) => ({ ...prev, registration_id: id }));
+  if (formData.receipt_type === 'registration') {
+    setFormData((prev) => ({ ...prev, registration_id: id, student_id: undefined }));
+  } else {
+    setFormData((prev) => ({ ...prev, student_id: id, registration_id: undefined }));
+  }
   setOpenStudentCombobox(false);
 };
 
-    return (
-      <form onSubmit={handleSubmit} className="space-y-4">
-<div className="grid grid-cols-4 items-center gap-4 relative">
+return (
+ <form onSubmit={handleSubmit} className="space-y-4">
+  <div className="grid grid-cols-4 items-center gap-4 relative">
   <Label htmlFor="student-search" className="text-right">
     Student
   </Label>
@@ -386,33 +388,20 @@ const handleStudentSelect = (id: number) => {
   </div>
 </div>
 
-<div>
-  <label className="block text-sm font-medium mb-1">Payment Type</label>
-  <Select
-    value={formData.payment_type}
-    onValueChange={(value) => setFormData({ ...formData, payment_type: value })}
-  >
-    <SelectTrigger>
-      <SelectValue placeholder="Select payment type" />
-    </SelectTrigger>
-    <SelectContent>
-      <SelectItem value="cash">Cash</SelectItem>
-      <SelectItem value="momo">Mobile Money</SelectItem>
-      <SelectItem value="bank">Bank Transfer</SelectItem>
-    </SelectContent>
-  </Select>
-</div>
-
 
 <div>
-  <label className="block text-sm font-medium mb-1">Receipt Type</label>
+  <label className="block text-sm font-medium mb-1">Payment Option</label>
   <Select value={formData.receipt_type} onValueChange={(value) => setFormData({...formData, receipt_type: value})}>
     <SelectTrigger>
       <SelectValue placeholder="Select receipt type" />
     </SelectTrigger>
     <SelectContent>
-              <SelectItem value="tuition">Tuition</SelectItem>
-              <SelectItem value="registration">Registration</SelectItem>
+    <SelectItem value="registration">Registration</SelectItem>
+                  <SelectItem value="furniture">Furniture</SelectItem>
+              <SelectItem value="levy">Levy</SelectItem>
+              <SelectItem value="textBooks">TextBooks</SelectItem>
+              <SelectItem value="exerciseBooks">Exercise Books</SelectItem>
+              <SelectItem value="jersey_crest"> Jersey/Crest</SelectItem>          
             </SelectContent>
           </Select>
         </div>
@@ -471,7 +460,7 @@ const handleStudentSelect = (id: number) => {
 
   // Receipt Details Component
   const ReceiptDetails = ({ receipt }: { receipt: Receipt }) => {
-    const receiptNumber = `R-${receipt.id.toString().padStart(6, '0')}`;
+  const receiptNumber = `R-${receipt.id.toString().padStart(6, '0')}`;
 
     return (
       <div className="space-y-6">
@@ -631,17 +620,25 @@ const handleStudentSelect = (id: number) => {
               <DropdownMenuContent>
                 <DropdownMenuLabel>Filter by Type</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setFilters({...filters, receipt_type: 'tuition'})}>
-                  Tuition
+                <DropdownMenuItem onClick={() => setFilters({...filters, receipt_type: 'furniture'})}>
+                  Furniture
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setFilters({...filters, receipt_type: 'registration'})}>
                   Registration
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilters({...filters, receipt_type: 'admission'})}>
-                  Admission
+                <DropdownMenuItem onClick={() => setFilters({...filters, receipt_type: 'textBooks'})}>
+                  Text Books
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilters({...filters, receipt_type: 'exam'})}>
-                  Exam
+                <DropdownMenuItem onClick={() => setFilters({...filters, receipt_type: 'levy'})}>
+                  Levy
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setFilters({...filters, receipt_type: 'exerciseBooks'})}>
+                  Exercise Books
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setFilters({...filters, receipt_type: 'jersey_crest'})}>
+                  Jersey/Crest
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setFilters({})}>
@@ -694,6 +691,8 @@ const handleStudentSelect = (id: number) => {
               </TableHeader>
               <TableBody>
   {receipts.map((receipt) => {
+      const realstudent = realStudents.find(s => Number(s.id) === Number(receipt.student_id));
+
     const student = students.find(
       (r) => r.student_id === receipt.student_id
     );
@@ -703,12 +702,21 @@ const handleStudentSelect = (id: number) => {
         <TableCell className="font-mono">
           R-{receipt.id.toString().padStart(6, '0')}
         </TableCell>
-        <TableCell>
-          <div>
-            <p className="font-medium">{receipt.student_name}</p>
-            <p className="text-sm text-muted-foreground">{receipt.class_name}</p>
-          </div>
-        </TableCell>
+<TableCell>
+  <div>
+    {receipt.receipt_type === 'registration' ? (
+      
+      <p className="font-medium">
+        {receipt.student_name}
+      </p>
+    ) : (
+      <p className="font-medium">
+        {student ? `${student.student_name} ` : `${realStudents.student_name}`}
+      </p>
+    )}
+    <p className="text-sm text-muted-foreground">{receipt.class_name}</p>
+  </div>
+</TableCell>
         <TableCell>
           <Badge {...getReceiptTypeBadge(receipt.receipt_type)}>
             {getReceiptTypeBadge(receipt.receipt_type).label}

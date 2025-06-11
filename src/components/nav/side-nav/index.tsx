@@ -58,16 +58,16 @@ const navigationItems: NavItem[] = [
     icon: BookOpen,
     href: "/exams",
     children: [
-      { name: "View Results", href: "/exams/results", icon: BookOpen },
-      { name: "Shortlisted", href: "/exams/shortlisted", icon: BookOpen },
+      { name: "Placement", href: "/exams/results", icon: BookOpen },
+      { name: "Admitted Applicants", href: "/exams/shortlisted", icon: BookOpen },
     ],
   },
   {
-    name: "Admissions",
+    name: "Enrollment",
     icon: GraduationCap,
     href: "/admissions",
     children: [
-      { name: "Process Admission", href: "/admissions/admission-process", icon: GraduationCap },
+      { name: "Process Enrollment", href: "/admissions/admission-process", icon: GraduationCap },
       { name: "Enrolled Students", href: "/admissions/enrolled-students", icon: GraduationCap },
     ],
   },
@@ -126,10 +126,10 @@ export default function SideNav() {
     const map = {
       admin: items,
       frontdesk: items.filter(item =>
-        !['Fee Management', 'Admin', 'Admissions', 'Entrance Exams'].includes(item.name)
+        !['Admin', 'Admissions', 'Enrollment', 'Entrance Exams'].includes(item.name)
       ),
       accountant: items.filter(item => ['Dashboard', 'Fee Management', 'Profile'].includes(item.name)),
-      teacher: items.filter(item => ['Dashboard', 'Entrance Exams', 'Profile'].includes(item.name)),
+      teacher: items.filter(item => ['Dashboard', 'Enrollment', 'Profile'].includes(item.name)),
     };
 
     return map[role as keyof typeof map] || [];

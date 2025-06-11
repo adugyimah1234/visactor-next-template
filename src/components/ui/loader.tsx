@@ -151,7 +151,7 @@ export function Loader({
     >
       {renderLoader()}
       {showText && (
-        <div className={`${colors.text} ${textSizeClass} font-medium animate-pulse`}>
+        <div className={`${colors.text} ${textSizeClass} font-medium animate-pulse text-center`}>
           {text}
         </div>
       )}

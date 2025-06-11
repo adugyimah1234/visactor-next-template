@@ -26,6 +26,10 @@ import {
   Cell
 } from 'recharts';
 import registrationService from '@/services/registrations';
+import SlotsChart from './components/SlotsChart';
+import DailyPaymentDashboard from './components/PaymentSummaryCard';
+import { useAuth } from '@/contexts/AuthContext';
+import { getAllRoles } from '@/services/roles';
 
 interface RegistrationStats {
   totalRegistered: number;
@@ -166,7 +170,21 @@ export default function ProfessionalDashboard() {
   const [stats, setStats] = useState<RegistrationStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+    const { user } = useAuth();
+    const [roleName, setRoleName] = useState('');
+
+useEffect(() => {
+  const loadRole = async () => {
+    const roles = await getAllRoles();
+    const role = roles.find(r => r.id === user?.role_id);
+    setRoleName(role?.name?.toLowerCase() || '');
+  };
+  if (user?.role_id) loadRole();
+}, [user?.role_id]);
+
+const isAdmin = roleName === 'admin';
+
+
   // Date range calculation
   const getDateRange = (range: string) => {
     const end = new Date();
@@ -359,7 +377,18 @@ export default function ProfessionalDashboard() {
             </>
           )}
         </div>
-
+    <div className="p-6">
+      {isAdmin ? (
+        <>
+          <DailyPaymentDashboard />
+          <SlotsChart />
+        </>
+      ) : (
+        <div className="text-center py-10 text-red-500">
+          // Access restricted. You do not have permission to view this section.
+        </div>
+      )}
+    </div>
         {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           

@@ -168,9 +168,14 @@ export default function SchoolManagement() {
   
   // Update the onSubmit handler
   const onSubmit: SubmitHandler<SchoolFormValues> = async (values) => {
+    const data = {
+  name: 'New Name',
+  address: 'Updated Address',
+};
     try {
       setIsLoading(true);
       if (editingSchool) {
+        
  await schoolService.update(editingSchool.id, data);
         toast({
           title: "Success",

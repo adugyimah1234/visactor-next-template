@@ -114,6 +114,9 @@ function addClass() {
     school_id: selectedSchool.id,
     school_name: selectedSchool.name,
     slots: 0,
+    capacity: 0,
+    students_count: 0,
+
   };
 
   setClasses((prev) => [...prev, newClass as ClassWithSlots]); // type override if needed
@@ -201,6 +204,8 @@ const classRequests = classes.map((cls) => {
     level: cls.level,
     school_id: savedSchool.id!,
     slots: cls.slots,
+    capacity: cls.slots,
+    students_count: cls.students_count,
   };
 
   if (!cls.id) {

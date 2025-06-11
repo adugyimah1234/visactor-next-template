@@ -22,6 +22,10 @@ import { Toaster, toast } from 'sonner';
 import classService, { ClassData } from '@/services/class';
 import { Category, getAllCategories } from '@/services/categories';
 import { academicYear, getAllAcademicYear } from '@/services/academic_year';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import ApplicantManagement from '../manage/page';
+import { saveOfflineRegistration } from '@/lib/offlineRegistrations';
+import SyncButton from '../components/SyncButton';
 
 const NewRegistrationPage = () => {
     const [gender, setGender] = useState<"Male" | "Female" | "Other">('Male');
@@ -58,7 +62,9 @@ const [registrationData, setRegistrationData] = useState<Omit<RegistrationData, 
     const [classes, setClasses] = useState<ClassData[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [error, setError] = useState<string | null>(null);
-    
+    const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+    const [showReceiptDialog, setShowReceiptDialog] = useState(false);
+    const [newRegistrationId, setNewRegistrationId] = useState<number | null>(null);
     // Simulate fetching academic years (replace with your actual API call)
 
     useEffect(() => {
@@ -150,74 +156,127 @@ async function loadSchools() {
         category: '',
     };
 
-    const handleSubmit = async (event: React.FormEvent) => {
-        event.preventDefault();
 
-        // Basic client-side validation
-        if (
-            !registrationData.first_name ||
-            !registrationData.last_name ||
-            !registrationData.date_of_birth ||
-            !registrationData.class_applying_for ||
-            !registrationData.gender ||
-            !registrationData.address ||
-            !registrationData.guardian_name ||
-            !registrationData.relationship ||
-            !registrationData.guardian_phone_number
-        ) {
-            toast.error("Please fill in all required fields.");
-            return;
-        }
-        if (!selectedAcademicYearId) {
-            toast.error("Please select an academic year.");
-            return;
-        }
+const handleSubmit = async (event: React.FormEvent) => {
+  event.preventDefault();
 
-        setLoading(true); // Set loading to true before making the API call
-        try {
-            // Prepare the data to match the backend API's expected format
-            const backendData: RegistrationCreateInput = {
-                school_id: schoolId, // Assuming school ID is 1, update as needed
-                student_id: studentId,
-                scores: 0,
-                status: 'pending',
-                class_id: classId, 
-                academic_year_id: selectedAcademicYearId,
-                academic_year: academicYears.find(y => y.id === selectedAcademicYearId)?.year.toString() ?? '',
-                first_name: registrationData.first_name,
-                middle_name: registrationData.middle_name,
-                last_name: registrationData.last_name,
-                date_of_birth: format(new Date(registrationData.date_of_birth), "yyyy-MM-dd"),
-                class_applying_for: registrationData.class_applying_for,
-                gender: registrationData.gender as "Male" | "Female" | "Other",
-                email: registrationData.email || '',
-                phone_number: registrationData.phone_number || '',
-                category: registrationData.category,
-                address: registrationData.address || '',
-                guardian_name: registrationData.guardian_name || '',
-                relationship: registrationData.relationship || '',
-                guardian_phone_number: registrationData.guardian_phone_number || '',
-            };
+  if (
+    !registrationData.first_name ||
+    !registrationData.last_name ||
+    !registrationData.date_of_birth ||
+    !registrationData.class_applying_for ||
+    !registrationData.gender ||
+    !registrationData.address ||
+    !registrationData.guardian_name ||
+    !registrationData.relationship ||
+    !registrationData.guardian_phone_number
+  ) {
+    toast.error("Please fill in all required fields.");
+    return;
+  }
 
+  if (!selectedAcademicYearId) {
+    toast.error("Please select an academic year.");
+    return;
+  }
 
-            // Call the registration service to create the registration
-            const newRegistrationId = await registrationService.create(backendData);
-            // Optionally, reset the form or redirect the user
-            setRegistrationData(initialRegistrationData);
-            setDate(undefined);
-            // setSelectedAcademicYearId(0); // Reset the selected academic year
-            toast.success(`Registration successful!`);
-        } catch (error: any) {
-            toast.error(error.message || "An error occurred during registration.");
-        } finally {
-            setLoading(false);
-        }
+  setLoading(true);
+
+  try {
+    const backendData: RegistrationCreateInput = {
+      school_id: schoolId,
+      student_id: studentId,
+      scores: 0,
+      status: "pending",
+      class_id: classId,
+      academic_year_id: selectedAcademicYearId,
+      academic_year:
+        academicYears.find((y) => y.id === selectedAcademicYearId)?.year.toString() ?? "",
+      first_name: registrationData.first_name,
+      middle_name: registrationData.middle_name,
+      last_name: registrationData.last_name,
+      date_of_birth: format(new Date(registrationData.date_of_birth), "yyyy-MM-dd"),
+      class_applying_for: registrationData.class_applying_for,
+      gender: registrationData.gender as "Male" | "Female" | "Other",
+      email: registrationData.email || "",
+      phone_number: registrationData.phone_number || "",
+      category: registrationData.category,
+      address: registrationData.address || "",
+      guardian_name: registrationData.guardian_name || "",
+      relationship: registrationData.relationship || "",
+      guardian_phone_number: registrationData.guardian_phone_number || "",
     };
+
+    if (!navigator.onLine) {
+      await saveOfflineRegistration(backendData);
+      toast.success("You're offline. Registration saved locally and will sync later.");
+    } else {
+      await registrationService.create(backendData);
+      toast.success("Registration successful!");
+    }
+
+    // Reset form
+    setRegistrationData(initialRegistrationData);
+    setDate(undefined);
+    // Optionally reset academic year or other fields
+
+  } catch (error: any) {
+    toast.error(error.message || "An error occurred during registration.");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+
+const handleFinalSubmit = async () => {
+  setLoading(true);
+  try {
+    const backendData: RegistrationCreateInput = {
+      ...registrationData,
+      academic_year_id: selectedAcademicYearId!,
+      academic_year:
+        academicYears.find(y => y.id === selectedAcademicYearId)?.year.toString() ?? '',
+      category: registrationData.category,
+      class_id: classId,
+      school_id: schoolId,
+      scores: registrationData.scores ?? 0,
+      status: registrationData.status ?? "pending"
+    };
+
+    let regId: number | undefined;
+
+    if (!navigator.onLine) {
+      await saveOfflineRegistration(backendData);
+      toast.success("You're offline. Registration saved locally and will sync when you're back online.");
+    } else {
+      regId = await registrationService.create(backendData);
+      toast.success("Registration successful!");
+    }
+
+    if (regId) {
+      setNewRegistrationId(regId);
+      setShowPreviewDialog(false);
+      setShowReceiptDialog(true); // 👈 open receipt popup
+    }
+
+  } catch (error: any) {
+    toast.error("Registration failed.");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
     return (
         <div className="p-4 md:p-8">
             <Toaster richColors />
             <h1 className="text-3xl font-semibold text-gray-900 dark:text-white mb-6 text-left">New Applicant Registration</h1>
+            <div className="flex justify-between items-center mb-4">
+      <h1 className="text-xl font-semibold">Registrations</h1>
+      <SyncButton />
+    </div>
             <form onSubmit={handleSubmit} className="max-w-7xl mx-auto space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* First Name */}
@@ -473,6 +532,14 @@ async function loadSchools() {
                         </SelectContent>
                     </Select>
                 </div>
+<Button
+  type="button"
+  className="w-full bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded"
+  disabled={loading}
+  onClick={() => setShowPreviewDialog(true)}
+>
+  Preview & Submit
+</Button>
 
                 <Button
                     type="submit"
@@ -482,6 +549,31 @@ async function loadSchools() {
                     {loading ? 'Registering...' : 'Register'}
                 </Button>
             </form>
+            <ApplicantManagement/>
+            <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
+  <DialogContent className="max-w-xl">
+    <DialogHeader>
+      <DialogTitle>Confirm Registration</DialogTitle>
+    </DialogHeader>
+    <div className="space-y-2 text-sm">
+      <p><strong>Name:</strong> {registrationData.first_name} {registrationData.last_name}</p>
+      <p><strong>Class:</strong> {registrationData.class_applying_for}</p>
+      <p><strong>Category:</strong> {registrationData.category}</p>
+      <p><strong>Guardian:</strong> {registrationData.guardian_name}</p>
+    </div>
+    <DialogFooter className="mt-4">
+      <Button variant="outline" onClick={() => setShowPreviewDialog(false)}>
+        Cancel
+      </Button>
+      <Button onClick={handleFinalSubmit} disabled={loading}>
+        {loading ? 'Submitting...' : 'Confirm & Submit'}
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
+
+
         </div>
     );
 };

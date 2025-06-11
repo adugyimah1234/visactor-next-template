@@ -33,6 +33,7 @@ export interface Student {
   admission_status: string;
   date_of_birth: string;
 first_name: string;
+student_name?: string;
 middle_name: string;
 last_name: string; 
 dob: Date;

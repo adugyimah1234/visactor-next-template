@@ -10,6 +10,7 @@ import { EyeIcon, EyeOffIcon, LockIcon, MailIcon, ArrowRightIcon } from 'lucide-
 import { useAuth } from '@/hooks/useAuth'; // Import your useAuth hook
 import { Loader } from '@/components/ui/loader'; // Import Loader component
 import Image from "next/image";
+import Link from 'next/link';
 
 export default function ProfessionalLogin() {
   const { signIn, loading, error: authError } = useAuth(); // Use signIn and states from the hook
@@ -125,17 +126,19 @@ export default function ProfessionalLogin() {
                   className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   placeholder="••••••••"
                 />
+                <Link href={'/'}>
                 <button
                   type="button"
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? (
-                    <EyeOffIcon className="h-5 w-5 text-gray-400" />
-                  ) : (
-                    <EyeIcon className="h-5 w-5 text-gray-400" />
-                  )}
+                {showPassword ? (
+                  <EyeOffIcon className="h-5 w-5 text-gray-400" />
+                ) : (
+                  <EyeIcon className="h-5 w-5 text-gray-400" />
+                )}
                 </button>
+                </Link>
               </div>
             </div>
 

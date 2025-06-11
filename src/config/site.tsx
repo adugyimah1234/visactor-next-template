@@ -8,8 +8,8 @@ export type Navigation = {
 };
 
 export const siteConfig = {
-  title: "VisActor Next Template",
-  description: "Template for VisActor and Next.js",
+  title: "3 Garrison Education Centre - SMS",
+  description: "Is a school management system design the facilitate school admissions, registration,, enrollment and fee management",
 };
 
 export const navigations: Navigation[] = [

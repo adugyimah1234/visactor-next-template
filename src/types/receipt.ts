@@ -1,8 +1,8 @@
 export interface Receipt {
   id: number;
   student_id: number;
-  payment_id?: number;
-  receipt_type: "registration" | "admission" | "tuition" | "exam";
+  payment_id?: number | null;
+  receipt_type: 'registration' | 'levy' | 'textBooks' | 'exerciseBooks' | 'furniture' | 'jersey_crest';
   amount: number;
   issued_by?: number;
   date_issued: string;
@@ -10,12 +10,17 @@ export interface Receipt {
   logo_url?: string;
   exam_date?: string;
   class_id?: number;
+  registration_id: number;
   school_id?: number;
   student_name?: string;
   class_name?: string;
   issued_by_name?: string;
   school_name?: string;
   payment_date?: string;
+  payment_type?: string;
+  payment_method?: string;
+  registration_first_name?: string;
+  registration_last_name?: string;
   amount_paid?: number;
 }
 
