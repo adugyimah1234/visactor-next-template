@@ -65,7 +65,7 @@ const colorMap = {
 };
 
 export function Loader({
-  className = "",
+  className = "text-center m-auto flex justify-center",
   size = "md",
   showText = true,
   text = "Loading...",

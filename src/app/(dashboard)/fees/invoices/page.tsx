@@ -102,6 +102,7 @@ interface CreateReceiptData {
   amount: number;
   date_issued?: string;
   venue?: string;
+  fee_id: number;
   exam_date?: string;
   class_id?: number;
   exam_id?: number;
@@ -123,6 +124,7 @@ export default function ReceiptManagement() {
   const [showReceiptDetails, setShowReceiptDetails] = useState(false);
   const [applicants, setApplicants] = useState<RegistrationData[]>([]);
   const [realStudents, setRealStudents] = useState<Student[]>([]);
+const [payerType, setPayerType] = useState<'applicant' | 'student'>('applicant');
 
 useEffect(() => {
   async function loadStudents() {
@@ -264,10 +266,11 @@ useEffect(() => {
   // Create Receipt Form Component
 const CreateReceiptForm = () => {
   const [formData, setFormData] = useState<CreateReceiptData>({
-  student_id:  undefined,
+  student_id:  0,
   registration_id: undefined,
   payment_id: undefined,
   receipt_type: '',
+  fee_id: 0,
   amount: 0,
   date_issued: new Date().toISOString().split('T')[0], // Default to today
   venue: '',
@@ -285,21 +288,37 @@ const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
 
   try {
-    const payload = { ...formData };
+    const isRegistration = formData.receipt_type === "registration";
 
-    // Enforce strict association
-    if (payload.receipt_type === "registration") {
-      if (!payload.registration_id) {
-        toast.error("Please select a registration for this receipt.");
+    // Enforce correct ID based on payer type
+    if (isRegistration) {
+      if (!formData.registration_id) {
+        toast.error("Please select an applicant for this receipt.");
         return;
       }
-      delete payload.student_id; // remove any student_id accidentally set
     } else {
-      if (!payload.student_id) {
+      if (!formData.student_id) {
         toast.error("Please select a student for this receipt.");
         return;
       }
-      delete payload.registration_id; // remove any registration_id accidentally set
+
+      const exists = realStudents.some((s) => s.id === formData.student_id);
+      if (!exists) {
+        toast.error("Selected student does not exist in the database.");
+        return;
+      }
+    }
+
+    // Safely construct payload
+    const payload: any = {
+      ...formData,
+      fee_id: formData.student_id ? `02500${formData.student_id}` : undefined,
+    };
+
+    if (isRegistration) {
+      delete payload.student_id;
+    } else {
+      delete payload.registration_id;
     }
 
     await createReceipt(payload);
@@ -317,144 +336,189 @@ const handleSubmit = async (e: React.FormEvent) => {
       date_issued: new Date().toISOString().split('T')[0],
       venue: '',
       payment_type: '',
+      fee_id: 0,
       exam_id: undefined,
       class_id: undefined,
       exam_date: ''
     });
-
   } catch (error) {
     console.error(error);
     toast.error("Failed to create receipt");
   }
 };
 
+
 const filteredStudents = useMemo(() => {
   const source = formData.receipt_type === 'registration' ? applicants : realStudents;
+
   return studentSearchQuery.trim()
-    ? source.filter((s) =>
-        `${s.first_name} ${s.middle_name ?? ''} ${s.last_name}`
-          .toLowerCase()
-          .includes(studentSearchQuery.toLowerCase())
+    ? source.filter((s: any) =>
+        `${s.first_name} ${s.middle_name ?? ''} ${s.last_name}`.toLowerCase().includes(
+          studentSearchQuery.toLowerCase()
+        )
       )
-    : applicants;
-}, [applicants, studentSearchQuery]);
+    : source;
+}, [formData.receipt_type, studentSearchQuery, applicants, realStudents]);
+
 
 const handleStudentSelect = (id: number) => {
   if (formData.receipt_type === 'registration') {
-    setFormData((prev) => ({ ...prev, registration_id: id, student_id: undefined }));
+    setFormData((prev) => ({
+      ...prev,
+      registration_id: id,
+      student_id: undefined,
+    }));
   } else {
-    setFormData((prev) => ({ ...prev, student_id: id, registration_id: undefined }));
+    setFormData((prev) => ({
+      ...prev,
+      student_id: id,
+      registration_id: undefined,
+    }));
   }
   setOpenStudentCombobox(false);
 };
 
 return (
  <form onSubmit={handleSubmit} className="space-y-4">
-  <div className="grid grid-cols-4 items-center gap-4 relative">
-  <Label htmlFor="student-search" className="text-right">
-    Student
-  </Label>
-
-  <div className="col-span-3 relative">
-    <Input
-      id="student-search"
-      type="text"
-      placeholder="Type to search student..."
-      value={studentSearchQuery}
-      onChange={(e) => setStudentSearchQuery(e.target.value)}
-      onFocus={() => setOpenStudentCombobox(true)}
-    />
-
-    {/* Dropdown list */}
-    {openStudentCombobox && filteredStudents.length > 0 && (
-      <ul className="absolute z-50  border rounded shadow-md w-full mt-1 max-h-48 overflow-y-auto">
-        {filteredStudents.map((student) => (
-          <li
-            key={student.id}
-            className="px-4 py-2   cursor-pointer"
-            onClick={() => {
-              handleStudentSelect(student.id ?? 0);
-              setStudentSearchQuery(
-                `${student.first_name} ${student.middle_name ?? ""} ${student.last_name}`
-              );
-              setOpenStudentCombobox(false);
-            }}
-          >
-            {student.first_name} {student.middle_name ?? ""} {student.last_name}
-          </li>
-        ))}
-      </ul>
-    )}
-  </div>
-</div>
-
-
-<div>
-  <label className="block text-sm font-medium mb-1">Payment Option</label>
-  <Select value={formData.receipt_type} onValueChange={(value) => setFormData({...formData, receipt_type: value})}>
-    <SelectTrigger>
-      <SelectValue placeholder="Select receipt type" />
-    </SelectTrigger>
-    <SelectContent>
-    <SelectItem value="registration">Registration</SelectItem>
-                  <SelectItem value="furniture">Furniture</SelectItem>
-              <SelectItem value="levy">Levy</SelectItem>
-              <SelectItem value="textBooks">TextBooks</SelectItem>
-              <SelectItem value="exerciseBooks">Exercise Books</SelectItem>
-              <SelectItem value="jersey_crest"> Jersey/Crest</SelectItem>          
-            </SelectContent>
-          </Select>
-        </div>
-        {formData.receipt_type === 'registration' || formData.receipt_type === 'exam' ? (
+  {/* === Payment Option === */}
   <div>
-    <label className="block text-sm font-medium mb-1">Exam</label>
+    <label className="block text-sm font-medium mb-1">Payment Option</label>
     <Select
-      value={formData.exam_id?.toString() || ""}
-      onValueChange={(value) => setFormData({ ...formData, exam_id: parseInt(value) })}
+      value={formData.receipt_type}
+      onValueChange={(value) => {
+        setFormData({ ...formData, receipt_type: value });
+        setPayerType(value === 'registration' ? 'applicant' : 'student');
+      }}
     >
       <SelectTrigger>
-        <SelectValue placeholder="Select exam" />
+        <SelectValue placeholder="Select receipt type" />
       </SelectTrigger>
       <SelectContent>
-        {/* TODO: Replace with your real list of exams */}
-        {exams.map((exam) => (
-  <SelectItem key={exam.id} value={exam.id.toString()}>
-    {exam.name}
-  </SelectItem>
-))}
-        {/* ...more exams */}
+        <SelectItem value="registration">Registration</SelectItem>
+        <SelectItem value="furniture">Furniture</SelectItem>
+        <SelectItem value="levy">Levy</SelectItem>
+        <SelectItem value="textBooks">TextBooks</SelectItem>
+        <SelectItem value="exerciseBooks">Exercise Books</SelectItem>
+        <SelectItem value="jersey_crest">Jersey/Crest</SelectItem>
       </SelectContent>
     </Select>
   </div>
-) : null}
-        <div>
-          <label className="block text-sm font-medium mb-1">Amount</label>
-          <Input
-            type="number"
-            step="0.01"
-            value={formData.amount || ''}
-            onChange={(e) => setFormData({...formData, amount: parseFloat(e.target.value) || 0})}
-            placeholder="Enter amount"
-            required
-          />
-        </div>
 
-{formData.venue && (
-  <p className="text-sm text-muted-foreground mt-1">
-    Venue: {formData.venue}
-  </p>
-)}
+  {/* === Payer Type Radio === */}
+  <div>
+    <label className="block text-sm font-medium mb-1">Select Payer</label>
+    <div className="flex items-center space-x-4">
+      <label className="flex items-center space-x-2">
+        <input
+          type="radio"
+          name="payer"
+          value="applicant"
+          checked={payerType === 'applicant'}
+          onChange={() => setPayerType('applicant')}
+          disabled={formData.receipt_type === 'registration'}
+        />
+        <span>Applicant</span>
+      </label>
+      <label className="flex items-center space-x-2">
+        <input
+          type="radio"
+          name="payer"
+          value="student"
+          checked={payerType === 'student'}
+          onChange={() => setPayerType('student')}
+          disabled={formData.receipt_type === 'registration'}
+        />
+        <span>Student</span>
+      </label>
+    </div>
+  </div>
 
+  {/* === Search Student === */}
+  <div className="grid grid-cols-4 items-center gap-4 relative">
+    <Label htmlFor="student-search" className="text-right">
+      {payerType === 'applicant' ? 'Applicant' : 'Student'}
+    </Label>
 
-        <div className="flex justify-end space-x-2 pt-4">
-          <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)}>
-            Cancel
-          </Button>
-          <Button type="submit">
-            Create Receipt
-          </Button>
-        </div>
-      </form>
+    <div className="col-span-3 relative">
+      <Input
+        id="student-search"
+        type="text"
+        placeholder="Type to search..."
+        value={studentSearchQuery}
+        onChange={(e) => setStudentSearchQuery(e.target.value)}
+        onFocus={() => setOpenStudentCombobox(true)}
+      />
+      {openStudentCombobox && filteredStudents.length > 0 && (
+        <ul className="absolute z-50  border rounded shadow-md w-full mt-1 max-h-48 overflow-y-auto">
+          {filteredStudents.map((student) => (
+            <li
+              key={student.id}
+              className="px-4 py-2 cursor-pointer hover:bg-gray-100"
+              onClick={() => {
+                handleStudentSelect(student.id ?? 0);
+                setStudentSearchQuery(
+                  `${student.first_name} ${student.middle_name ?? ""} ${student.last_name}`
+                );
+                setOpenStudentCombobox(false);
+              }}
+            >
+              {student.first_name} {student.middle_name ?? ""} {student.last_name}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  </div>
+
+  {/* === Exam Select (if applicable) === */}
+  {(formData.receipt_type === 'registration' || formData.receipt_type === 'exam') && (
+    <div>
+      <label className="block text-sm font-medium mb-1">Exam</label>
+      <Select
+        value={formData.exam_id?.toString() || ""}
+        onValueChange={(value) => setFormData({ ...formData, exam_id: parseInt(value) })}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Select exam" />
+        </SelectTrigger>
+        <SelectContent>
+          {exams.map((exam) => (
+            <SelectItem key={exam.id} value={exam.id.toString()}>
+              {exam.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  )}
+
+  {/* === Amount === */}
+  <div>
+    <label className="block text-sm font-medium mb-1">Amount</label>
+    <Input
+      type="number"
+      step="0.01"
+      value={formData.amount || ''}
+      onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
+      placeholder="Enter amount"
+      required
+    />
+  </div>
+
+  {/* === Venue Display (Optional) === */}
+  {formData.venue && (
+    <p className="text-sm text-muted-foreground mt-1">Venue: {formData.venue}</p>
+  )}
+
+  {/* === Submit Buttons === */}
+  <div className="flex justify-end space-x-2 pt-4">
+    <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)}>
+      Cancel
+    </Button>
+    <Button type="submit">Create Receipt</Button>
+  </div>
+</form>
+
     );
   };
 
@@ -691,9 +755,11 @@ return (
               </TableHeader>
               <TableBody>
               {receipts.map((receipt: Receipt) => {
-  const realstudent: Student | undefined = realStudents.find(
-    (s) => Number(s.id) === Number(receipt.student_id)
-  );
+const realstudent: Student | undefined = realStudents.find(
+  (s) => Number(s.id) === Number(receipt.student_id)
+);
+console.log('Receipts:', receipts);
+
 
   const renderStudentName = () => {
     if (receipt.receipt_type === 'registration') {

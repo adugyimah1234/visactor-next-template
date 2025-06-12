@@ -11,6 +11,7 @@ export interface Receipt {
   exam_date?: string;
   class_id?: number;
   registration_id: number;
+  fee_id?: number;
   school_id?: number;
   student_name?: string;
   class_name?: string;
@@ -36,6 +37,7 @@ export interface ReceiptFilters {
 export interface CreateReceiptPayload {
   student_id: number;
   payment_id?: number;
+  fee_id: number;
   receipt_type: string;
   amount: number;
   date_issued?: string;
