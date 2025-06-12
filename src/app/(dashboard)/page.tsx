@@ -12,9 +12,13 @@ export default function Home() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push('/login');
+      router.replace('/login');
     }
   }, [isAuthenticated, isLoading, router]);
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   if (!isAuthenticated) {
     return <div>Redirecting to login...</div>;

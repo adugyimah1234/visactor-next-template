@@ -176,7 +176,7 @@ export default function ProfessionalDashboard() {
 useEffect(() => {
   const loadRole = async () => {
     const roles = await getAllRoles();
-    const role = roles.find(r => r.id === user?.role_id);
+    const role = roles.find(r => Number(r.id) === user?.role_id);
     setRoleName(role?.name?.toLowerCase() || '');
   };
   if (user?.role_id) loadRole();
