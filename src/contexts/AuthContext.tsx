@@ -24,6 +24,7 @@ interface AuthContextType {
   token: string | null;
   login: (token: string, initialUser: { id: number; role: string }) => Promise<void>;
   logout: () => void;
+  isLoading: boolean;
   isAuthenticated: boolean;
   updateUserProfile: (data: UpdateUserPayload) => Promise<void>;
 }
@@ -216,6 +217,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     token, 
     login, 
     logout: () => logout(), 
+    isLoading,
     isAuthenticated, 
     updateUserProfile 
   };

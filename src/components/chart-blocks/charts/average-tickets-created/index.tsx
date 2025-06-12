@@ -92,7 +92,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
               <span className={`text-sm font-medium ${
                 trend === 'up' ? 'text-green-600' : 'text-red-600'
               }`}>
-                {trendValue}%
+                {trendValue?.toFixed(1)}%
               </span>
               <span className="text-sm text-gray-500">vs last period</span>
             </div>
