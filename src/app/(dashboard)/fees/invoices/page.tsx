@@ -95,7 +95,7 @@ interface ReceiptFilters {
 }
 
 interface CreateReceiptData {
-  student_id?: number; // Changed from number | string to number only as per createReceipt expected payload
+  student_id?: number | undefined; // Changed from number | string to number only as per createReceipt expected payload
   registration_id?: number;
   payment_id?: number;
   receipt_type: string;
@@ -121,22 +121,21 @@ export default function ReceiptManagement() {
   const [processingAction, setProcessingAction] = useState<number | null>(null);
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const [showReceiptDetails, setShowReceiptDetails] = useState(false);
-  const [students, setStudents] = useState<RegistrationData[]>([]);
+  const [applicants, setApplicants] = useState<RegistrationData[]>([]);
   const [realStudents, setRealStudents] = useState<Student[]>([]);
 
 useEffect(() => {
   async function loadStudents() {
     try {
-      const data = await 
-      registrationService.getAll();
-
-      setStudents(data);
+      const data = await registrationService.getAll();
+      setApplicants(data); // changed
     } catch (err) {
-      console.error("Failed to fetch students", err);
+      console.error("Failed to fetch applicants", err);
     }
   }
   loadStudents();
 }, []);
+
 
 const fetchReceipts = useCallback(async () => {
   try {
@@ -265,7 +264,7 @@ useEffect(() => {
   // Create Receipt Form Component
 const CreateReceiptForm = () => {
   const [formData, setFormData] = useState<CreateReceiptData>({
-  student_id: 0,
+  student_id:  undefined,
   registration_id: undefined,
   payment_id: undefined,
   receipt_type: '',
@@ -330,14 +329,15 @@ const handleSubmit = async (e: React.FormEvent) => {
 };
 
 const filteredStudents = useMemo(() => {
+  const source = formData.receipt_type === 'registration' ? applicants : realStudents;
   return studentSearchQuery.trim()
-    ? students.filter((s) =>
+    ? source.filter((s) =>
         `${s.first_name} ${s.middle_name ?? ''} ${s.last_name}`
           .toLowerCase()
           .includes(studentSearchQuery.toLowerCase())
       )
-    : students;
-}, [students, studentSearchQuery]);
+    : applicants;
+}, [applicants, studentSearchQuery]);
 
 const handleStudentSelect = (id: number) => {
   if (formData.receipt_type === 'registration') {
@@ -690,86 +690,94 @@ return (
                 </TableRow>
               </TableHeader>
               <TableBody>
-  {receipts.map((receipt) => {
-      const realstudent = realStudents.find(s => Number(s.id) === Number(receipt.student_id));
+              {receipts.map((receipt: Receipt) => {
+  const realstudent: Student | undefined = realStudents.find(
+    (s) => Number(s.id) === Number(receipt.student_id)
+  );
 
-    const student = students.find(
-      (r) => r.student_id === receipt.student_id
-    );
+  const renderStudentName = () => {
+    if (receipt.receipt_type === 'registration') {
+      return receipt.student_name || 'Unknown Student';
+    }
 
-    return (
-      <TableRow key={receipt.id}>
-        <TableCell className="font-mono">
-          R-{receipt.id.toString().padStart(6, '0')}
-        </TableCell>
-<TableCell>
-  <div>
-    {receipt.receipt_type === 'registration' ? (
-      
-      <p className="font-medium">
-        {receipt.student_name}
-      </p>
-    ) : (
-      <p className="font-medium">
-        {student ? `${student.student_name} ` : `${realStudents.student_name}`}
-      </p>
-    )}
-    <p className="text-sm text-muted-foreground">{receipt.class_name}</p>
-  </div>
-</TableCell>
-        <TableCell>
-          <Badge {...getReceiptTypeBadge(receipt.receipt_type)}>
-            {getReceiptTypeBadge(receipt.receipt_type).label}
-          </Badge>
-        </TableCell>
-        <TableCell className="font-medium">
-          {formatCurrency(receipt.amount)}
-        </TableCell>
-        <TableCell>{formatDate(receipt.date_issued)}</TableCell>
-        <TableCell>
-          <Badge variant={receipt.payment_method === 'Paid' ? 'default' : 'secondary'}>
-            {receipt.payment_method || 'Paid'}
-          </Badge>
-        </TableCell>
-        <TableCell>
-          <Badge variant={receipt.payment_type ? 'default' : 'secondary'}>
-            {receipt.payment_type || 'cash'}
-          </Badge>
-</TableCell>
-        <TableCell>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
-                {processingAction === receipt.id ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <MoreHorizontal className="h-4 w-4" />
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => handleAction('view', receipt.id)}>
-                <Eye className="mr-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAction('print', receipt.id)}>
-                <Printer className="mr-2 h-4 w-4" />
-                Print
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAction('download', receipt.id)}>
-                <Download className="mr-2 h-4 w-4" />
-                Download PDF
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAction('email', receipt.id)}>
-                <Mail className="mr-2 h-4 w-4" />
-                Email Receipt
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </TableCell>
-      </TableRow>
-    );
-  })}
+    if (!realstudent) return 'Unknown Student';
+
+    const fullName = [realstudent.first_name, realstudent.middle_name, realstudent.last_name]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+
+    if (fullName) return fullName;
+
+    const initials =
+      (realstudent.first_name?.[0]?.toUpperCase() ?? '') +
+      (realstudent.last_name?.[0]?.toUpperCase() ?? '');
+
+    return initials || 'NA';
+  };
+
+  return (
+    <TableRow key={receipt.id}>
+      <TableCell className="font-mono">
+        R-{receipt.id.toString().padStart(6, '0')}
+      </TableCell>
+
+      <TableCell>
+        <div>
+          <p className="font-medium">{renderStudentName()}</p>
+          <p className="text-sm text-muted-foreground">{receipt.class_name}</p>
+        </div>
+      </TableCell>
+      <TableCell>
+        <Badge {...getReceiptTypeBadge(receipt.receipt_type)}>
+          {getReceiptTypeBadge(receipt.receipt_type).label}
+        </Badge>
+      </TableCell>
+      <TableCell className="font-medium">
+        {formatCurrency(receipt.amount)}
+      </TableCell>
+      <TableCell>{formatDate(receipt.date_issued)}</TableCell>
+      <TableCell>
+        <Badge variant={receipt.payment_method === 'Paid' ? 'default' : 'secondary'}>
+          {receipt.payment_method || 'Paid'}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        <Badge variant={receipt.payment_type ? 'default' : 'secondary'}>
+          {receipt.payment_type || 'cash'}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm">
+              {processingAction === receipt.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <MoreHorizontal className="h-4 w-4" />
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={() => handleAction('view', receipt.id)}>
+              <Eye className="mr-2 h-4 w-4" />
+              View Details
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleAction('print', receipt.id)}>
+              <Printer className="mr-2 h-4 w-4" />
+              Print
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleAction('download', receipt.id)}>
+              <Download className="mr-2 h-4 w-4" />
+              Download PDF
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+    </TableRow>
+  );
+})}
+
 </TableBody>
             </Table>
           )}

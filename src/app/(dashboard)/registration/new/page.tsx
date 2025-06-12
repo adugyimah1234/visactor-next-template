@@ -23,9 +23,7 @@ import classService, { ClassData } from '@/services/class';
 import { Category, getAllCategories } from '@/services/categories';
 import { academicYear, getAllAcademicYear } from '@/services/academic_year';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import ApplicantManagement from '../manage/page';
 import { saveOfflineRegistration } from '@/lib/offlineRegistrations';
-import SyncButton from '../components/SyncButton';
 
 const NewRegistrationPage = () => {
     const [gender, setGender] = useState<"Male" | "Female" | "Other">('Male');
@@ -275,7 +273,6 @@ const handleFinalSubmit = async () => {
             <h1 className="text-3xl font-semibold text-gray-900 dark:text-white mb-6 text-left">New Applicant Registration</h1>
             <div className="flex justify-between items-center mb-4">
       <h1 className="text-xl font-semibold">Registrations</h1>
-      <SyncButton />
     </div>
             <form onSubmit={handleSubmit} className="max-w-7xl mx-auto space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -549,7 +546,6 @@ const handleFinalSubmit = async () => {
                     {loading ? 'Registering...' : 'Register'}
                 </Button>
             </form>
-            <ApplicantManagement/>
             <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
   <DialogContent className="max-w-xl">
     <DialogHeader>
