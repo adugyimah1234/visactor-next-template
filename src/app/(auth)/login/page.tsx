@@ -19,23 +19,23 @@ export default function ProfessionalLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null); // Local error state
-  const [socialLoading, setSocialLoading] = useState<string | null>(null); // Social loading state
+  const [socialLoading, setSocialLoading] = useState(false); // Social loading state
   const router = useRouter(); // Initialize the router
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLocalError(null);
-    setSocialLoading('true');
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLocalError(null);
+  setSocialLoading(true); // Use boolean
 
-    try {
-      await signIn(email, password); // Call the signIn function from useAuth
-      // Redirection is handled in AuthContext
-    } catch (err: any) {
-      setLocalError(err.response?.data?.message || err.message || 'Login failed. Please check your credentials.');
-    } finally {
-      setSocialLoading('false');
-    }
-  };
+  try {
+    await signIn(email, password); // Login logic from useAuth
+    router.push('/'); // Navigate after successful login
+  } catch (err: any) {
+    setLocalError(err?.response?.data?.message || err?.message || 'Login failed. Please check your credentials.');
+  } finally {
+    setSocialLoading(false);
+  }
+};
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
@@ -160,10 +160,10 @@ export default function ProfessionalLogin() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={socialLoading}
               className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-base font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
             >
-              {loading ? (
+              {socialLoading ? (
                 <Loader className="h-5 w-5" />
               ) : (
                 <>

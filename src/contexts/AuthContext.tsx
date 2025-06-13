@@ -65,7 +65,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         console.log('User logged out successfully');
       }
       
-      router.push('/login');
+      // router.push('/login');
     }
   }, [token, router]);
 

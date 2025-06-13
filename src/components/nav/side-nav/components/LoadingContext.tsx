@@ -64,7 +64,7 @@ export function LoadingProvider({
       // Small delay to ensure page is rendered
       const timer = setTimeout(() => {
         finishNavigation();
-      }, 500);
+      }, 300);
 
       return () => clearTimeout(timer);
     }
@@ -75,7 +75,7 @@ export function LoadingProvider({
     if (navigationLoading) {
       const maxTimer = setTimeout(() => {
         finishNavigation();
-      }, 5000); // Maximum 5 seconds loading
+      }, 2000); // Maximum 5 seconds loading
 
       return () => clearTimeout(maxTimer);
     }

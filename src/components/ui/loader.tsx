@@ -10,65 +10,65 @@ interface LoaderProps {
 }
 
 const sizeMap = {
-  xs: "h-4 w-4",
-  sm: "h-6 w-6", 
-  md: "h-8 w-8",
-  lg: "h-12 w-12",
-  xl: "h-16 w-16",
+  xs: "h-3 w-3",
+  sm: "h-4 w-4", 
+  md: "h-6 w-6",
+  lg: "h-8 w-8",
+  xl: "h-10 w-10",
 };
 
 const textSizeMap = {
   xs: "text-xs",
   sm: "text-sm",
-  md: "text-base",
-  lg: "text-lg", 
-  xl: "text-xl",
+  md: "text-sm",
+  lg: "text-base", 
+  xl: "text-lg",
 };
 
 const colorMap = {
   indigo: {
     primary: "border-indigo-600",
-    secondary: "border-indigo-200",
+    secondary: "border-gray-200",
     bg: "bg-indigo-600",
-    text: "text-indigo-600",
+    text: "text-gray-700",
   },
   blue: {
     primary: "border-blue-600",
-    secondary: "border-blue-200", 
+    secondary: "border-gray-200", 
     bg: "bg-blue-600",
-    text: "text-blue-600",
+    text: "text-gray-700",
   },
   green: {
     primary: "border-green-600",
-    secondary: "border-green-200",
+    secondary: "border-gray-200",
     bg: "bg-green-600", 
-    text: "text-green-600",
+    text: "text-gray-700",
   },
   red: {
     primary: "border-red-600",
-    secondary: "border-red-200",
+    secondary: "border-gray-200",
     bg: "bg-red-600",
-    text: "text-red-600",
+    text: "text-gray-700",
   },
   purple: {
     primary: "border-purple-600", 
-    secondary: "border-purple-200",
+    secondary: "border-gray-200",
     bg: "bg-purple-600",
-    text: "text-purple-600",
+    text: "text-gray-700",
   },
   gray: {
     primary: "border-gray-600",
     secondary: "border-gray-200",
     bg: "bg-gray-600",
-    text: "text-gray-600",
+    text: "text-gray-700",
   },
 };
 
 export function Loader({
-  className = "text-center m-auto flex justify-center",
+  className = "",
   size = "md",
   showText = true,
-  text = "Loading...",
+  text = "",
   variant = "spinner",
   color = "indigo",
 }: LoaderProps) {
@@ -77,58 +77,63 @@ export function Loader({
   const colors = colorMap[color];
 
   const renderSpinner = () => (
-    <div className={`relative ${sizeClass}`}>
+    <div className={`${sizeClass} relative`}>
       <div
-        className={`absolute inset-0 rounded-full border-2 ${colors.secondary}`}
-      ></div>
+        className={`absolute inset-0 rounded-full border-2 ${colors.secondary}/30`}
+      />
       <div
         className={`absolute inset-0 rounded-full border-2 border-transparent ${colors.primary} border-t-2 animate-spin`}
-      ></div>
+      />
     </div>
   );
 
-  const renderDots = () => (
-    <div className="flex space-x-1">
-      {[0, 1, 2].map((i) => (
-        <div
-          key={i}
-          className={`rounded-full ${colors.bg} ${size === 'xs' ? 'h-2 w-2' : size === 'sm' ? 'h-3 w-3' : 'h-4 w-4'} animate-bounce`}
-          style={{
-            animationDelay: `${i * 0.1}s`,
-            animationDuration: '0.6s',
-          }}
-        ></div>
-      ))}
-    </div>
-  );
+  const renderDots = () => {
+    const dotSize = size === 'xs' ? 'h-1.5 w-1.5' : size === 'sm' ? 'h-2 w-2' : size === 'md' ? 'h-2.5 w-2.5' : size === 'lg' ? 'h-3 w-3' : 'h-3.5 w-3.5';
+    
+    return (
+      <div className="flex space-x-1.5 items-center">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className={`rounded-full ${colors.bg} ${dotSize}`}
+            style={{
+              animation: `bounce 1.4s ease-in-out ${i * 0.16}s infinite both`,
+            }}
+          />
+        ))}
+      </div>
+    );
+  };
 
   const renderPulse = () => (
-    <div className={`relative ${sizeClass}`}>
+    <div className={`${sizeClass} relative`}>
       <div
-        className={`absolute inset-0 rounded-full ${colors.bg} animate-ping opacity-75`}
-      ></div>
+        className={`absolute inset-0 rounded-full ${colors.bg} animate-ping opacity-40`}
+      />
       <div
-        className={`relative rounded-full ${colors.bg} ${sizeClass} animate-pulse`}
-      ></div>
+        className={`relative rounded-full ${colors.bg} ${sizeClass} opacity-75`}
+      />
     </div>
   );
 
-  const renderBars = () => (
-    <div className="flex items-end space-x-1">
-      {[0, 1, 2, 3].map((i) => (
-        <div
-          key={i}
-          className={`${colors.bg} rounded-sm animate-pulse`}
-          style={{
-            width: size === 'xs' ? '3px' : size === 'sm' ? '4px' : '6px',
-            height: size === 'xs' ? '12px' : size === 'sm' ? '16px' : '24px',
-            animationDelay: `${i * 0.15}s`,
-            animationDuration: '1s',
-          }}
-        ></div>
-      ))}
-    </div>
-  );
+  const renderBars = () => {
+    const barWidth = size === 'xs' ? 'w-0.5' : size === 'sm' ? 'w-1' : 'w-1.5';
+    const heights = ['h-2', 'h-3', 'h-4', 'h-2'];
+    
+    return (
+      <div className="flex items-end space-x-1">
+        {[0, 1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className={`${colors.bg} ${barWidth} ${heights[i]} rounded-sm`}
+            style={{
+              animation: `pulse 1.2s ease-in-out ${i * 0.15}s infinite`,
+            }}
+          />
+        ))}
+      </div>
+    );
+  };
 
   const renderLoader = () => {
     switch (variant) {
@@ -145,15 +150,15 @@ export function Loader({
 
   return (
     <div
-      className={`flex flex-col items-center justify-center space-y-2 ${className}`}
+      className={`inline-flex items-center ${showText ? 'flex-col space-y-2' : ''} ${className}`}
       role="status"
-      aria-label="Loading"
+      aria-label={text}
     >
       {renderLoader()}
       {showText && (
-        <div className={`${colors.text} ${textSizeClass} font-medium animate-pulse text-center`}>
+        <span className={`${colors.text} ${textSizeClass} font-medium text-center`}>
           {text}
-        </div>
+        </span>
       )}
     </div>
   );
@@ -170,16 +175,16 @@ export function InlineLoader({
 
   return (
     <div
-      className={`relative ${sizeClass} ${className} flex items-center justify-center`}
+      className={`${sizeClass} relative inline-block ${className}`}
       role="status"
       aria-label="Loading"
     >
       <div
         className={`absolute inset-0 rounded-full border-2 ${colors.secondary}`}
-      ></div>
+      />
       <div
         className={`absolute inset-0 rounded-full border-2 border-transparent ${colors.primary} border-t-2 animate-spin`}
-      ></div>
+      />
     </div>
   );
 }
@@ -191,14 +196,15 @@ export function LoaderOverlay({
   color = "indigo",
 }: Pick<LoaderProps, "text" | "variant" | "color">) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
-      <div className="rounded-lg text-center bg-white p-8 shadow-xl dark:bg-gray-800">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/95 backdrop-blur-sm">
+      <div className="flex flex-col items-center space-y-4 bg-white rounded-xl shadow-lg border border-gray-100 p-8 mx-4">
         <Loader
           size="lg"
           variant={variant}
           color={color}
           text={text}
           showText={true}
+          className=""
         />
       </div>
     </div>
