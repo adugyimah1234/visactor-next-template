@@ -11,9 +11,11 @@ export interface RegistrationData {
   academic_year_id: number;
   first_name: string;
   middle_name?: string;
+  previous_school: string;
   academic_year: string;
   last_name: string;
   category: string;
+  category_id?: number;
   date_of_birth: string | null;
   class_applying_for: string;
   gender: "Male" | "Female" | "Other";
@@ -58,6 +60,7 @@ const registrationService = {
       throw new Error(error.response?.data?.error || "Failed to fetch registrations");
     }
   },
+  
 
   async getById(id: number): Promise<RegistrationData> {
     try {
@@ -151,6 +154,8 @@ const registrationService = {
       throw new Error(error.response?.data?.error || "Failed to fetch registration statistics");
     }
   }
+
+  
 };
 
 

@@ -3,18 +3,22 @@
 // hooks/useAuth.ts
 import { useState, useContext } from 'react';
 import { AuthContext, AuthContextType } from '@/contexts/AuthContext';
-import { login as loginService } from '@/services/auth'; // Ensure correct import
+import { login as loginService } from '@/services/auth';
 
 interface LoginResponse {
   token: string;
   user: {
     id: number;
     role: string;
-    // Add other properties of the user object from the login response
+    // Add other properties if needed
   };
 }
 
-export const useAuth = (): AuthContextType & { loading: boolean; error: string | null; signIn: (email: string, password: string) => Promise<void> } => {
+export const useAuth = (): AuthContextType & {
+  loading: boolean;
+  error: string | null;
+  signIn: (username: string, password: string) => Promise<void>; // ✅ updated
+} => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
@@ -23,11 +27,13 @@ export const useAuth = (): AuthContextType & { loading: boolean; error: string |
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const signIn = async (email: string, password: string): Promise<void> => {
+  // ✅ updated param name
+  const signIn = async (username: string, password: string): Promise<void> => {
     setLoading(true);
     setError(null);
     try {
-      const data: LoginResponse = await loginService(email, password);
+      // ✅ pass username to service
+      const data: LoginResponse = await loginService(username, password);
       if (data?.token && data?.user) {
         await context.login(data.token, { id: data.user.id, role: data.user.role });
       } else {

@@ -1,45 +1,45 @@
+'use client';
 /* eslint-disable react/jsx-no-undef */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable react/no-unescaped-entities */
-'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation'; // Import useRouter
-import { EyeIcon, EyeOffIcon, LockIcon, MailIcon, ArrowRightIcon } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth'; // Import your useAuth hook
-import { Loader } from '@/components/ui/loader'; // Import Loader component
+import { useRouter } from 'next/navigation';
+import { EyeIcon, EyeOffIcon, LockIcon, UserIcon, ArrowRightIcon } from 'lucide-react'; // ⬅️ Use UserIcon
+import { useAuth } from '@/hooks/useAuth';
+import { Loader } from '@/components/ui/loader';
 import Image from "next/image";
 import Link from 'next/link';
 
 export default function ProfessionalLogin() {
-  const { signIn, loading, error: authError } = useAuth(); // Use signIn and states from the hook
-  const [email, setEmail] = useState('');
+  const { signIn, loading, error: authError } = useAuth();
+  const [username, setUsername] = useState(''); // ⬅️ changed
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [localError, setLocalError] = useState<string | null>(null); // Local error state
-  const [socialLoading, setSocialLoading] = useState(false); // Social loading state
-  const router = useRouter(); // Initialize the router
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [socialLoading, setSocialLoading] = useState(false);
+  const router = useRouter();
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLocalError(null);
-  setSocialLoading(true); // Use boolean
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLocalError(null);
+    setSocialLoading(true);
 
-  try {
-    await signIn(email, password); // Login logic from useAuth
-    router.push('/'); // Navigate after successful login
-  } catch (err: any) {
-    setLocalError(err?.response?.data?.message || err?.message || 'Login failed. Please check your credentials.');
-  } finally {
-    setSocialLoading(false);
-  }
-};
+    try {
+      await signIn(username, password); // ⬅️ changed
+      router.push('/');
+    } catch (err: any) {
+      setLocalError(err?.response?.data?.message || err?.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setSocialLoading(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Left panel with illustration */}
+      {/* Left panel */}
       <div className="hidden lg:flex lg:w-1/2 bg-indigo-600 items-center justify-center p-12">
         <div className="max-w-md text-white">
           <div className="text-4xl font-bold mb-6">Welcome back</div>
@@ -60,14 +60,12 @@ const handleSubmit = async (e: React.FormEvent) => {
         </div>
       </div>
 
-      {/* Right panel with login form */}
+      {/* Right panel */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <div className="text-center mb-10">
-            <div className="h-10 w-16 rounded-xl  flex items-center justify-center mx-auto mb-8">
-              <div className="font-bold  text-white">
-              <Image src="/logo.png" alt="Logo" width={55} height={48} className='w-28 h-20'/>
-              </div>
+            <div className="h-10 w-20 rounded-xl flex items-center justify-center mx-auto mb-8">
+              <Image src="/logo.png" alt="Logo" width={50} height={50} className='w-28 h-20'/>
             </div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Sign in to Dashboard</h1>
             <p className="mt-2 text-gray-600 dark:text-gray-400">Enter your credentials to access your account</p>
@@ -80,28 +78,28 @@ const handleSubmit = async (e: React.FormEvent) => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* ✅ Username input */}
             <div className="space-y-2">
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Email address
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Username
               </label>
               <div className="relative rounded-lg shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <MailIcon className="h-5 w-5 text-gray-400" />
+                  <UserIcon className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
+                  id="username"
+                  name="username"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="name@company.com"
+                  placeholder="Your username"
                 />
               </div>
             </div>
 
+            {/* ✅ Password input (unchanged) */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -126,19 +124,17 @@ const handleSubmit = async (e: React.FormEvent) => {
                   className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   placeholder="••••••••"
                 />
-                <Link href={'/'}>
                 <button
                   type="button"
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                {showPassword ? (
-                  <EyeOffIcon className="h-5 w-5 text-gray-400" />
-                ) : (
-                  <EyeIcon className="h-5 w-5 text-gray-400" />
-                )}
+                  {showPassword ? (
+                    <EyeOffIcon className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    <EyeIcon className="h-5 w-5 text-gray-400" />
+                  )}
                 </button>
-                </Link>
               </div>
             </div>
 
@@ -173,13 +169,6 @@ const handleSubmit = async (e: React.FormEvent) => {
               )}
             </button>
           </form>
-
-          <div className="mt-8">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-              </div>
-            </div>
-          </div>
 
           <p className="mt-10 text-center text-sm text-gray-600 dark:text-gray-400">
             Don't have an account?{' '}

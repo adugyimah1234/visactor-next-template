@@ -5,7 +5,7 @@ import api from "@/lib/axios";
 export interface User {
   id: number;
   full_name: string;
-  email: string;
+  username: string;
   phone_number?: string;
   role_id: number;
   school_id?: number | null;
@@ -16,8 +16,9 @@ export interface User {
 
 export interface UpdateUserPayload {
   full_name?: string;
-  email?: string;
   phone_number?: string;
+  username?: string;
+  
   password?: string;
   role_id?: number;
   status?: 'active' | 'inactive';
@@ -25,7 +26,7 @@ export interface UpdateUserPayload {
 
 export interface CreateUserDTO {
   full_name: string;
-  email: string;
+  username: string;
   password: string;
   role_id: number;
   school_id?: number | null;

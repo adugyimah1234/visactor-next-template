@@ -3,7 +3,7 @@ import api from "@/lib/axios";
 export interface ClassData {
   id: number;
   name: string;
-  level: number;
+  level?: number;
   school_id: number;
   school_name?: string;
   slots: number;

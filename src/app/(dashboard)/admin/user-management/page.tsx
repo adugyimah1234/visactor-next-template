@@ -4,7 +4,7 @@
 /* eslint-disable @typescript-eslint/consistent-type-imports */
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { User, getAllUsers, updateUser, createUser, deleteUser } from '@/services/users';
 import {
   Table,
@@ -47,16 +47,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+
 const userFormSchema = z.object({
-  full_name: z.string()
-    .min(2, "Full name must be at least 2 characters"),
-  email: z.string()
-    .email("Please enter a valid email address"),
-  password: z.string()
-    .min(6, "Password must be at least 6 characters"),
+  full_name: z.string().min(2, "Full name must be at least 2 characters"),
+  username: z.string().min(2, "Username must be at least 2 characters"), // ✅ ADD THIS
+  password: z.string().min(6, "Password must be at least 6 characters"),
   role_id: z.number(),
   school_id: z.number().optional().nullable()
 });
+
 
 type UserFormValues = z.infer<typeof userFormSchema>;
 export type RoleId = number;
@@ -75,9 +75,8 @@ export default function UserManagement() {
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
     defaultValues: {
-      username: "",
       full_name: "",
-      email: "",
+      username: "",
       password: "",
       role_id: 1,
       school_id: null
@@ -97,7 +96,8 @@ export default function UserManagement() {
     }
   };
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
-  
+  const dropdownTriggerRef = useRef<HTMLButtonElement | null>(null);
+
 
   
   useEffect(() => {
@@ -138,33 +138,44 @@ export default function UserManagement() {
     }
   };
 
-  const handleStatusChange = async (userId: number, status: 'active' | 'inactive') => {
-    try {
-      await updateUser(userId, { status });
-      await fetchUsers(); // Refresh the list
-      toast({
-        title: "Success",
-        description: "User status updated successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update user status",
-        variant: "destructive",
-      });
-    }
-  };
+const handleStatusChange = async (user: User, status: 'active' | 'inactive') => {
+  try {
+    await updateUser(user.id, {
+      username: user.username,
+      full_name: user.full_name,
+      password: '', // optional or empty string
+      role_id: user.role_id,
+      status: status,
+    });
+    await fetchUsers();
+    toast({
+      title: "Success",
+      description: "User status updated successfully",
+    });
+  } catch (error) {
+    toast({
+      title: "Error",
+      description: "Failed to update user status",
+      variant: "destructive",
+    });
+  }
+};
 
-  const handleEdit = (user: User) => {
+const lastEditButtonRef = useRef<HTMLButtonElement | null>(null);
+
+const handleEdit = (user: User, e: React.MouseEvent<HTMLButtonElement>) => {
+  lastEditButtonRef.current = e.currentTarget;
   setEditingUser(user);
   form.reset({
     full_name: user.full_name,
-    email: user.email,
-    password: "", // Optional: ask user to reset password manually
+    username: user.username,
+    password: "",
     role_id: user.role_id,
     school_id: user.school_id,
   });
 };
+
+
 
   const handleDelete = async (userId: number) => {
   try {
@@ -192,7 +203,7 @@ export default function UserManagement() {
       setIsLoading(true);
       await createUser({
         full_name: values.full_name,
-        email: values.email,
+        username: values.username,
         password: values.password,
         role_id: values.role_id,
         school_id: values.school_id
@@ -223,7 +234,7 @@ export default function UserManagement() {
   const filteredUsers = users
     .filter(user => 
       user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+      user.username.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
     .filter(user => {
@@ -299,12 +310,12 @@ export default function UserManagement() {
 
                   <FormField
                     control={form.control}
-                    name="email"
+                    name="username"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email</FormLabel>
+                        <FormLabel>username</FormLabel>
                         <FormControl>
-                          <Input type="email" placeholder="john@example.com" {...field} />
+                          <Input type="username" placeholder="john" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -323,33 +334,33 @@ export default function UserManagement() {
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="role_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Role</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange}
-                          value={field.value?.toString()}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a role" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {roles.map((role) => (
-                              <SelectItem key={role.id} value={role.id}>
-                                {role.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          <FormField
+          control={form.control}
+          name="role_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Role</FormLabel>
+              <Select
+                value={field.value?.toString()}
+                onValueChange={(value) => field.onChange(Number(value))}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {roles.map((role) => (
+                    <SelectItem key={role.id} value={String(role.id)}>
+                      {role.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setIsCreatingUser(false)}>
                       Cancel
@@ -373,7 +384,7 @@ export default function UserManagement() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
+                <TableHead>Username</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Last Login</TableHead>
@@ -384,7 +395,7 @@ export default function UserManagement() {
               {filteredUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.full_name}</TableCell>
-                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.username}</TableCell>
                   <TableCell>
                     <Badge variant="outline">
                       {roles.find(role =>                       Number(role.id) === user.role_id)?.name || 'Unknown'}
@@ -395,9 +406,9 @@ export default function UserManagement() {
                       variant={user.status === 'active' ? 'default' : 'secondary'}
                       className="cursor-pointer"
                       onClick={() => handleStatusChange(
-                        user.id, 
-                        user.status === 'active' ? 'inactive' : 'active'
-                      )}
+  user,
+  user.status === 'active' ? 'inactive' : 'active'
+)}
                     >
                       {user.status}
                     </Badge>
@@ -411,9 +422,11 @@ export default function UserManagement() {
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end">
-      <DropdownMenuItem onClick={() => handleEdit(user)}>
-        Edit
-      </DropdownMenuItem>
+<DropdownMenuItem asChild>
+  <button onClick={(e) => handleEdit(user, e)}>
+    Edit
+  </button>
+</DropdownMenuItem>
 <DropdownMenuItem
   onClick={() => setConfirmDeleteUserId(user.id)}
   className="text-red-600"
@@ -424,7 +437,15 @@ export default function UserManagement() {
     </DropdownMenuContent>
   </DropdownMenu>
 </TableCell>
-<Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
+<Dialog
+  open={!!editingUser}
+  onOpenChange={(open) => {
+    if (!open) {
+      setEditingUser(null);
+      lastEditButtonRef.current?.focus();
+    }
+  }}
+>
   <DialogContent>
     <DialogHeader>
       <DialogTitle>Edit User</DialogTitle>
@@ -473,12 +494,12 @@ export default function UserManagement() {
 
         <FormField
           control={form.control}
-          name="email"
+          name="username"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>username</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="john@example.com" {...field} />
+<Input type="text" placeholder="john" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

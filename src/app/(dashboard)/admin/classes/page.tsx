@@ -21,9 +21,13 @@ import schoolService from "@/services/schools";
 import classService, { ClassData } from "@/services/class";
 import { School } from "@/types/school";
 import { Toaster, toast } from 'sonner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 interface ClassWithSlots extends ClassData {
   slots: number;
+  temp_id?: number; // 👈 add this
 }
 
 export default function AdminSchoolsPage() {
@@ -87,40 +91,44 @@ export default function AdminSchoolsPage() {
   }
 
   // Handle class changes
-  function onClassChange(
-    id: number,
-    field: "name" | "level" | "slots",
-    value: string | number
-  ) {
-    setClasses((prev) =>
-      prev.map((cls) =>
-        cls.id === id
-          ? {
-              ...cls,
-              [field]: field === "level" || field === "slots" ? Number(value) : value,
-            }
-          : cls
-      )
-    );
-  }
+function onClassChange(
+  id: number,
+  field: "name" |  "slots",
+  value: string | number
+) {
+  setClasses((prev) =>
+    prev.map((cls) =>
+      (cls.id ?? cls.temp_id) === id
+        ? {
+            ...cls,
+            [field]: field === "slots" ? Number(value) : value,
+          }
+        : cls
+    )
+  );
+}
+
 
   // Add new empty class
 function addClass() {
   if (!selectedSchool) return;
 
-  const newClass: Omit<ClassWithSlots, 'id' | 'created_at' | 'updated_at'> = {
+  const tempId = Date.now() + Math.floor(Math.random() * 10000); // Unique fallback ID
+
+  const newClass: ClassWithSlots = {
+    id: tempId, // 👈 temp_id only
     name: '',
-    level: 1,
     school_id: selectedSchool.id,
     school_name: selectedSchool.name,
     slots: 0,
     capacity: 0,
     students_count: 0,
-
   };
 
-  setClasses((prev) => [...prev, newClass as ClassWithSlots]); // type override if needed
+  setClasses((prev) => [...prev, newClass]);
 }
+
+
 
 
 
@@ -163,6 +171,7 @@ function addClass() {
     setError(null);
 
     try {
+      
 if (!selectedSchool.name.trim()) {
   toast.error("School name is required.");
   setSaving(false);
@@ -192,32 +201,29 @@ if (!selectedSchool.name.trim()) {
       // Save or update classes
 const classRequests = classes.map((cls) => {
   if (!cls.name) throw new Error("Class name is required");
-  if (cls.level === null || cls.level === undefined || isNaN(cls.level)) {
-  throw new Error("Class level is required");
-}
+
   if (cls.slots === null || cls.slots === undefined || isNaN(cls.slots)) {
     throw new Error("Class slots are required");
   }
 
   const payload: Omit<ClassData, "id" | "school_name"> = {
     name: cls.name,
-    level: cls.level,
     school_id: savedSchool.id!,
     slots: cls.slots,
     capacity: cls.slots,
     students_count: cls.students_count,
   };
 
-  if (!cls.id) {
-    // No ID means new class
-    return classService.create(payload);
-  } else {
-    // ID exists, safe to update
-    return classService.update({
-      id: cls.id,
-      ...payload,
-    });
-  }
+if (cls.id >= 1000000000) {
+  // Temporary class – create new
+  return classService.create(payload);
+} else {
+  // Existing class – update
+  return classService.update({
+    id: cls.id,
+    ...payload,
+  });
+} 
 });
 
 
@@ -249,6 +255,12 @@ const classRequests = classes.map((cls) => {
   setClasses([]);
 }
 
+// Suggested options
+const CLASS_OPTIONS = [
+  "KG1",
+  "KG2",
+  ...Array.from({ length: 8 }, (_, i) => `Basic ${i + 1}`),
+];
 
   return (
     <div className="max-w-7xl mx-auto p-6 flex gap-6">
@@ -384,69 +396,81 @@ const classRequests = classes.map((cls) => {
                 )}
 
                 {classes.map((cls) => (
-                  <div
-                    key={cls.id}
-                    className="grid grid-cols-5 gap-4 items-center border-b border-border py-2"
-                  >
-                    <div>
-                      <Label htmlFor={`class-name-${cls.id}`}>Class Name</Label>
-                      <Input
-                        id={`class-name-${cls.id}`}
-                        value={cls.name}
-                        onChange={(e) =>
-                          onClassChange(cls.id, "name", e.target.value)
-                        }
-                        placeholder="Class Name"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`class-level-${cls.id}`}>Level</Label>
-                      <Input
-                        id={`class-level-${cls.id}`}
-                        type="number"
-                        min={1}
-                        value={cls.level}
-                        onChange={(e) =>
-                          onClassChange(cls.id, "level", e.target.value)
-                        }
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`class-slots-${cls.id}`}>
-                        Slots Available
-                      </Label>
-                      <Input
-                        id={`class-slots-${cls.id}`}
-                        type="number"
-                        min={0}
-                        value={cls.slots}
-                        onChange={(e) =>
-                          onClassChange(cls.id, "slots", e.target.value)
-                        }
-                        required
-                      />
-                    </div>
-                    <div className="pt-6">
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              `Are you sure you want to delete class "${cls.name}"?`
-                            )
-                          ) {
-                            deleteClass(cls.id);
-                          }
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+  <div
+    key={cls.id ?? cls.temp_id}
+    className="grid grid-cols-5 gap-4 items-center border-b border-border py-2"
+  >
+    <div>
+      <Label htmlFor={`class-name-${cls.id ?? cls.temp_id}`}>
+        Class Name
+      </Label>
+
+      {/* ✅ Combobox: Popover with list AND typing */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Input
+            value={cls.name}
+            placeholder="Type or select class"
+            onChange={(e) =>
+              onClassChange(cls.id ?? cls.temp_id!, "name", e.target.value)
+            }
+          />
+        </PopoverTrigger>
+        <PopoverContent className="p-0">
+          <div className="flex flex-col">
+            {CLASS_OPTIONS.map((option) => (
+              <button
+                key={option}
+                className={cn(
+                  "text-left w-full px-4 py-2 hover:bg-muted"
+                )}
+                onClick={() =>
+                  onClassChange(cls.id ?? cls.temp_id!, "name", option)
+                }
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
+
+    <div>
+      <Label htmlFor={`class-slots-${cls.id ?? cls.temp_id}`}>
+        Slots Available
+      </Label>
+      <Input
+        id={`class-slots-${cls.id ?? cls.temp_id}`}
+        type="number"
+        min={0}
+        value={cls.slots}
+        onChange={(e) =>
+          onClassChange(cls.id ?? cls.temp_id!, "slots", e.target.value)
+        }
+        required
+      />
+    </div>
+
+    <div className="pt-6">
+      <Button
+        variant="destructive"
+        size="sm"
+        onClick={() => {
+          if (
+            window.confirm(
+              `Are you sure you want to delete class "${cls.name}"?`
+            )
+          ) {
+            deleteClass(cls.id);
+          }
+        }}
+      >
+        Delete
+      </Button>
+    </div>
+  </div>
+))}
 
                 <Button variant="outline" onClick={addClass}>
                   + Add Class

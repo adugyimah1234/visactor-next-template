@@ -57,7 +57,7 @@ const [selectedAppliedClass, setSelectedAppliedClass] = useState<string>('');
         
         // Get user role name based on role_id
         if (user?.role_id && roleData.length > 0) {
-          const userRoleData = roleData.find(role => role.id === user.role_id);
+          const userRoleData = roleData.find(role => Number(role.id) === user.role_id);
           setUserRole(userRoleData?.name || '');
         }
       } catch (err) {
@@ -337,11 +337,13 @@ const handleSinglePromote = async (applicant: RegistrationData) => {
 const pendingApplicants = useMemo(() => {
   return applicants.filter((a) => {
     const matchesStatus = a.status === 'pending';
+    const isPaymentValid = a.payment_status !== 'unpaid'; // ✅ Filter unpaid
     const matchesClass = selectedClassId === '' || a.class_id === selectedClassId;
     const matchesAppliedClass = selectedAppliedClass === '' || a.class_applying_for === selectedAppliedClass;
-    return matchesStatus && matchesClass && matchesAppliedClass;
+    return matchesStatus && isPaymentValid && matchesClass && matchesAppliedClass;
   });
 }, [applicants, selectedClassId, selectedAppliedClass]);
+
 
 const uniqueAppliedClasses = Array.from(
   new Set(applicants.map((a) => a.class_applying_for).filter(Boolean))

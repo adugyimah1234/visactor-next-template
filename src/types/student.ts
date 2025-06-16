@@ -43,6 +43,7 @@ class_id: number;
 registration_date: string;
 status: string;
 school_id: number;
+ category?: 'SVC' | 'MOD' | 'CIV'; 
 }
 
 

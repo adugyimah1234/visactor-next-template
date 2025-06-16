@@ -6,7 +6,7 @@ export interface Category {
   name: string;
   code: string;
   description: string;
-  fees: number;
+  amount: number;
   school_id: number;
   status: 'active' | 'inactive';
   created_at?: string;
@@ -17,7 +17,7 @@ export interface CreateCategoryDTO {
   name: string;
   code: string;
   description: string;
-  fees: number;
+  amount: number;
   status?: 'active' | 'inactive';
 }
 

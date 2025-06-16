@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Plus, Edit, Trash2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { createCategory, getAllCategories, updateCategory } from '@/services/categories';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
 interface Category {
   id: string;
@@ -34,9 +39,84 @@ interface Category {
   isActive: boolean;
 }
 
+const categoryFormSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  code: z.string().min(2, "Code must be at least 2 characters"),
+  description: z.string().min(10, "Description must be at least 10 characters"),
+  fees: z.number().min(0, "Fees cannot be negative"),
+  status: z.enum(['active', 'inactive']) // Use enum for status
+
+});
+
+type CategoryFormValues = z.infer<typeof categoryFormSchema>;
+
+
 export default function CategorySettings() {
-  const [categories] = useState<Category[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const { toast } = useToast();
+
+  const form = useForm<CategoryFormValues>({
+    resolver: zodResolver(categoryFormSchema),
+    defaultValues: {
+      name: "",
+      code: "",
+      description: "",
+      fees: 0,
+      status: "active"
+    }
+  });
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getAllCategories();
+      setCategories(data);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+    const onSubmit = async (values: CategoryFormValues) => {
+      try {
+        if (editingCategory) {
+          await updateCategory(editingCategory.id, values);
+          toast({
+            title: "Success",
+            description: "Category updated successfully"
+          });
+        } else {
+          await createCategory(values);
+          toast({
+            title: "Success",
+            description: "Category created successfully"
+          });
+        }
+        setIsAddingCategory(false);
+        setEditingCategory(null);
+        form.reset();
+        fetchCategories();
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive"
+        });
+      }
+    };
 
   return (
     <Card>

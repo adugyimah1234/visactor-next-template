@@ -62,15 +62,15 @@ const navigationItems: NavItem[] = [
       { name: "Admitted Applicants", href: "/exams/shortlisted", icon: BookOpen },
     ],
   },
-  {
-    name: "Enrollment",
-    icon: GraduationCap,
-    href: "/admissions",
-    children: [
-      { name: "Process Enrollment", href: "/admissions/admission-process", icon: GraduationCap },
-      { name: "Enrolled Students", href: "/admissions/enrolled-students", icon: GraduationCap },
-    ],
-  },
+  // {
+  //   name: "Enrollment",
+  //   icon: GraduationCap,
+  //   href: "/admissions",
+  //   children: [
+  //     { name: "Process Enrollment", href: "/admissions/admission-process", icon: GraduationCap },
+  //     { name: "Enrolled Students", href: "/admissions/enrolled-students", icon: GraduationCap },
+  //   ],
+  // },
   {
     name: "Fee Management",
     icon: CreditCard,

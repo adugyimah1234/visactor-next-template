@@ -40,7 +40,7 @@ export interface User extends BaseUser {
  * Registration payload type
  */
 export interface RegisterPayload {
-  email: string;
+  username: string;
   password: string;
   name: string;
 }
@@ -49,7 +49,7 @@ export interface RegisterPayload {
  * Login payload type
  */
 export interface LoginPayload {
-  email: string;
+  username: string;
   password: string;
 }
 
@@ -96,7 +96,7 @@ export interface CreateUserData {
  */
 export interface UpdateUserData {
   name?: string;
-  email?: string;
+  username?: string;
   role?: UserRole;
   status?: UserStatus;
   password?: string;

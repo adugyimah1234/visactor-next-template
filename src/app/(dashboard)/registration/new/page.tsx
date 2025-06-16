@@ -26,7 +26,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { saveOfflineRegistration } from '@/lib/offlineRegistrations';
 
 const NewRegistrationPage = () => {
-    const [gender, setGender] = useState<"Male" | "Female" | "Other">('Male');
+    const [gender, setGender] = useState<"Male" | "Female" >('Male');
 const [registrationData, setRegistrationData] = useState<Omit<RegistrationData, 'id'>>({
     first_name: '',
     last_name: '',
@@ -35,9 +35,10 @@ const [registrationData, setRegistrationData] = useState<Omit<RegistrationData, 
     email: '',
     middle_name: '',
     phone_number: '',
+    previous_school: '',
     date_of_birth: '',
     class_applying_for: '',
-    gender: gender as "Male" | "Female" | "Other",
+    gender: gender as "Male" | "Female",
     academic_year: '',
     category: '',
     address: '',
@@ -63,7 +64,7 @@ const [registrationData, setRegistrationData] = useState<Omit<RegistrationData, 
     const [showPreviewDialog, setShowPreviewDialog] = useState(false);
     const [showReceiptDialog, setShowReceiptDialog] = useState(false);
     const [newRegistrationId, setNewRegistrationId] = useState<number | null>(null);
-    // Simulate fetching academic years (replace with your actual API call)
+
 
     useEffect(() => {
         const fetchAcademicYears = async () => {
@@ -92,6 +93,11 @@ const [registrationData, setRegistrationData] = useState<Omit<RegistrationData, 
         }
       };
 
+const getCategoryName = (id: number | string) => {
+  const found = categories.find((c) => c.id === Number(id));
+  return found ? found.name : `Unknown (${id})`;
+};
+
 async function loadSchools() {
   setLoading(true);
   try {
@@ -119,12 +125,28 @@ async function loadSchools() {
         loadSchools();
       }, []);
 
-    const handleChange = (field: keyof RegistrationData, value: any) => {
-        setRegistrationData(prevData => ({
-            ...prevData,
-            [field]: value,
-        }));
-    };
+ const handleChange = (field: keyof typeof registrationData, value: any) => {
+    setRegistrationData(prevData => ({
+      ...prevData,
+      [field]: value,
+    }));
+  };
+
+  // Function to calculate age from date string YYYY-MM-DD
+  const calculateAge = (dob: string) => {
+    if (!dob) return null;
+    const today = new Date();
+    const birthDate = new Date(dob);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age >= 0 ? age : null;
+  };
+
+  const age = calculateAge(registrationData.date_of_birth ?? '');
+
 
     const handleAcademicYearChange = (value: string) => {
         const selectedYear = academicYears.find(year => year.year.toString() === value);
@@ -136,6 +158,7 @@ async function loadSchools() {
         student_id: 0,
         scores: 0,
         status: 'pending',
+        previous_school: '',
         class_id: 0,
         academic_year_id: 0,
         academic_year: '',
@@ -195,13 +218,14 @@ const handleSubmit = async (event: React.FormEvent) => {
       last_name: registrationData.last_name,
       date_of_birth: format(new Date(registrationData.date_of_birth), "yyyy-MM-dd"),
       class_applying_for: registrationData.class_applying_for,
-      gender: registrationData.gender as "Male" | "Female" | "Other",
+      gender: registrationData.gender as "Male" | "Female",
       email: registrationData.email || "",
       phone_number: registrationData.phone_number || "",
       category: registrationData.category,
       address: registrationData.address || "",
       guardian_name: registrationData.guardian_name || "",
       relationship: registrationData.relationship || "",
+      previous_school: registrationData.previous_school || "",
       guardian_phone_number: registrationData.guardian_phone_number || "",
     };
 
@@ -241,7 +265,25 @@ const handleFinalSubmit = async () => {
       scores: registrationData.scores ?? 0,
       status: registrationData.status ?? "pending"
     };
+  if (
+    !registrationData.first_name ||
+    !registrationData.last_name ||
+    !registrationData.date_of_birth ||
+    !registrationData.class_applying_for ||
+    !registrationData.gender ||
+    !registrationData.address ||
+    !registrationData.guardian_name ||
+    !registrationData.relationship ||
+    !registrationData.guardian_phone_number
+  ) {
+    toast.error("Please fill in all required fields.");
+    return;
+  }
 
+  if (!selectedAcademicYearId) {
+    toast.error("Please select an academic year.");
+    return;
+  }
     let regId: number | undefined;
 
     if (!navigator.onLine) {
@@ -251,6 +293,9 @@ const handleFinalSubmit = async () => {
       regId = await registrationService.create(backendData);
       toast.success("Registration successful!");
     }
+    // Reset form
+    setRegistrationData(initialRegistrationData);
+    setDate(undefined);
 
     if (regId) {
       setNewRegistrationId(regId);
@@ -265,11 +310,9 @@ const handleFinalSubmit = async () => {
   }
 };
 
-
-
     return (
         <div className="p-4 md:p-8">
-            <Toaster richColors />
+            
             <h1 className="text-3xl font-semibold text-gray-900 dark:text-white mb-6 text-left">New Applicant Registration</h1>
             <div className="flex justify-between items-center mb-4">
       <h1 className="text-xl font-semibold">Registrations</h1>
@@ -324,21 +367,32 @@ const handleFinalSubmit = async () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Date of Birth */}
-<div>
-    <Label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-        Date of Birth <span className="text-red-500">*</span>
-    </Label>
-    <Input
-        type="date"
-        id="dateOfBirth"
-        value={registrationData.date_of_birth ? registrationData.date_of_birth : ""}
-        onChange={e => handleChange('date_of_birth', e.target.value)}
-        required
-        className="mt-1"
-        disabled={loading}
-        max={new Date().toISOString().split('T')[0]}
-    />
+<div className="relative">
+  <Label
+    htmlFor="dateOfBirth"
+    className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+  >
+    Date of Birth <span className="text-red-500">*</span>
+  </Label>
+
+  <Input
+    type="date"
+    id="dateOfBirth"
+    value={registrationData.date_of_birth ?? ''}
+    onChange={e => handleChange('date_of_birth', e.target.value)}
+    required
+    disabled={loading}
+    max={new Date().toISOString().split('T')[0]}
+    className="pr-24 mt-1"
+  />
+
+  {registrationData.date_of_birth && (
+    <span className="absolute right-3 top-[33px] text-sm text-gray-500 pointer-events-none">
+      {calculateAge(registrationData.date_of_birth)} yrs
+    </span>
+  )}
 </div>
+
 
                     {/* Class Applying For */}
                     <div>
@@ -381,60 +435,30 @@ const handleFinalSubmit = async () => {
                                 <RadioGroupItem value="Female" id="r2" required disabled={loading} />
                                 <Label htmlFor="r2">Female</Label>
                             </div>
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="Other" id="r3" required disabled={loading} />
-                                <Label htmlFor="r3">Other</Label>
-                            </div>
+                            
                         </RadioGroup>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Email */}
                     <div>
-                        <Label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Email
-                        </Label>
-                        <Input
-                            type="email"
-                            id="email"
-                            value={registrationData.email}
-                            onChange={(e) => handleChange('email', e.target.value)}
-                            className="mt-1"
-                            disabled={loading}
-                        />
-                    </div>
-                    {/* Phone Number */}
-                    <div>
-                        <Label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Phone Number
-                        </Label>
-                        <Input
-                            type="tel"
-                            id="phoneNumber"
-                            value={registrationData.phone_number}
-                            onChange={(e) => handleChange('phone_number', e.target.value)}
-                            className="mt-1"
-                            disabled={loading}
-                        />
-                    </div>
-                </div>
-                {/* Address */}
-                <div>
-                    <Label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Address <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                        type="text"
-                        id="address"
-                        value={registrationData.address}
-                        onChange={(e) => handleChange('address', e.target.value)}
-                        required
-                        className="mt-1"
-                        disabled={loading}
-                    />
-                </div>
+  <Label htmlFor="previousSchool" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+    Previous School
+  </Label>
+  <Input
+    type="text"
+    id="previousSchool"
+    value={registrationData.previous_school ?? ''}
+    onChange={e => handleChange('previous_school', e.target.value)}
+    placeholder="Enter previous school name"
+    className="mt-1"
+    disabled={loading}
+  />
+</div>
 
+
+                
                 <div>
                     <Label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Category <span className="text-red-500">*</span>
@@ -458,7 +482,28 @@ const handleFinalSubmit = async () => {
                         </SelectContent>
                     </Select>
                 </div>
-
+<div>
+                    <Label htmlFor="academicYear" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Academic Year <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
+                        onValueChange={handleAcademicYearChange}
+                        value={academicYears.find(y => y.id === selectedAcademicYearId)?.year.toString()}
+                        disabled={loading}
+                    >
+                        <SelectTrigger className="w-full mt-1">
+                            <SelectValue placeholder="Select Academic Year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {academicYears.map((year) => (
+                                <SelectItem key={year.id} value={year.year.toString()}>
+                                    {year.year}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+</div>
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white mt-8">Guardian Information</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Guardian Name */}
@@ -507,28 +552,40 @@ const handleFinalSubmit = async () => {
                         />
                     </div>
                 </div>
-                {/* Academic Year Selection */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            
+                {/* Address */}
                 <div>
-                    <Label htmlFor="academicYear" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Academic Year <span className="text-red-500">*</span>
+                    <Label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Address <span className="text-red-500">*</span>
                     </Label>
-                    <Select
-                        onValueChange={handleAcademicYearChange}
-                        value={academicYears.find(y => y.id === selectedAcademicYearId)?.year.toString()}
+                    <Input
+                        type="text"
+                        id="address"
+                        value={registrationData.address}
+                        onChange={(e) => handleChange('address', e.target.value)}
+                        required
+                        className="mt-1"
                         disabled={loading}
-                    >
-                        <SelectTrigger className="w-full mt-1">
-                            <SelectValue placeholder="Select Academic Year" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {academicYears.map((year) => (
-                                <SelectItem key={year.id} value={year.year.toString()}>
-                                    {year.year}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    />
                 </div>
+
+                 {/* Email */}
+                    <div>
+                        <Label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Email
+                        </Label>
+                        <Input
+                            type="email"
+                            id="email"
+                            value={registrationData.email}
+                            onChange={(e) => handleChange('email', e.target.value)}
+                            className="mt-1"
+                            disabled={loading}
+                        />
+                    </div>
+                    </div>
+                
 <Button
   type="button"
   className="w-full bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded"
@@ -537,14 +594,6 @@ const handleFinalSubmit = async () => {
 >
   Preview & Submit
 </Button>
-
-                <Button
-                    type="submit"
-                    className="w-full bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                    disabled={loading}
-                >
-                    {loading ? 'Registering...' : 'Register'}
-                </Button>
             </form>
             <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
   <DialogContent className="max-w-xl">
@@ -554,7 +603,7 @@ const handleFinalSubmit = async () => {
     <div className="space-y-2 text-sm">
       <p><strong>Name:</strong> {registrationData.first_name} {registrationData.last_name}</p>
       <p><strong>Class:</strong> {registrationData.class_applying_for}</p>
-      <p><strong>Category:</strong> {registrationData.category}</p>
+      <p><strong>Category:</strong> {getCategoryName(registrationData.category)}</p>
       <p><strong>Guardian:</strong> {registrationData.guardian_name}</p>
     </div>
     <DialogFooter className="mt-4">

@@ -196,8 +196,8 @@ export function LoaderOverlay({
   color = "indigo",
 }: Pick<LoaderProps, "text" | "variant" | "color">) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/95 backdrop-blur-sm">
-      <div className="flex flex-col items-center space-y-4 bg-white rounded-xl shadow-lg border border-gray-100 p-8 mx-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm">
+      <div className="flex flex-col items-center space-y-4 bg-white/60 rounded-xl shadow-lg border border-gray-100 p-8 mx-4">
         <Loader
           size="lg"
           variant={variant}

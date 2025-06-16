@@ -66,7 +66,7 @@ const categoryFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   code: z.string().min(2, "Code must be at least 2 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
-  fees: z.number().min(0, "Fees cannot be negative"),
+  amount: z.number().min(0, "amount cannot be negative"),
   status: z.enum(['active', 'inactive']) // Use enum for status
 
 });
@@ -86,7 +86,7 @@ export default function CategoryManagement() {
       name: "",
       code: "",
       description: "",
-      fees: 0,
+      amount: 0,
       status: "active"
     }
   });
@@ -145,7 +145,7 @@ export default function CategoryManagement() {
         <div>
           <CardTitle>Category Management</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage student categories and fees
+            Manage student categories and amount
           </p>
         </div>
         <Dialog open={isAddingCategory} onOpenChange={setIsAddingCategory}>
@@ -205,10 +205,10 @@ export default function CategoryManagement() {
                   />
                   <FormField
                     control={form.control}
-                    name="fees"
+                    name="amount"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Fees</FormLabel>
+                        <FormLabel>Fees amount</FormLabel>
                         <FormControl>
                           <Input 
                             type="number"
@@ -245,7 +245,7 @@ export default function CategoryManagement() {
               <TableHead>Name</TableHead>
               <TableHead>Code</TableHead>
               <TableHead>Description</TableHead>
-              <TableHead>Fees</TableHead>
+              <TableHead>amount</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -265,7 +265,6 @@ export default function CategoryManagement() {
                   <TableCell className="font-medium">{category.name}</TableCell>
                   <TableCell>{category.code}</TableCell>
                   <TableCell className="max-w-[300px] truncate">{category.description}</TableCell>
-                  <TableCell>{category.fees.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</TableCell>
                   <TableCell>
                     <Badge variant={category.status === 'active' ? 'default' : 'secondary'}>
                       {category.status}
@@ -281,7 +280,7 @@ export default function CategoryManagement() {
                           name: category.name,
                           code: category.code,
                           description: category.description,
-                          fees: category.fees,
+                          amount: category.amount,
                           status: category.status
                         });
                         setIsAddingCategory(true);

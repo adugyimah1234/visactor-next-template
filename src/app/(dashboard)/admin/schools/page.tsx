@@ -276,33 +276,33 @@ export default function SchoolManagement() {
     }
   };
 
-  // const handleClassSubmit: SubmitHandler<ClassFormValues> = async (values) => {
-  //   try {
-  //     if (editingClass) {
-  //       await schoolService.update(editingClass.id);
-  //       toast({
-  //         title: "Success",
-  //         description: "Class updated successfully"
-  //       });
-  //     } else {
-  //       await schoolService.create(values);
-  //       toast({
-  //         title: "Success",
-  //         description: "Class created successfully"
-  //       });
-  //     }
-  //     setIsAddingClass(false);
-  //     setEditingClass(null);
-  //     classForm.reset();
-  //     fetchClasses();
-  //   } catch (error: any) {
-  //     toast({
-  //       title: "Error",
-  //       description: error.message,
-  //       variant: "destructive"
-  //     });
-  //   }
-  // };
+  const handleClassSubmit: SubmitHandler<ClassFormValues> = async (values) => {
+    try {
+      if (editingClass) {
+        await schoolService.update(editingClass.id);
+        toast({
+          title: "Success",
+          description: "Class updated successfully"
+        });
+      } else {
+        await schoolService.create(values);
+        toast({
+          title: "Success",
+          description: "Class created successfully"
+        });
+      }
+      setIsAddingClass(false);
+      setEditingClass(null);
+      classForm.reset();
+      fetchClasses();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
 
    const handleCategorySubmit: SubmitHandler<CategoryFormValues> = async (values) => {
     try {
@@ -630,7 +630,103 @@ export default function SchoolManagement() {
                   Add Class
                 </Button>
               </div>
-          
+          <Dialog open={isAddingClass} onOpenChange={setIsAddingClass}>
+  <DialogContent className="sm:max-w-[525px]">
+    <Form {...classForm}>
+      <form onSubmit={classForm.handleSubmit(handleClassSubmit)}>
+        <DialogHeader>
+          <DialogTitle>{editingClass ? 'Edit Class' : 'Add Class'}</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <FormField
+            control={classForm.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Class Name</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={classForm.control}
+            name="level"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Level</FormLabel>
+                <FormControl>
+                  <Input type="number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={classForm.control}
+            name="capacity"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Capacity</FormLabel>
+                <FormControl>
+                  <Input type="number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={classForm.control}
+            name="school_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>School</FormLabel>
+                <FormControl>
+                  <select
+                    value={field.value}
+                    onChange={(e) => field.onChange(Number(e.target.value))}
+                    className="w-full rounded-md border p-2"
+                  >
+                    <option value="">Select a school</option>
+                    {schools.map((school) => (
+                      <option key={school.id} value={school.id}>
+                        {school.name}
+                      </option>
+                    ))}
+                  </select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setIsAddingClass(false);
+              setEditingClass(null);
+              classForm.reset();
+            }}
+          >
+            Cancel
+          </Button>
+          <Button type="submit">
+            {editingClass ? "Update" : "Create"}
+          </Button>
+        </DialogFooter>
+      </form>
+    </Form>
+  </DialogContent>
+</Dialog>
+
               <Table>
                 <TableHeader>
                   <TableRow>

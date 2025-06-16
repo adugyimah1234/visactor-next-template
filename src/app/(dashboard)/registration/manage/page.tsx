@@ -62,7 +62,7 @@ import {
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from "@/contexts/AuthContext";
-import registrationService, { type RegistrationData } from '@/services/registrations';
+import registrationService, { RegistrationUpdateInput, type RegistrationData } from '@/services/registrations';
 import { useRouter } from 'next/navigation';
 import {
     DropdownMenu,
@@ -70,8 +70,9 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { toast } from 'sonner';
+import { toast, Toaster } from 'sonner';
 import schoolService from '@/services/schools';
+import { Category, getAllCategories } from '@/services/categories';
 
 // ...other imports...
 interface Applicant {
@@ -97,7 +98,8 @@ const ApplicantManagement = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(false);
-
+const [showConfirmEdit, setShowConfirmEdit] = useState(false);
+const [showEditForm, setShowEditForm] = useState(false);
     const [itemsPerPage] = useState(10); // Number of items per page
     const [registrations, setRegistrations] = useState<RegistrationData[]>([]);
     const [isRegistrationFormOpen, setIsRegistrationFormOpen] = useState(false);
@@ -123,6 +125,7 @@ const ApplicantManagement = () => {
     const [totalPages, setTotalPages] = useState(0);
     const [selectedSchoolId, setSelectedSchoolId] = useState<string>(''); // store ID, not name
     const [schools, setSchools] = useState<{ id: number, name: string }[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
 
     // Add this helper function inside your component or in a separate utils file
     const getPaginationRange = (current: number, total: number) => {
@@ -163,6 +166,23 @@ const ApplicantManagement = () => {
     useEffect(() => {
         fetchRegistrations();
     }, [fetchRegistrations]);
+
+    useEffect(() => {
+            fetchCategories();
+          }, []);
+        
+          const fetchCategories = async () => {
+            try {
+              setLoading(true);
+              const data = await getAllCategories();
+              setCategories(data);
+            } catch (error: any) {
+                console.error("failed to load categories!")
+            } finally {
+              setLoading(false);
+            }
+          };
+    
 
     useEffect(() => {
         const fetchSchools = async () => {
@@ -206,15 +226,20 @@ const ApplicantManagement = () => {
         }
     };
 
-    const handleUpdateRegistration = async (id: number, data: RegistrationData) => {
+const handleUpdateRegistration = async (id: number, data: RegistrationUpdateInput) => {
+  try {
+    const updatedRegistration = await registrationService.updatePartial(id, data);
+    setRegistrations((prev) =>
+      prev.map((registration) =>
+        registration.id === id ? updatedRegistration : registration
+      )
+    );
+  } catch (error) {
+    console.error(error);
+  }
+};
 
-        try {
-            const updatedRegistration = await registrationService.update(id, data);
-            setRegistrations(registrations.map((registration) => (registration.id === id ? updatedRegistration : registration)));
-        } catch (error) {
-            console.error(error);
-        }
-    };
+
 
     const handleDeleteClick = (registration: RegistrationData) => {
         setSelectedRegistration(registration);
@@ -239,46 +264,62 @@ const ApplicantManagement = () => {
         setSelectedRegistration(null);
     };
 
-    const confirmEdit = async () => {
-        if (selectedRegistration?.id) {
-            try {
-                const formattedDOB = new Date(selectedRegistration.date_of_birth || '')
-                    .toISOString()
-                    .split('T')[0]; // => 'YYYY-MM-DD'
 
-                await handleUpdateRegistration(selectedRegistration.id, {
-                    ...selectedRegistration,
-                    date_of_birth: formattedDOB, // ✅ use formatted date here
-                    school_id: selectedRegistration.school_id,
-                    student_id: selectedRegistration.student_id,
-                    class_id: selectedRegistration.class_id,
-                    academic_year_id: selectedRegistration.academic_year_id,
-                    first_name: selectedRegistration.first_name,
-                    last_name: selectedRegistration.last_name,
-                    academic_year: selectedRegistration.academic_year ?? '',
-                    class_applying_for: selectedRegistration.class_applying_for,
-                    gender: selectedRegistration.gender,
-                    phone_number: selectedRegistration.phone_number,
-                    address: selectedRegistration.address,
-                    guardian_name: selectedRegistration.guardian_name,
-                    relationship: selectedRegistration.relationship,
-                    guardian_phone_number: selectedRegistration.guardian_phone_number,
-                    category: selectedRegistration.category ?? '',
-                    scores: selectedRegistration.scores ?? 0,
-                    status: selectedRegistration.status ?? 'Pending'
-                });
+const handleSubmitEdit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!selectedRegistration?.id) return;
 
-                toast.success("Registration updated successfully");
-                fetchRegistrations();
-            } catch (error) {
-                toast.error("Failed to update registration");
-                console.error(error);
-            }
-        }
+  try {
+    const formattedDOB = new Date(selectedRegistration.date_of_birth || '')
+      .toISOString()
+      .split('T')[0];
 
-        setIsEditDialogOpen(false);
-        setSelectedRegistration(null);
+    const payload = {
+      school_id: selectedRegistration.school_id,
+      student_id: selectedRegistration.student_id,
+      scores: selectedRegistration.scores ?? 0,
+      status: selectedRegistration.status ?? 'pending',
+      class_id: selectedRegistration.class_id,
+      academic_year_id: selectedRegistration.academic_year_id,
+      first_name: selectedRegistration.first_name,
+      middle_name: selectedRegistration.middle_name,
+      last_name: selectedRegistration.last_name,
+      date_of_birth: formattedDOB,
+      class_applying_for: selectedRegistration.class_applying_for,
+      gender: selectedRegistration.gender as 'Male' | 'Female',
+      email: selectedRegistration.email ?? '',
+      phone_number: selectedRegistration.phone_number ?? '',
+      category: selectedRegistration.category,
+      address: selectedRegistration.address ?? '',
+      guardian_name: selectedRegistration.guardian_name ?? '',
+      relationship: selectedRegistration.relationship ?? '',
+      guardian_phone_number: selectedRegistration.guardian_phone_number ?? '',
     };
+
+    console.log('Updating with payload:', payload);
+
+    // ✅ Actually update via your service
+    await handleUpdateRegistration(selectedRegistration.id, payload);
+
+    // ✅ Feedback + Refresh + Cleanup
+    toast.success('Registration updated successfully');
+    await fetchRegistrations(); // make sure this awaits
+    setIsEditDialogOpen(false); // close the form/dialog
+    setSelectedRegistration(null); // clear selection
+  } catch (err) {
+    console.error(err);
+    toast.error('Failed to update registration');
+  }
+};
+
+
+const handleChange = (field: keyof RegistrationData, value: any) => {
+  setSelectedRegistration((prev) => ({
+    ...prev!,
+    [field]: value,
+  }));
+};
+
 
 
     // --- Sorting ---
@@ -927,12 +968,8 @@ const ApplicantManagement = () => {
                         </style>
                     </head>
                     <body>
-                        <div class="logo">
-                            <img src="/logo.png" alt="School Logo"/>
-                        </div>
+                        
                         <div class="header">
-                            <h1>Registration Records</h1>
-                            <p>Generated on: ${new Date().toLocaleDateString()}</p>
                             <p>Total Records: ${filteredRegistrations.length}</p>
                         </div>
                         <table>
@@ -966,10 +1003,6 @@ const ApplicantManagement = () => {
                                 `).join('')}
                             </tbody>
                         </table>
-                        <div class="footer">
-                            <p>Generated from the School Management System</p>
-                            <p>Date: ${new Date().toLocaleDateString()}</p>
-                        </div>
                     </body>
                 </html>
             `);
@@ -981,6 +1014,7 @@ const ApplicantManagement = () => {
     // --- UI ---
     return (
         <div className= "p-4 md:p-8" >
+        
         <h1 className="text-2xl md:text-4xl font-bold text-gray-800 dark:text-gray-200 mb-4 md:mb-6 flex items-center gap-2" >
             <Users className="w-6 h-6 md:w-8 md:h-8" />
                 Applicant Management
@@ -1064,14 +1098,6 @@ className = "h-8 px-0 font-normal"
     <span>Last Name </span>
         </Button>
         </TableHead>
-{/* <TableHead>
-                                <Button
-                                    variant="ghost"
-                                    className="h-8 px-0 font-normal"
-                                >
-                                    <span>Email</span>
-                                </Button>
-                            </TableHead> */}
 <TableHead>
     <Button
                             variant="ghost"
@@ -1142,8 +1168,7 @@ transition = {{ duration: 0.2 }}
 </TableCell>
     < TableCell className = "font-medium" > { registration.first_name } </TableCell>
         < TableCell > { registration.last_name } </TableCell>
-{/* <TableCell>{registration.email}</TableCell> */ }
-{/* <TableCell>{registration.phone_number}</TableCell> */ }
+
 <TableCell>
     {/* Format date_of_birth as "MMM dd, yyyy" if available */ }
 {
@@ -1188,9 +1213,6 @@ className = "hover:bg-gray-200 dark:hover:bg-gray-700"
             <DropdownMenuItem onClick={ () => handlePrintExcel(registration) }>
                 Download Excel
                     </DropdownMenuItem>
-                    < DropdownMenuItem onClick = {() => handlePrint(registration)}>
-                        Print Receipt
-                            </DropdownMenuItem>
                             </DropdownMenuContent>
                             </DropdownMenu>
 {
@@ -1223,7 +1245,7 @@ className = "hover:bg-red-700"
     </Table>
     </div>
 
-{/* Pagination */ } {/* Enhanced Pagination */ }
+{/* Pagination */ }
 {
     filteredRegistrations.length > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 px-4" >
@@ -1349,26 +1371,215 @@ className = "bg-red-600 hover:bg-red-700"
     </AlertDialog>
 
 {/* Edit Confirmation Dialog */ }
-<AlertDialog open={ isEditDialogOpen } onOpenChange = { setIsEditDialogOpen } >
-    <AlertDialogContent>
+<AlertDialog open={showConfirmEdit} onOpenChange={setShowConfirmEdit}>
+  <AlertDialogContent>
     <AlertDialogHeader>
-    <AlertDialogTitle>Confirm Edit Registration </AlertDialogTitle>
-        <AlertDialogDescription>
-          Are you sure you want to edit the registration for{ ' '}
-         { selectedRegistration?.first_name } { selectedRegistration?.last_name } ?
-        </AlertDialogDescription>
-        </AlertDialogHeader>
-        < AlertDialogFooter >
-        <AlertDialogCancel onClick= {() => setIsEditDialogOpen(false)}> Cancel </AlertDialogCancel>
-            < AlertDialogAction
-onClick = { confirmEdit }
-className = "bg-blue-600 hover:bg-blue-700"
-    >
-    Edit
-    </AlertDialogAction>
+      <AlertDialogTitle>Confirm Edit Registration</AlertDialogTitle>
+      <AlertDialogDescription>
+        Are you sure you want to edit {selectedRegistration?.first_name} {selectedRegistration?.last_name}?
+      </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel onClick={() => setShowConfirmEdit(false)}>
+        Cancel
+      </AlertDialogCancel>
+      <AlertDialogAction
+        onClick={() => {
+          // ✅ Close confirm and open edit form
+          setShowConfirmEdit(false);
+          setShowEditForm(true);
+        }}
+        className="bg-blue-600 hover:bg-blue-700"
+      >
+        Yes, Edit
+      </AlertDialogAction>
     </AlertDialogFooter>
-    </AlertDialogContent>
-    </AlertDialog>
+  </AlertDialogContent>
+</AlertDialog>
+
+
+<Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+  <DialogContent className="max-w-2xl">
+    <DialogHeader>
+      <DialogTitle>Edit Registration</DialogTitle>
+    </DialogHeader>
+
+    <form onSubmit={handleSubmitEdit} className="space-y-4 max-h-[80vh] overflow-y-auto p-2">
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+    <div>
+      <label className="block text-sm font-medium mb-1">First Name</label>
+      <Input
+        placeholder="First Name"
+        value={selectedRegistration?.first_name || ''}
+        onChange={(e) =>
+          setSelectedRegistration((prev) => ({ ...prev!, first_name: e.target.value }))
+        }
+      />
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium mb-1">Middle Name</label>
+      <Input
+        placeholder="Middle Name"
+        value={selectedRegistration?.middle_name || ''}
+        onChange={(e) =>
+          setSelectedRegistration((prev) => ({ ...prev!, middle_name: e.target.value }))
+        }
+      />
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium mb-1">Last Name</label>
+      <Input
+        placeholder="Last Name"
+        value={selectedRegistration?.last_name || ''}
+        onChange={(e) =>
+          setSelectedRegistration((prev) => ({ ...prev!, last_name: e.target.value }))
+        }
+      />
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium mb-1">Date of Birth</label>
+      <Input
+        type="date"
+        placeholder="Date of Birth"
+        value={
+          selectedRegistration?.date_of_birth
+            ? new Date(selectedRegistration.date_of_birth).toISOString().split('T')[0]
+            : ''
+        }
+        onChange={(e) =>
+          setSelectedRegistration((prev) => ({ ...prev!, date_of_birth: e.target.value }))
+        }
+      />
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium mb-1">Class Applying For</label>
+      <Input
+        placeholder="Class Applying For"
+        value={selectedRegistration?.class_applying_for || ''}
+        onChange={(e) =>
+          setSelectedRegistration((prev) => ({ ...prev!, class_applying_for: e.target.value }))
+        }
+      />
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium mb-1">Gender</label>
+      <Input
+        placeholder="Gender"
+        value={selectedRegistration?.gender || ''}
+        onChange={(e) =>
+          setSelectedRegistration((prev) => ({ ...prev!, gender: e.target.value as 'Male' | 'Female' }))
+        }
+      />
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium mb-1">Email</label>
+      <Input
+        placeholder="Email"
+        value={selectedRegistration?.email || ''}
+        onChange={(e) =>
+          setSelectedRegistration((prev) => ({ ...prev!, email: e.target.value }))
+        }
+      />
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium mb-1">Phone Number</label>
+      <Input
+        placeholder="Phone Number"
+        value={selectedRegistration?.phone_number || ''}
+        onChange={(e) =>
+          setSelectedRegistration((prev) => ({ ...prev!, phone_number: e.target.value }))
+        }
+      />
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium mb-1">Address</label>
+      <Input
+        placeholder="Address"
+        value={selectedRegistration?.address || ''}
+        onChange={(e) =>
+          setSelectedRegistration((prev) => ({ ...prev!, address: e.target.value }))
+        }
+      />
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium mb-1">Guardian Name</label>
+      <Input
+        placeholder="Guardian Name"
+        value={selectedRegistration?.guardian_name || ''}
+        onChange={(e) =>
+          setSelectedRegistration((prev) => ({ ...prev!, guardian_name: e.target.value }))
+        }
+      />
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium mb-1">Relationship</label>
+      <Input
+        placeholder="Relationship"
+        value={selectedRegistration?.relationship || ''}
+        onChange={(e) =>
+          setSelectedRegistration((prev) => ({ ...prev!, relationship: e.target.value }))
+        }
+      />
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium mb-1">Guardian Phone Number</label>
+      <Input
+        placeholder="Guardian Phone Number"
+        value={selectedRegistration?.guardian_phone_number || ''}
+        onChange={(e) =>
+          setSelectedRegistration((prev) => ({
+            ...prev!,
+            guardian_phone_number: e.target.value,
+          }))
+        }
+      />
+    </div>
+
+    <div>
+  <label className="block text-sm font-medium mb-1">
+    Category <span className="text-red-500">*</span>
+  </label>
+<Select
+  onValueChange={(value) => handleChange('category', parseInt(value))}
+  value={selectedRegistration?.category?.toString() || ""}
+>
+    <SelectTrigger className="w-full">
+      <SelectValue placeholder="Select Category" />
+    </SelectTrigger>
+    <SelectContent>
+      {categories.map((category) => (
+        <SelectItem key={category.id} value={category.id.toString()}>
+          {category.name}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+</div>
+
+    </div>
+
+      <DialogFooter className="pt-4">
+        <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+          Cancel
+        </Button>
+        <Button type="submit">Save Changes</Button>
+      </DialogFooter>
+    </form>
+  </DialogContent>
+</Dialog>
+
     </div>
     );
 };
