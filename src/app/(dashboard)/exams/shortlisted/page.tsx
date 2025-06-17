@@ -16,6 +16,13 @@ import {
   Send,
   View,
 } from 'lucide-react';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
+} from "@/components/ui/tabs";
+import * as XLSX from 'xlsx';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -89,6 +96,10 @@ export default function ShortlistedPage() {
 const [studentToRemove, setStudentToRemove] = useState<Student | null>(null);
 const [showProfile, setShowProfile] = useState(false);
 const { toast } = useToast();
+const [searchTerm, setSearchTerm] = useState('');
+const [activeSchoolId, setActiveSchoolId] = useState<string>(''); // school ID as string
+const [selectedClassId, setSelectedClassId] = useState('all');
+const [activeClassTab, setActiveClassTab] = useState<Record<number, string>>({});
 const getCategoryName = (categoryId: number): string => {
   switch (categoryId) {
     case 1:
@@ -106,6 +117,7 @@ const handleViewProfile = (student: Student) => {
   setSelectedStudent(student);
   setShowProfile(true);
 };
+
   useEffect(() => {
     const loadStudents = async () => {
       try {
@@ -141,9 +153,23 @@ useEffect(() => {
   loadData();
 }, []);
 
+useEffect(() => {
+  const fetchClassesForSchool = async () => {
+    if (!activeSchoolId) return;
+    try {
+      const classList = await classService.getBySchool(Number(activeSchoolId));
+      setClasses(classList);
+    } catch (err) {
+      console.error("Failed to fetch classes for school:", err);
+    }
+  };
+
+  fetchClassesForSchool();
+}, [activeSchoolId]);
+
 const getClassName = (classId: number): string => {
   const classItem = classes.find(c => c.id === classId);
-  return classItem ? `${classItem.name} (Lvl ${classItem.level})` : '—';
+  return classItem ? `${classItem.name} ` : '—';
 };
 
 const [schools, setSchools] = useState<School[]>([]);
@@ -162,112 +188,280 @@ const getSchoolName = (schoolId: number): string => {
 };
 
 
+const filteredStudents = students.filter((s: Student) => {
+  const fullName = `${s.first_name} ${s.middle_name} ${s.last_name}`.toLowerCase();
+  const matchesSearch = fullName.includes(searchTerm.toLowerCase());
+  const matchesClass = selectedClassId === 'all' || s.class_id.toString() === selectedClassId;
+  return matchesSearch && matchesClass;
+}) ?? [];
+
+
+
+const handleExport = (schoolId: number) => {
+  const filtered = students.filter((s: Student) => {
+    const fullName = `${s.first_name} ${s.middle_name} ${s.last_name}`.toLowerCase();
+    const matchesSearch = fullName.includes(searchTerm.toLowerCase());
+    const matchesClass = selectedClassId === 'all' || s.class_id.toString() === selectedClassId;
+    return matchesSearch && matchesClass;
+  }) ?? [];
+
+  if (filtered.length === 0) {
+    toast({ title: "No students to export for this selection." });
+    return;
+  }
+
+  const schoolName = getSchoolName(schoolId).replace(/\s+/g, '-');
+  const className =
+    selectedClassId === 'all'
+      ? 'AllClasses'
+      : classes.find(c => c.id.toString() === selectedClassId)?.name.replace(/\s+/g, '-') || 'Class';
+
+  const exportData = filtered.map((s: { first_name: any; middle_name: any; last_name: any; scores: any; class_id: number; category_id: number; status: any; admission_status: any; gender: any; dob: any; registration_date: any; }) => ({
+    Name: `${s.first_name} ${s.middle_name} ${s.last_name}`,
+    Score: `${s.scores}%`,
+    Class: getClassName(s.class_id),
+    Category: getCategoryName(s.category_id),
+    Status: s.status,
+    AdmissionStatus: s.admission_status,
+    Gender: s.gender,
+    DOB: s.dob,
+    RegisteredOn: s.registration_date
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(exportData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Students");
+
+  XLSX.writeFile(workbook, `students-${schoolName}-${className}.xlsx`);
+};
+
+const printAdmittedList = (schoolId: number, classId: string, students: Student[]) => {
+  const admitted = students.filter((s) =>
+    s.school_id === schoolId &&
+    (classId === 'all' || s.class_id.toString() === classId) &&
+    s.admission_status === 'admitted'
+  );
+
+  const schoolName = getSchoolName(schoolId);
+  const className = classId === 'all' ? 'All Classes' : getClassName(Number(classId));
+
+  const printWindow = window.open('', '', 'width=900,height=700');
+  if (!printWindow) return;
+
+  const tableRows = admitted.map((s) => `
+    <tr>
+      <td style="border:1px solid #ccc;padding:8px;">${s.first_name} ${s.middle_name} ${s.last_name}</td>
+      <td style="border:1px solid #ccc;padding:8px;">${getClassName(s.class_id)}</td>
+      <td style="border:1px solid #ccc;padding:8px;">${getCategoryName(s.category_id)}</td>
+    </tr>
+  `).join('');
+
+  const htmlContent = `
+    <html>
+    <head>
+      <title>Admitted Students</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 24px; }
+        h2 { text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 24px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+      </style>
+    </head>
+    <body>
+      <h2>Admitted Students - ${schoolName} (${className})</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Class</th>
+            <th>Category</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRows}
+        </tbody>
+      </table>
+    </body>
+    </html>
+  `;
+
+  printWindow.document.write(htmlContent);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+};
+
+
   return (
     <div className="space-y-6 p-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Shortlisted Candidates</CardTitle>
-          <div className="flex gap-2">
-            <Button variant="outline">
-              <Mail className="mr-2 h-4 w-4" />
-              Notify All
-            </Button>
-            <Button>
-              <Download className="mr-2 h-4 w-4" />
-              Export List
-            </Button>
-          </div>
+
         </CardHeader>
 
         <CardContent>
           {/* Filters */}
           <div className="flex gap-4 mb-6">
-            <div className="flex-1">
-              <div className="relative max-w-sm">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                  <Search className="h-4 w-4" />
-                </span>
-                <Input placeholder="Search candidates..." className="pl-9" />
-              </div>
-            </div>
-            <Select
-              value={selectedProgram}
-              onValueChange={setSelectedProgram}
-            >
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Select Program" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Programs</SelectItem>
-                <SelectItem value="cs">Computer Science</SelectItem>
-                <SelectItem value="engineering">Engineering</SelectItem>
-                <SelectItem value="business">Business</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" size="icon">
-              <Filter className="h-4 w-4" />
+  <div className="flex-1">
+    <div className="relative max-w-sm">
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+        <Search className="h-4 w-4" />
+      </span>
+      <Input
+        placeholder="Search candidates..."
+        className="pl-9"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+    </div>
+
+  </div>
+
+<Select
+  value={selectedClassId}
+  onValueChange={setSelectedClassId}
+>
+  <SelectTrigger className="w-[200px]">
+    <SelectValue placeholder="Select Class" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="all">All Classes</SelectItem>
+    {classes
+      .filter((cls) => cls.school_id === Number(activeSchoolId))
+      .map((cls) => (
+        <SelectItem key={cls.id} value={cls.id.toString()}>
+          {cls.name}
+        </SelectItem>
+      ))}
+  </SelectContent>
+</Select>
+
+</div>
+
+
+          {/* Candidates List */}
+<Tabs
+  value={activeSchoolId || schools[0]?.id.toString()}
+  onValueChange={(val) => {
+    setActiveSchoolId(val);
+    setSelectedClassId(val); // reset class filter on school change
+  }}
+  className="w-full"
+>
+
+  <TabsList className="flex overflow-x-auto">
+    {schools.map((school) => (
+      <TabsTrigger key={school.id} value={school.id.toString()}>
+        {school.name}
+      </TabsTrigger>
+    ))}
+  </TabsList>
+
+{schools.map((school) => {
+  const selectedClassTab = activeClassTab[school.id] || 'all';
+
+  const filteredStudents = students.filter((s: Student) =>
+    s.school_id === school.id &&
+    (selectedClassTab === 'all' || s.class_id.toString() === selectedClassTab) &&
+    `${s.first_name} ${s.middle_name} ${s.last_name}`.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <TabsContent key={school.id} value={school.id.toString()}>
+      {/* Class Tabs */}
+      <Tabs
+        value={selectedClassTab}
+        onValueChange={(val) =>
+          setActiveClassTab((prev) => ({ ...prev, [school.id]: val }))
+        }
+        className="mt-4"
+      >
+        <TabsList className="mb-4 flex flex-wrap gap-2">
+          <TabsTrigger value="all">All Classes</TabsTrigger>
+          {classes
+            .filter((cls) => cls.school_id === school.id)
+            .map((cls) => (
+              <TabsTrigger key={cls.id} value={cls.id.toString()}>
+                {cls.name}
+              </TabsTrigger>
+            ))}
+        </TabsList>
+
+        <TabsContent value={selectedClassTab}>
+          <div className="flex justify-end mb-4 gap-2">
+
+<Button
+  onClick={() => printAdmittedList(school.id, selectedClassTab, students)}
+  className="mb-4"
+>
+  Print Admitted List
+</Button>
+
+
+
+
+            <Button onClick={() => handleExport(school.id)}>
+              <Download className="mr-2 h-4 w-4" />
+              Export
             </Button>
           </div>
 
-          {/* Candidates List */}
-          <ScrollArea className="h-[600px]">
-            {loading ? (
-    <div className="flex justify-center items-center h-full text-muted-foreground">
-      Loading shortlisted candidates...
-    </div>
-  ) : (
-<div className="overflow-auto">
-  <table className="min-w-full border text-sm">
-    <thead className="bg-muted text-left">
-      <tr>
-        <th className="p-3 border">Name</th>
-        <th className="p-3 border">Score</th>
-        <th className="p-3 border">Class</th>
-        <th className="p-3 border">School</th>
-        <th className="p-3 border">Status After Exams</th>
-        <th className="p-3 border">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {students.map((student) => (
-        <tr key={student.id} className="hover:bg-accent/30">
-        <td className="p-3 border font-medium">
-        {student.first_name} {student.middle_name} {student.last_name}
-        </td>
-        <td className="p-3 border">{student.scores}%</td>
-        <td className="p-3 border">{getClassName(student.class_id)}</td>
-          <td className="p-3 border text-muted-foreground">{getSchoolName(student.school_id)}</td>
-          <td className="p-3 border">
-            <Badge variant="secondary">{student.status}</Badge>
-          </td>
-          <td className="p-3 border">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-<DropdownMenuItem onClick={() => handleViewProfile(student)}>
-  View Profile
-</DropdownMenuItem>
+          <div id={`print-area-${school.id}-${selectedClassTab}`} className="overflow-auto">
+            <table className="min-w-full border text-sm">
+              <thead className="bg-muted text-left">
+                <tr>
+                  <th className="p-3 border">Name</th>
+                  <th className="p-3 border">Score</th>
+                  <th className="p-3 border">Class</th>
+                  <th className="p-3 border">Category</th>
+                  <th className="p-3 border">Status</th>
+                  <th className="p-3 border">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredStudents.map((student: Student) => (
+                  <tr key={student.id} className="hover:bg-accent/30">
+                    <td className="p-3 border font-medium">
+                      {student.first_name} {student.middle_name} {student.last_name}
+                    </td>
+                    <td className="p-3 border">{student.scores}%</td>
+                    <td className="p-3 border">{getClassName(student.class_id)}</td>
+                    <td className="p-3 border">{getCategoryName(student.category_id)}</td>
+                    <td className="p-3 border">
+                      <Badge variant="secondary">{student.status}</Badge>
+                    </td>
+                    <td className="p-3 border">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={() => handleViewProfile(student)}>
+                            View Profile
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setStudentToRemove(student)} className="text-red-600">
+                            Remove
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </TabsContent>
+  );
+})}
 
-<DropdownMenuItem onClick={() => setStudentToRemove(student)} className="text-red-600">
-  Remove
-</DropdownMenuItem>
+</Tabs>
 
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
-</div>
-
-  )}
-          </ScrollArea>
 <Dialog open={showProfile} onOpenChange={setShowProfile}>
   <DialogContent className="max-w-2xl">
     <DialogHeader>
@@ -281,7 +475,7 @@ const getSchoolName = (schoolId: number): string => {
         <div><strong>Scores:</strong> {selectedStudent.scores}%</div>
         <div><strong>Admission Status:</strong> {selectedStudent.admission_status}</div>
         <div><strong>Status:</strong> {selectedStudent.status}</div>
-        <div><strong>Class ID:</strong> {getClassName(selectedStudent.class_id)} ({selectedStudent.class_id})</div>
+        <div><strong>Class ID:</strong> {getClassName(selectedStudent.class_id)}</div>
         <div><strong>School ID:</strong> {getSchoolName(selectedStudent.school_id)} ({selectedStudent.school_id})</div>
         <div><strong>Category ID:</strong> {getCategoryName(selectedStudent.category_id)} ({selectedStudent.category_id})</div>
         <div><strong>Registered On:</strong> {selectedStudent.registration_date}</div>

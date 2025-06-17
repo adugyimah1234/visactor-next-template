@@ -25,6 +25,7 @@ import { format } from 'date-fns';
 import { Toaster, toast } from 'sonner';
 import { getAllRoles, Role } from '@/services/roles';
 import { Class } from '@/types/class';
+import { getAllCategories } from '@/services/categories';
 
 export default function ResultsPage() {
   const [applicants, setApplicants] = useState<RegistrationData[]>([]);
@@ -35,8 +36,11 @@ export default function ResultsPage() {
   const [passMark, setPassMark] = useState<number>(50);
   const [classSlots, setClassSlots] = useState<Record<number, number>>({});
   const { token, user } = useAuth();
+const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
 const [selectedClassId, setSelectedClassId] = useState<number | ''>('');
 const [selectedAppliedClass, setSelectedAppliedClass] = useState<string>('');
+const [selectedCategory, setSelectedCategory] = useState<string>('');
+const [selectedCategoryName, setSelectedCategoryName] = useState('');
 
   // Check if user is admin based on role name from roles table
   const isAdmin = userRole.toLowerCase() === 'admin' || userRole.toLowerCase() === 'administrator';
@@ -46,6 +50,7 @@ const [selectedAppliedClass, setSelectedAppliedClass] = useState<string>('');
       if (!token) return; // wait until token is ready
 
       try {
+
         const [applicantData, schoolData, roleData] = await Promise.all([
           registrationService.getAll(),
           schoolService.getAll(),
@@ -66,6 +71,18 @@ const [selectedAppliedClass, setSelectedAppliedClass] = useState<string>('');
     };
     fetchInitial();
   }, [token, user?.role_id]);
+
+  useEffect(() => {
+  const fetchCategories = async () => {
+    try {
+      const categoryData = await getAllCategories();
+      setCategories(categoryData);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
+  fetchCategories();
+}, []);
 
 const handleSchoolChange = async (index: number, schoolId: number) => {
   if (typeof schoolId === 'number') {
@@ -334,20 +351,83 @@ const handleSinglePromote = async (applicant: RegistrationData) => {
 
 
   // Filter applicants based on index, not a separate variable
+const categoryOrder = ['SVC', 'MOD', 'CIV'];
+
 const pendingApplicants = useMemo(() => {
-  return applicants.filter((a) => {
-    const matchesStatus = a.status === 'pending';
-    const isPaymentValid = a.payment_status !== 'unpaid'; // ✅ Filter unpaid
-    const matchesClass = selectedClassId === '' || a.class_id === selectedClassId;
-    const matchesAppliedClass = selectedAppliedClass === '' || a.class_applying_for === selectedAppliedClass;
-    return matchesStatus && isPaymentValid && matchesClass && matchesAppliedClass;
-  });
-}, [applicants, selectedClassId, selectedAppliedClass]);
+  return applicants
+    .filter((a) => {
+      const matchesStatus = a.status === 'pending';
+      const isPaymentValid = a.payment_status !== 'unpaid';
+      const matchesClass = selectedClassId === '' || a.class_id === selectedClassId;
+      const matchesAppliedClass = selectedAppliedClass === '' || a.class_applying_for === selectedAppliedClass;
+
+      const categoryName = categories.find(c => Number(c.id) === Number(a.category))?.name;
+      const matchesCategory = categoryName && categoryOrder.includes(categoryName);
+
+      return matchesStatus && isPaymentValid && matchesClass && matchesAppliedClass && matchesCategory;
+    })
+    .sort((a, b) => {
+      const aName = categories.find(c => Number(c.id) === Number(a.category))?.name || '';
+      const bName = categories.find(c => Number(c.id) === Number(b.category))?.name || '';
+      return categoryOrder.indexOf(aName) - categoryOrder.indexOf(bName);
+    });
+}, [applicants, selectedClassId, selectedAppliedClass, categories, passMark]);
 
 
 const uniqueAppliedClasses = Array.from(
   new Set(applicants.map((a) => a.class_applying_for).filter(Boolean))
 );
+
+const uniqueCategories = Array.from(
+  new Set(applicants.map((a) => a.category).filter(Boolean))
+).map(catId => {
+  const category = categories.find(c => Number(c.id) === Number(catId));
+  return category ? category.name : catId; // fallback to ID if name not found
+});
+
+const handleSaveScores = async () => {
+  let updatedCount = 0;
+  const failed: string[] = [];
+
+  for (const applicant of applicants) {
+    if (applicant.scores !== undefined && applicant.scores !== null) {
+      try {
+        const formattedDOB = applicant.date_of_birth
+          ? format(new Date(applicant.date_of_birth), 'yyyy-MM-dd')
+          : null;
+
+        await registrationService.update(applicant.id as number, {
+          ...applicant,
+          scores: applicant.scores,
+          date_of_birth: formattedDOB,
+        });
+
+        updatedCount++;
+      } catch (error) {
+        console.error(`Error saving score for ${applicant.first_name}:`, error);
+        failed.push(`${applicant.first_name} ${applicant.last_name}`);
+      }
+    }
+  }
+
+  if (updatedCount > 0) {
+    toast.success(`${updatedCount} scores saved successfully.`);
+
+    // ✅ Refresh applicant list from backend
+    try {
+      const refreshed = await registrationService.getAll();
+      setApplicants(refreshed);
+    } catch (err) {
+      console.error('Failed to refresh applicants after saving:', err);
+      toast.error('Could not refresh updated scores from server.');
+    }
+  }
+
+  if (failed.length > 0) {
+    toast.error(`Failed to save scores for: ${failed.join(', ')}`);
+  }
+};
+
 
   return (
     <div className="p-6 space-y-6">
@@ -399,16 +479,23 @@ const uniqueAppliedClasses = Array.from(
         </select>
       </div>
 
+  <div className="flex justify-end my-4">
+    <Button onClick={handleSaveScores} className="bg-emerald-600 text-white">
+      Save Scores
+    </Button>
+  </div>
+
       <Table>
         <TableHeader>
           <TableRow>
+          <TableHead>Category</TableHead>
             <TableHead>Name</TableHead>
             <TableHead>Class Applied For</TableHead>
             <TableHead>Score</TableHead>
-            <TableHead>School</TableHead>
-            <TableHead>Class</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Action</TableHead>
+{isAdmin && <TableHead>School</TableHead>}
+{isAdmin && <TableHead>Class</TableHead>}
+{isAdmin && <TableHead>Status</TableHead>}
+{isAdmin && <TableHead>Action</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -419,27 +506,31 @@ const uniqueAppliedClasses = Array.from(
 
             return (
               <TableRow key={applicant.id}>
-                <TableCell>{applicant.first_name} {applicant.middle_name} {applicant.last_name}</TableCell>
+              <TableCell>
+              {categories.find(c => Number(c.id) === Number(applicant.category))?.name || 'Unknown'}
+</TableCell>
+
+<TableCell>{applicant.first_name} {applicant.middle_name} {applicant.last_name}</TableCell>
                 <TableCell>
                   {applicant.class_applying_for || 'N/A'}
                 </TableCell>
                 <TableCell>
-                  <Input
-                    type="number"
-                    value={applicant.scores === undefined || applicant.scores === null ? '' : applicant.scores.toString()}
-                    onChange={(e) => {
-                      const updated = [...applicants];
-                      updated[originalIndex].scores = parseFloat(e.target.value);
-                      setApplicants(updated); // update UI instantly
-                    }}
-                    onBlur={(e) => {
-                      handleScoreChange(originalIndex, e.target.value); 
-                    }}
-                    className="w-20"
-                    placeholder="0"
-                  />
+<Input
+  type="number"
+  value={applicant.scores === undefined || applicant.scores === null ? '' : applicant.scores}
+  onChange={(e) => {
+    const updated = [...applicants];
+    updated[originalIndex].scores = parseFloat(e.target.value);
+    setApplicants(updated); // update UI instantly
+  }}
+  className="w-20"
+  placeholder="0"
+/>
+
                 </TableCell>
-                <TableCell>
+
+                {isAdmin && (
+                  <TableCell>
                   <select
                     title="Select School"
                     aria-label="Select School"
@@ -449,32 +540,38 @@ const uniqueAppliedClasses = Array.from(
                   >
                     <option value="">--Select--</option>
                     {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
-                </TableCell>
-                <TableCell>
-                  <select
+                    </select>
+                    </TableCell>
+                  )}
+                  {isAdmin && (
+                    <TableCell>
+                    <select
                     title="Select Class"
                     aria-label="Select Class"
                     value={applicant.class_id ?? ''}
                     onChange={(e) => handleClassSelect(originalIndex, parseInt(e.target.value))}
                     className="border p-1 rounded w-full"
-                  >
+                    >
                     <option value="">Select Class</option>
                     {classes.map((cls) => (
                       <option key={cls.id} value={cls.id}>
                         {cls.name} ({classSlots[cls.id] ?? 0}/{cls.slots})
-                      </option>
-                    ))}
-                  </select>
-                </TableCell>
-                <TableCell>
-                  {passed ? (
-                    <span className="text-green-600 font-bold">Passed</span>
-                  ) : (
-                    <span className="text-red-600">Failed</span>
-                  )}
-                </TableCell>
-                <TableCell>
+                        </option>
+                      ))}
+                      </select>
+                      </TableCell>
+                    )}
+                    {isAdmin && (
+                      <TableCell>
+                      {passed ? (
+                        <span className="text-green-600 font-bold">Passed</span>
+                      ) : (
+                        <span className="text-red-600">Failed</span>
+                      )}
+                      </TableCell>
+                    )}
+                    {isAdmin && (
+                      <TableCell>
                   {applicant.status === 'pending' && (
                     <Button
                       onClick={() => handleSinglePromote(applicant)}
@@ -482,9 +579,12 @@ const uniqueAppliedClasses = Array.from(
                       className="bg-green-600 text-white"
                     >
                       Promote
-                    </Button>
+                      </Button>
+                      
+                    )}
+
+                    </TableCell>
                   )}
-                </TableCell>
               </TableRow>
             );
           })}

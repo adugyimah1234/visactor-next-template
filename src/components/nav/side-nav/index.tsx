@@ -122,18 +122,28 @@ export default function SideNav() {
 
   const [filteredNavItems, setFilteredNavItems] = useState<NavItem[]>([]);
 
-  const filterNavItemsByRole = (role: string, items: NavItem[]): NavItem[] => {
-    const map = {
-      admin: items,
-      frontdesk: items.filter(item =>
-        !['Admin', 'Admissions', 'Enrollment', 'Entrance Exams'].includes(item.name)
-      ),
-      accountant: items.filter(item => ['Dashboard', 'Fee Management', 'Profile'].includes(item.name)),
-      teacher: items.filter(item => ['Dashboard', 'Enrollment', 'Profile'].includes(item.name)),
-    };
-
-    return map[role as keyof typeof map] || [];
+ const filterNavItemsByRole = (role: string, items: NavItem[]): NavItem[] => {
+  const map = {
+    admin: items,
+    frontdesk: items
+      .filter(item =>
+        ['Dashboard', 'Profile', 'Registration', 'Entrance Exams'].includes(item.name)
+      )
+      .map(item => {
+        if (item.name === 'Entrance Exams') {
+          return {
+            ...item,
+            children: item.children?.filter(child => child.name === 'Placement'), // 👈 Only keep Placement
+          };
+        }
+        return item;
+      }),
+    accountant: items.filter(item => ['Dashboard', 'Fee Management', 'Profile'].includes(item.name)),
+    teacher: items.filter(item => ['Dashboard', 'Enrollment', 'Profile'].includes(item.name)),
   };
+
+  return map[role as keyof typeof map] || [];
+};
 
   useEffect(() => {
     const fetchRolesAndFilter = async () => {

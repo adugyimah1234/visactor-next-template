@@ -4,7 +4,7 @@ const token = typeof window !== "undefined" ? localStorage.getItem("authToken") 
     // const storedToken = localStorage.getItem('authToken');
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.3-gec.com/api',
   // withCredentials: true, // if you use cookies
    headers: {
     ...(token && { Authorization: `Bearer ${token}` }),
