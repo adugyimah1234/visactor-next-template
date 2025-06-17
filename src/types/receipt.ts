@@ -16,6 +16,7 @@ export interface Receipt {
   student_name?: string;
   class_name?: string;
   issued_by_name?: string;
+  fullName?: string;
   school_name?: string;
   payment_date?: string;
   payment_type?: string;

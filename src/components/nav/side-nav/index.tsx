@@ -221,15 +221,8 @@ export default function SideNav() {
 
       {/* Logo */}
       <div className="flex h-16 items-center px-4">
-        <div className={`flex items-center ${isOpen ? "justify-start" : "justify-center w-full"}`}>
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white">
-            <span className="text-xl font-bold text-white">
-            <Image src={"/logo.png"} alt={"logo"} width={40} height={40} className="h-8 w-8" />
-            <span className="sr-only">Logo</span>
-            </span>
-          </div>
-          {isOpen && <span className="ml-3 text-xl font-bold text-gray-900 dark:text-white">USER ID: 3GEC00{user?.id}</span>}
-        </div>
+                        {isOpen && <span className="ml-3 text-xl font-bold text-gray-900 dark:text-white">{user?.full_name}: 3GEC00{user?.id}</span>}
+
       </div>
 
       {/* Search */}

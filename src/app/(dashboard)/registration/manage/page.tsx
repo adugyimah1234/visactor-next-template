@@ -1128,7 +1128,7 @@ className = "h-8 px-0 font-normal"
                                     variant="ghost"
 className = "h-8 px-0 font-normal"
     >
-    <span>Payment </span>
+    <span>Registration</span>
     </Button>
     </TableHead>
     < TableHead >

@@ -12,6 +12,7 @@ import Image from "next/image"; // Import Image for profile picture
 import { useRouter } from 'next/navigation'; // Replace react-router-dom import
 import { Loader } from "@/components/ui/loader"; // Add this import
 import { Button } from "../ui/button";
+import Link from "next/link";
 
 export default function TopNav({ title }: { title: string }) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -20,6 +21,7 @@ export default function TopNav({ title }: { title: string }) {
   const { user } = useAuth(); // Access the user object from the AuthContext
   const [profileImage, setProfileImage] = useState<string | null>(null); // State for profile image
   const router = useRouter(); // Use Next.js router instead
+  const [isOpen, setIsOpen] = useState(true);
 
   // Add these states for loading
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -80,13 +82,29 @@ export default function TopNav({ title }: { title: string }) {
     <Container className="flex h-16 items-center justify-between border-b border-border">
       {/* Left side: Logo/Title and mobile menu toggle */}
       <div className="flex items-center gap-4">
+      
+            {/* Logo */}
+            <div className="flex h-16 items-center px-4">
+              <div className={`flex items-center ${isOpen ? "justify-start" : "justify-center w-full"}`}>
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white">
+                  <span className="text-xl font-bold text-white">
+                  <Image src={"/logo.png"} alt={"logo"} width={40} height={40} className="h-8 w-8" />
+                  <span className="sr-only">Logo</span>
+                  </span>
+                </div>
+              </div>
+            </div>
         <Button
           className="md:hidden p-2 text-muted-foreground hover:text-foreground"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
           <Menu size={20} />
         </Button>
-        <h1 className="text-2xl font-medium">{title}</h1>
+        <h1 className="text-2xl font-medium">
+              <Link href="/" className="text-xl font-bold text-blue-600 hover:underline">
+        {title}
+      </Link>
+        </h1>
       </div>
 
       {/* Right side: Search, notifications, user menu */}

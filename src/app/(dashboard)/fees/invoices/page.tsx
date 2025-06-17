@@ -83,6 +83,7 @@ import studentService from '@/services/students';
 import { Student } from '@/types/student';
 import { Receipt } from '@/types/receipt';
 import { Category, getAllCategories } from '@/services/categories';
+import { useAuth } from "@/contexts/AuthContext";
 
 // Types based on your backend structure
 
@@ -111,8 +112,8 @@ interface CreateReceiptData {
 }
 
 export default function ReceiptManagement() {
-
-  // State management
+  
+  const { user } = useAuth();
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -448,7 +449,7 @@ useEffect(() => {
       break;
 
     case 'furniture':
-      autoAmount = 400;
+      autoAmount = 100;
       break;
 
     case 'jersey_crest':
@@ -499,6 +500,7 @@ const isAmountLocked = useMemo(() => {
   return ['levy', 'registration', 'furniture', 'jersey_crest'].includes(formData.receipt_type);
 }, [formData.receipt_type]);
 
+const fullName = `${user?.full_name}`.trim();
 
 return (
  <form onSubmit={handleSubmit} className="space-y-4">
