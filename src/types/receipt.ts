@@ -19,6 +19,11 @@ export interface Receipt {
   fullName?: string;
   school_name?: string;
   payment_date?: string;
+   receipt_items: {
+    id: number;
+    receipt_type: string;
+    amount: number;
+  }[];
   payment_type?: string;
   payment_method?: string;
   registration_first_name?: string;

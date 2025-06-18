@@ -62,22 +62,18 @@ const navigationItems: NavItem[] = [
       { name: "Admitted Applicants", href: "/exams/shortlisted", icon: BookOpen },
     ],
   },
-  // {
-  //   name: "Enrollment",
-  //   icon: GraduationCap,
-  //   href: "/admissions",
-  //   children: [
-  //     { name: "Process Enrollment", href: "/admissions/admission-process", icon: GraduationCap },
-  //     { name: "Enrolled Students", href: "/admissions/enrolled-students", icon: GraduationCap },
-  //   ],
-  // },
+  {
+    name: "Enrollment",
+    icon: GraduationCap,
+    href: "/admissions",
+  },
   {
     name: "Fee Management",
     icon: CreditCard,
     href: "/fees",
     children: [
       { name: "Create Receipt", href: "/fees/invoices", icon: CircleDollarSign },
-      // { name: "Process Payment", href: "/fees/payment-history", icon: CreditCard },
+      { name: "Receipt History", href: "/fees/receipt-history", icon: CreditCard },
       { name: "Payment History", href: "/fees/payment-history", icon: FileText },
     ],
   },
@@ -231,25 +227,8 @@ export default function SideNav() {
 
       {/* Logo */}
       <div className="flex h-16 items-center px-4">
-                        {isOpen && <span className="ml-3 text-xl font-bold text-gray-900 dark:text-white">{user?.full_name}: 3GEC00{user?.id}</span>}
-
+      {isOpen && <span className="ml-3 text-xl font-bold text-gray-900 dark:text-white">{user?.full_name}: 3GEC00{user?.id}</span>}
       </div>
-
-      {/* Search */}
-      {isOpen && (
-        <div className="mx-4 my-4">
-          <div className="relative rounded-md shadow-sm">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <Search className="h-4 w-4 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              placeholder="Search..."
-              className="block w-full rounded-md border-gray-300 bg-gray-100 py-2 pl-10 pr-3 text-sm placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500 transition-colors duration-200"
-            />
-          </div>
-        </div>
-      )}
 
       {/* Menu Items */}
       <nav className="mt-2 flex-1 space-y-1 px-2">

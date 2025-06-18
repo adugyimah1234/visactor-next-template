@@ -67,6 +67,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import registrationService, { type RegistrationData } from '@/services/registrations';
 import { toast } from 'sonner';
@@ -84,6 +85,8 @@ import { Student } from '@/types/student';
 import { Receipt } from '@/types/receipt';
 import { Category, getAllCategories } from '@/services/categories';
 import { useAuth } from "@/contexts/AuthContext";
+import classService from '@/services/class';
+import { isDeepStrictEqual } from 'util';
 
 // Types based on your backend structure
 
@@ -97,11 +100,10 @@ interface ReceiptFilters {
 }
 
 interface CreateReceiptData {
-  student_id?: number | undefined; // Changed from number | string to number only as per createReceipt expected payload
+  student_id?: number;
   registration_id?: number;
   payment_id?: number;
-  receipt_type: string;
-  amount: number;
+  receipt_type: { type: string; amount: number }[]; // ✅ changed from string
   date_issued?: string;
   venue?: string;
   fee_id: number;
@@ -109,6 +111,21 @@ interface CreateReceiptData {
   class_id?: number;
   exam_id?: number;
   payment_type?: string;
+  amount: number; // ✅ total amount
+}
+
+// ✅ Small deep equal helper for safe comparison
+function deepEqual(x: any, y: any): boolean {
+  if (x === y) return true;
+  if (typeof x !== "object" || typeof y !== "object" || x == null || y == null) return false;
+  const keysX = Object.keys(x);
+  const keysY = Object.keys(y);
+  if (keysX.length !== keysY.length) return false;
+  for (const key of keysX) {
+    if (!keysY.includes(key)) return false;
+    if (!deepEqual(x[key], y[key])) return false;
+  }
+  return true;
 }
 
 export default function ReceiptManagement() {
@@ -119,6 +136,7 @@ export default function ReceiptManagement() {
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ReceiptFilters>({});
   const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showFilterDialog, setShowFilterDialog] = useState(false);
   const [processingAction, setProcessingAction] = useState<number | null>(null);
@@ -128,6 +146,16 @@ export default function ReceiptManagement() {
   const [realStudents, setRealStudents] = useState<Student[]>([]);
 const [payerType, setPayerType] = useState<'applicant' | 'student'>('applicant');
     const [categories, setCategories] = useState<Category[]>([]);
+const [classes, setClasses] = useState<{ id: number; name: string }[]>([]);
+
+
+useEffect(() => {
+  const timer = setTimeout(() => {
+    setDebouncedSearch(searchInput);
+  }, 300); // 300ms delay
+
+  return () => clearTimeout(timer);
+}, [searchInput]);
 
 useEffect(() => {
   async function loadStudents() {
@@ -141,6 +169,49 @@ useEffect(() => {
   loadStudents();
 }, []);
 
+useEffect(() => {
+  const fetchClasses = async () => {
+    try {
+      const data = await classService.getAll(); // or your actual fetch function
+      setClasses(data);
+    } catch (err) {
+      console.error("Failed to load classes!", err);
+    }
+  };
+
+  fetchClasses();
+}, []);
+
+// ✅ 1) Outside or inside - doesn't matter
+useEffect(() => {
+  const fetchCategories = async () => {
+    try {
+      const data = await getAllCategories();
+      setCategories(data);
+    } catch (err) {
+      console.error("Failed to load categories", err);
+    }
+  };
+  fetchCategories();
+}, []);
+
+// ✅ Fetch unique classes
+useEffect(() => {
+  const fetchClasses = async () => {
+    try {
+            const data = await classService.getAll(); // or your actual fetch function
+      // Deduplicate by name (case-insensitive)
+      const uniqueByName = Array.from(
+        new Map(data.map(cls => [cls.name.trim().toLowerCase(), cls])).values()
+      );
+      setClasses(uniqueByName);
+    } catch (err) {
+      console.error("Failed to load classes!", err);
+    }
+  };
+
+  fetchClasses();
+}, []);
 
 const fetchReceipts = useCallback(async () => {
   try {
@@ -227,7 +298,7 @@ useEffect(() => {
   };
 
   // Get receipt type badge variant
-  const getReceiptTypeBadge = (type: string) => {
+ const getReceiptTypeBadge = (type: string) => {
     const variants = {
       levy: { variant: 'default' as const, label: 'Levy' },
       registration: { variant: 'secondary' as const, label: 'Registration' },
@@ -269,22 +340,28 @@ useEffect(() => {
   loadExams();
 }, []);
   // Create Receipt Form Component
-const CreateReceiptForm = () => {
-  const [formData, setFormData] = useState<CreateReceiptData>({
-  student_id:  0,
+  interface CreateReceiptFormProps {
+  categories: Category[]; // ✅ pass from parent
+}
+
+const CreateReceiptForm: React.FC<CreateReceiptFormProps> = ({ categories }) => {
+const [formData, setFormData] = useState<CreateReceiptData>({
+  student_id: 0,
   registration_id: undefined,
   payment_id: undefined,
-  receipt_type: '',
+  receipt_type: [
+
+  ], // ✅ now an array
   fee_id: 0,
   amount: 0,
-  date_issued: new Date().toISOString().split('T')[0], // Default to today
+  date_issued: new Date().toISOString().split('T')[0],
   venue: '',
   exam_id: undefined,
   class_id: undefined,
   exam_date: '',
-  payment_type: '',
-
+  payment_type: ''
 });
+
 const [openStudentCombobox, setOpenStudentCombobox] = useState(false);
 const [studentSearchQuery, setStudentSearchQuery] = useState('');
 const [loadingStudents, setLoadingStudents] = useState(false);
@@ -292,13 +369,19 @@ const [loadingStudents, setLoadingStudents] = useState(false);
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
 
-  try {
-    const isRegistration = formData.receipt_type === "registration";
-if (formData.receipt_type === 'registration' && exams.length === 0) {
-  toast.error("No exams available. Cannot create registration receipt.");
-  return;
-}
+  if (formData.receipt_type.length === 0) {
+    toast.error("Please add at least one payment option.");
+    return;
+  }
 
+  const isRegistration = formData.receipt_type.some(item => item.type === 'registration');
+
+  if (isRegistration && exams.length === 0) {
+    toast.error("No exams available. Cannot create registration receipt.");
+    return;
+  }
+
+  try {
     // Enforce correct ID based on payer type
     if (isRegistration) {
       if (!formData.registration_id) {
@@ -330,28 +413,69 @@ if (formData.receipt_type === 'registration' && exams.length === 0) {
       delete payload.registration_id;
     }
 
-    await createReceipt(payload);
-
+    // ✅ Create the receipt and get the response with the receipt ID
+    const createdReceipt = await createReceipt(payload);
+    
     toast.success("Receipt created successfully!");
 
-    if (formData.receipt_type === 'registration' && formData.registration_id) {
-  try {
-    await registrationService.updatePartial(formData.registration_id, { payment_status: 'paid' });
-    console.log("Registration marked as paid");
-  } catch (err) {
-    console.error("Failed to update payment status", err);
-    toast.warning("Receipt created, but payment status update failed.");
-  }
-}
+    // ✅ Update payment status if it's a registration
+    if (
+      formData.receipt_type?.some(item => item.type === 'registration') &&
+      formData.registration_id
+    ) {
+      try {
+        await registrationService.updatePartial(formData.registration_id, {
+          payment_status: 'paid'
+        });
+        console.log("Registration marked as paid");
+      } catch (err) {
+        console.error("Failed to update payment status", err);
+        toast.warning("Receipt created, but payment status update failed.");
+      }
+    }
 
+    // ✅ Close the dialog first
     setShowCreateDialog(false);
+    
+    // ✅ Refresh the receipts list
     fetchReceipts();
 
-    // Reset form
+    // ✅ Auto-print the receipt
+    try {
+      // Get the receipt ID from the created receipt response
+      const receiptId = createdReceipt.id || createdReceipt.id;
+      
+      if (receiptId) {
+        // Generate and open the printable receipt
+        const html = await getPrintableReceipt(receiptId);
+        const newWindow = window.open('', '_blank');
+        
+        if (newWindow) {
+          newWindow.document.write(html);
+          newWindow.document.close();
+          
+          // ✅ Automatically trigger print dialog
+          newWindow.onload = () => {
+            newWindow.print();
+          };
+          
+          toast.success("Receipt created and print dialog opened!");
+        } else {
+          toast.warning("Receipt created successfully, but unable to open print window. Please allow pop-ups and try printing manually.");
+        }
+      } else {
+        toast.warning("Receipt created successfully, but unable to get receipt ID for printing.");
+      }
+    } catch (printError) {
+      console.error("Print error:", printError);
+      toast.warning("Receipt created successfully, but failed to generate printable version.");
+    }
+
+    // ✅ Reset form
     setFormData({
       student_id: undefined,
       registration_id: undefined,
-      receipt_type: '',
+      receipt_type: [],
       amount: 0,
       date_issued: new Date().toISOString().split('T')[0],
       venue: '',
@@ -361,6 +485,7 @@ if (formData.receipt_type === 'registration' && exams.length === 0) {
       class_id: undefined,
       exam_date: ''
     });
+
   } catch (error) {
     console.error(error);
     toast.error("Failed to create receipt");
@@ -368,8 +493,10 @@ if (formData.receipt_type === 'registration' && exams.length === 0) {
 };
 
 
+const isRegistration = formData.receipt_type?.some(item => item.type === 'registration');
+
 const filteredStudents = useMemo(() => {
-  const source = formData.receipt_type === 'registration' ? applicants : realStudents;
+  const source = isRegistration ? applicants : realStudents;
 
   return studentSearchQuery.trim()
     ? source.filter((s: any) =>
@@ -378,11 +505,13 @@ const filteredStudents = useMemo(() => {
         )
       )
     : source;
-}, [formData.receipt_type, studentSearchQuery, applicants, realStudents]);
+}, [isRegistration, studentSearchQuery, applicants, realStudents]);
 
 
 const handleStudentSelect = (id: number) => {
-  if (formData.receipt_type === 'registration') {
+  const isRegistration = formData.receipt_type?.some(item => item.type === 'registration');
+
+  if (isRegistration) {
     setFormData((prev) => ({
       ...prev,
       registration_id: id,
@@ -396,10 +525,9 @@ const handleStudentSelect = (id: number) => {
     }));
   }
 
-  const selected =
-    formData.receipt_type === 'registration'
-      ? applicants.find((s) => s.id === id)
-      : realStudents.find((s) => s.id === id);
+  const selected = isRegistration
+    ? applicants.find((s) => s.id === id)
+    : realStudents.find((s) => s.id === id);
 
   setStudentSearchQuery(
     `${selected?.first_name ?? ''} ${selected?.middle_name ?? ''} ${selected?.last_name ?? ''}`.trim()
@@ -408,136 +536,198 @@ const handleStudentSelect = (id: number) => {
 };
 
     
-      const fetchCategories = async () => {
-        try {
-          setLoading(true);
-          const data = await getAllCategories();
-          setCategories(data);
-        } catch (error: any) {
-            console.error("failed to load categories!")
-        } finally {
-          setLoading(false);
-        }
-      };
 
+
+
+// 2️⃣ Use as normal
 const getCategoryName = (id: number | string) => {
   const found = categories.find((c) => c.id === Number(id));
-  return found ? found.name : `Unknown (${id})`;
+  return found ? found.name : undefined;
 };
 
-useEffect(() => {
-  const selected =
-    formData.receipt_type === 'registration'
-      ? applicants.find((s) => s.id === formData.registration_id)
-      : realStudents.find((s) => s.id === formData.student_id);
 
-  if (!formData.receipt_type || !selected) return;
+ useEffect(() => {
+    if (!formData.receipt_type?.length) return;
 
-  // Resolve category name using category_id
-  const categoryName = categories.find(
-    (c) => c.id === selected.category_id
-  )?.name;
+    const isRegistration = formData.receipt_type.some(item => item.type === "registration");
 
-  console.log("📦 Selected Category Name:", categoryName);
+    const selected = isRegistration
+      ? applicants.find(s => s.id === formData.registration_id)
+      : realStudents.find(s => s.id === formData.student_id);
 
-  let autoAmount = 0;
+    if (!selected) return; // Don't run until student is selected
 
-  switch (formData.receipt_type) {
-    case 'levy':
-      if (categoryName === 'SVC' || categoryName === 'MOD') autoAmount = 200;
-      else if (categoryName === 'CIV') autoAmount = 220;
-      break;
+    const categoryId = selected.category_id;
+    const categoryName = categoryId ? getCategoryName(categoryId) : undefined;
 
-    case 'furniture':
-      autoAmount = 100;
-      break;
+    const classId = isRegistration
+      ? (selected as RegistrationData)?.class_applying_for
+      : (selected as Student)?.class_id;
 
-    case 'jersey_crest':
-      autoAmount = 100;
-      break;
+    const classNameRaw = classId ? classes.find(cls => cls.id === Number(classId))?.name : undefined;
+    const className = classNameRaw?.trim().toLowerCase();
 
-    case 'registration':
-      autoAmount = 40;
-      break;
+    const updatedTypes = formData.receipt_type.map(item => {
+      let fixedAmount = item.amount; // Keep previous by default
 
-    default:
-      autoAmount = 0;
-  }
+      switch (item.type) {
+        case "levy":
+          if (categoryName === "SVC" || categoryName === "MOD") fixedAmount = 200;
+          else if (categoryName === "CIV") fixedAmount = 220;
+          else fixedAmount = 0;
+          break;
+        case "furniture":
+          fixedAmount = 100;
+          break;
+        case "jersey_crest":
+          fixedAmount = 120;
+          break;
+        case "registration":
+          fixedAmount = 40;
+          break;
+        case "textBooks":
+          if (className?.includes("kg")) fixedAmount = 100;
+          else if (className?.includes("basic 1") || className?.includes("basic 2")) fixedAmount = 120;
+          else if (className?.includes("basic 3") || className?.includes("basic 4")) fixedAmount = 150;
+          else if (className?.includes("basic 5") || className?.includes("basic 6")) fixedAmount = 180;
+          else if (className?.includes("basic 7") || className?.includes("basic 8")) fixedAmount = 200;
+          else fixedAmount = 200;
+          break;
+        case "exerciseBooks":
+          if (className?.includes("kg")) fixedAmount = 30;
+          else if (className?.includes("basic 1") || className?.includes("basic 2")) fixedAmount = 50;
+          else if (className?.includes("basic 3") || className?.includes("basic 4")) fixedAmount = 60;
+          else if (className?.includes("basic 5") || className?.includes("basic 6")) fixedAmount = 70;
+          else if (className?.includes("basic 7") || className?.includes("basic 8")) fixedAmount = 80;
+          else fixedAmount = 50;
+          break;
+        default:
+          // no auto amount for other types
+      }
 
-  console.log("✅ Setting amount to:", autoAmount);
+      return { ...item, amount: fixedAmount };
+    });
 
-  setFormData((prev) => ({
-    ...prev,
-    amount: autoAmount,
-  }));
-}, [
-  formData.receipt_type,
-  formData.registration_id,
-  formData.student_id,
-  applicants,
-  realStudents,
-  categories, // ✅ important so it runs when categories are loaded
-]);
+    const newTotal = updatedTypes.reduce((sum, item) => sum + item.amount, 0);
 
+    const typesEqual = deepEqual(formData.receipt_type, updatedTypes);
+    const totalEqual = formData.amount === newTotal;
 
-
-useEffect(() => {
-  if (formData.receipt_type !== 'registration' || !formData.registration_id) return;
-  if (exams.length === 0) return;
-
-  const latestExam = exams[0]; // or sort to get the newest
-
-  setFormData((prev) => ({
-    ...prev,
-    exam_id: latestExam.id,
-    exam_date: new Date(latestExam.date).toISOString().split('T')[0],
-    class_id: latestExam.class_id, // optional
-  }));
-}, [formData.receipt_type, formData.registration_id, exams]);
+    if (!typesEqual || !totalEqual) {
+      setFormData(prev => ({
+        ...prev,
+        receipt_type: updatedTypes,
+        amount: newTotal,
+      }));
+    }
+  }, [
+    formData.receipt_type,
+    formData.registration_id,
+    formData.student_id,
+    applicants,
+    realStudents,
+    categories,
+    classes,
+  ]);
 
 
 const isAmountLocked = useMemo(() => {
-  return ['levy', 'registration', 'furniture', 'jersey_crest'].includes(formData.receipt_type);
+  return formData.receipt_type?.some(item =>
+    ['levy', 'registration', 'furniture', 'jersey_crest'].includes(item.type)
+  );
 }, [formData.receipt_type]);
 
-const fullName = `${user?.full_name}`.trim();
-
 return (
- <form onSubmit={handleSubmit} className="space-y-4">
+<form onSubmit={handleSubmit} className="space-y-4">
+
   {/* === Payment Option === */}
   <div>
-    <label className="block text-sm font-medium mb-1">Payment Option</label>
+    <label className="block text-sm font-medium mb-1">Payment Options</label>
+{formData.receipt_type.map((opt, idx) => (
+  <div key={idx} className="flex items-center space-x-4 mb-2">
+    {/* ✅ Select using shadcn */}
     <Select
-      value={formData.receipt_type}
-      onValueChange={(value) => {
-        setFormData({ ...formData, receipt_type: value });
+      value={opt.type}
+      onValueChange={(newType) => {
+        const newOptions = [...formData.receipt_type];
+        let fixedAmount = 0;
+        switch (newType) {
+          case "registration":
+            fixedAmount = 40;
+            break;
+          case "levy":
+            fixedAmount = 0; // handled in useEffect for SVC/CIV
+            break;
+          case "furniture":
+            fixedAmount = 100;
+            break;
+          case "jersey_crest":
+            fixedAmount = 120;
+            break;
+          default:
+            fixedAmount = 0;
+        }
+        newOptions[idx] = { type: newType, amount: fixedAmount };
+        const totalAmount = newOptions.reduce((sum, item) => sum + item.amount, 0);
+        setFormData({ ...formData, receipt_type: newOptions, amount: totalAmount });
       }}
     >
-      <SelectTrigger>
-        <SelectValue placeholder="Select receipt type" />
+      <SelectTrigger className="w-[200px]">
+        <SelectValue placeholder="Select type" />
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="registration">Registration</SelectItem>
-        <SelectItem value="furniture">Furniture</SelectItem>
         <SelectItem value="levy">Levy</SelectItem>
+        <SelectItem value="furniture">Furniture</SelectItem>
         <SelectItem value="textBooks">TextBooks</SelectItem>
-        <SelectItem value="exerciseBooks">Exercise Books</SelectItem>
+        <SelectItem value="exerciseBooks">ExerciseBooks</SelectItem>
         <SelectItem value="jersey_crest">Jersey/Crest</SelectItem>
       </SelectContent>
     </Select>
-  </div>
 
-  
+    {/* ✅ Show amount */}
+    <span className="font-medium text-gray-700">GHS {opt.amount}</span>
+
+    {/* ✅ Remove option with icon button */}
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      onClick={() => {
+        const newOptions = [...formData.receipt_type];
+        newOptions.splice(idx, 1);
+        const totalAmount = newOptions.reduce((sum, item) => sum + item.amount, 0);
+        setFormData({ ...formData, receipt_type: newOptions, amount: totalAmount });
+      }}
+    >
+      <X className="w-4 h-4 text-red-600" />
+    </Button>
+  </div>
+))}
+
+{/* ✅ Add option button with plus icon */}
+<Button
+  type="button"
+  variant="secondary"
+  onClick={() =>
+    setFormData({
+      ...formData,
+      receipt_type: [...formData.receipt_type, { type: "", amount: 0 }],
+    })
+  }
+  className="mt-2"
+>
+  <Plus className="w-4 h-4 mr-1" />
+  Add Option
+</Button>
+  </div>
 
   {/* === Search Student === */}
   <div className="grid grid-cols-4 items-center gap-4 relative">
-
-
-
     <div className="col-span-3 relative">
-    <Label htmlFor="student-search" className="block text-sm font-medium mb-1">
-  {formData.receipt_type === 'registration' ? 'Applicant' : 'Student'}
-</Label>
+      <Label htmlFor="student-search" className="block text-sm font-medium mb-1">
+        {formData.receipt_type.some(item => item.type === 'registration') ? 'Applicant' : 'Student'}
+      </Label>
       <Input
         id="student-search"
         type="text"
@@ -547,11 +737,11 @@ return (
         onFocus={() => setOpenStudentCombobox(true)}
       />
       {openStudentCombobox && filteredStudents.length > 0 && (
-        <ul className="absolute z-50  border rounded shadow-md w-full mt-1 max-h-48 overflow-y-auto">
+        <ul className="absolute z-50 border rounded shadow-md w-full mt-1 max-h-48 overflow-y-auto">
           {filteredStudents.map((student) => (
             <li
               key={student.id}
-              className="px-4 py-2 bg-white dark:: text-black cursor-pointer hover:bg-gray-700"
+              className="px-4 py-2 bg-white text-black cursor-pointer hover:bg-gray-700"
               onClick={() => {
                 handleStudentSelect(student.id ?? 0);
                 setStudentSearchQuery(
@@ -568,43 +758,21 @@ return (
     </div>
   </div>
 
-
-{/* === Amount === */}
-<div>
-  <label className="block text-sm font-medium mb-1">Amount</label>
-  {isAmountLocked ? (
-    <>
-      <Input
-        type="text"
-        value={new Intl.NumberFormat('en-GH', {
-          style: 'currency',
-          currency: 'GHS',
-        }).format(formData.amount)}
-        disabled
-      />
-      <p className="text-sm text-muted-foreground mt-1">
-        This amount is fixed based on the selected Payment Option make sure you have received the amount before you proceed.
-      </p>
-    </>
-  ) : (
-    <div className="relative">
-      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
-        GHS
-      </span>
-      <Input
-        type="number"
-        className="pl-14"
-        value={formData.amount === 0 ? '' : formData.amount}
-        onChange={(e) =>
-          setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })
-        }
-        placeholder="Enter amount"
-        required
-      />
-    </div>
-  )}
-</div>
-
+  {/* === Amount === */}
+  <div>
+    <label className="block text-sm font-medium mb-1">Total Amount</label>
+    <Input
+      type="text"
+      value={new Intl.NumberFormat('en-GH', {
+        style: 'currency',
+        currency: 'GHS',
+      }).format(formData.amount)}
+      disabled
+    />
+    <p className="text-sm text-muted-foreground mt-1">
+      This total is calculated automatically based on your selected Payment Options.
+    </p>
+  </div>
 
   {/* === Venue Display (Optional) === */}
   {formData.venue && (
@@ -619,6 +787,7 @@ return (
     <Button type="submit">Create Receipt</Button>
   </div>
 </form>
+
 
     );
   };
@@ -659,9 +828,12 @@ return (
           </div>
           <div>
             <p className="text-sm font-medium">Receipt Type</p>
-            <Badge {...getReceiptTypeBadge(receipt.receipt_type)}>
-              {getReceiptTypeBadge(receipt.receipt_type).label}
-            </Badge>
+{receipt.receipt_items?.map(item => (
+  <Badge key={item.id} {...getReceiptTypeBadge(item.receipt_type)}>
+    {getReceiptTypeBadge(item.receipt_type).label}
+  </Badge>
+))}
+
           </div>
           <div>
             <p className="text-sm font-medium">Date Issued</p>
@@ -748,7 +920,7 @@ return (
                 Generate a new receipt for a student payment
               </DialogDescription>
             </DialogHeader>
-            <CreateReceiptForm />
+            <CreateReceiptForm categories={categories}/>
           </DialogContent>
         </Dialog>
       </div>
@@ -855,95 +1027,110 @@ return (
                 </TableRow>
               </TableHeader>
               <TableBody>
-              {receipts.map((receipt: Receipt) => {
-const realstudent: Student | undefined = realStudents.find(
-  (s) => Number(s.id) === Number(receipt.student_id)
-);
+  {receipts.map((receipt: Receipt) => {
+    const realstudent: Student | undefined = realStudents.find(
+      (s) => Number(s.id) === Number(receipt.student_id)
+    );
 
-  const renderStudentName = () => {
-    if (receipt.receipt_type === 'registration') {
-      return receipt.student_name || 'Unknown Student';
-    }
+    const renderStudentName = () => {
+      if (
+        receipt.receipt_items?.some(item => item.receipt_type === "registration")
+      ) {
+        return receipt.student_name || 'Unknown Student';
+      }
 
-    if (!realstudent) return 'Unknown Student';
+      if (!realstudent) return 'Unknown Student';
 
-    const fullName = [realstudent.first_name, realstudent.middle_name, realstudent.last_name]
-      .filter(Boolean)
-      .join(' ')
-      .trim();
+      const fullName = [
+        realstudent.first_name,
+        realstudent.middle_name,
+        realstudent.last_name,
+      ].filter(Boolean).join(' ').trim();
 
-    if (fullName) return fullName;
+      if (fullName) return fullName;
 
-    const initials =
-      (realstudent.first_name?.[0]?.toUpperCase() ?? '') +
-      (realstudent.last_name?.[0]?.toUpperCase() ?? '');
+      return (
+        (realstudent.first_name?.[0]?.toUpperCase() ?? '') +
+        (realstudent.last_name?.[0]?.toUpperCase() ?? '')
+      ) || 'NA';
+    };
 
-    return initials || 'NA';
-  };
+    return (
+      <TableRow key={receipt.id}>
+        <TableCell className="font-mono">
+          R-{receipt.id.toString().padStart(6, '0')}
+        </TableCell>
 
-  return (
-    <TableRow key={receipt.id}>
-      <TableCell className="font-mono">
-        R-{receipt.id.toString().padStart(6, '0')}
-      </TableCell>
+        <TableCell>
+          <div>
+            <p className="font-medium">{renderStudentName()}</p>
+            <p className="text-sm text-muted-foreground">{receipt.class_name}</p>
+          </div>
+        </TableCell>
 
-      <TableCell>
-        <div>
-          <p className="font-medium">{renderStudentName()}</p>
-          <p className="text-sm text-muted-foreground">{receipt.class_name}</p>
-        </div>
-      </TableCell>
-      <TableCell>
-        <Badge {...getReceiptTypeBadge(receipt.receipt_type)}>
-          {getReceiptTypeBadge(receipt.receipt_type).label}
-        </Badge>
-      </TableCell>
-      <TableCell className="font-medium">
-        {formatCurrency(receipt.amount)}
-      </TableCell>
-      <TableCell>{formatDate(receipt.date_issued)}</TableCell>
-      <TableCell>
-        <Badge variant={receipt.payment_method === 'Paid' ? 'default' : 'secondary'}>
-          {receipt.payment_method || 'Paid'}
-        </Badge>
-      </TableCell>
-      <TableCell>
-        <Badge variant={receipt.payment_type ? 'default' : 'secondary'}>
-          {receipt.payment_type || 'cash'}
-        </Badge>
-      </TableCell>
-      <TableCell>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
-              {processingAction === receipt.id ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <MoreHorizontal className="h-4 w-4" />
-              )}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem onClick={() => handleAction('view', receipt.id)}>
-              <Eye className="mr-2 h-4 w-4" />
-              View Details
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleAction('print', receipt.id)}>
-              <Printer className="mr-2 h-4 w-4" />
-              Print
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleAction('download', receipt.id)}>
-              <Download className="mr-2 h-4 w-4" />
-              Download PDF
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </TableCell>
-    </TableRow>
-  );
-})}
+        {/* ✅ MULTIPLE RECEIPT TYPES */}
+        <TableCell>
+          <div className="flex flex-wrap gap-1">
+{receipt.receipt_items?.map(item => (
+  <Badge key={item.id} {...getReceiptTypeBadge(item.receipt_type)}>
+    {getReceiptTypeBadge(item.receipt_type).label}
+  </Badge>
+))}
 
+          </div>
+        </TableCell>
+
+        {/* ✅ SHOW TOTAL AMOUNT AS BEFORE */}
+        <TableCell className="font-medium">
+          {formatCurrency(receipt.amount)}
+        </TableCell>
+
+        <TableCell>{formatDate(receipt.date_issued)}</TableCell>
+
+        <TableCell>
+          <Badge variant={receipt.payment_method === 'Paid' ? 'default' : 'secondary'}>
+            {receipt.payment_method || 'Paid'}
+          </Badge>
+        </TableCell>
+
+        <TableCell>
+          <Badge variant={receipt.payment_type ? 'default' : 'secondary'}>
+            {receipt.payment_type || 'cash'}
+          </Badge>
+        </TableCell>
+
+        <TableCell>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm">
+                {processingAction === receipt.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <MoreHorizontal className="h-4 w-4" />
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleAction('view', receipt.id)}>
+                <Eye className="mr-2 h-4 w-4" />
+                View Details
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAction('print', receipt.id)}>
+                <Printer className="mr-2 h-4 w-4" />
+                Print
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAction('download', receipt.id)}>
+                <Download className="mr-2 h-4 w-4" />
+                Download PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </TableCell>
+      </TableRow>
+    );
+  })}
 </TableBody>
+
             </Table>
           )}
 
