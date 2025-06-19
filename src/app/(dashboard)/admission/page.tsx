@@ -328,9 +328,7 @@ return (
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4">
-          <Button onClick={handlePrint} variant="outline">
-  <Printer className="w-4 h-4 mr-2" /> Print
-</Button>
+
 
             <div>
             
@@ -433,6 +431,9 @@ return (
             <Button onClick={handleRefresh} variant="outline">
     <RefreshCcw className="w-4 h-4 mr-2" /> Refresh
     </Button>
+              <Button onClick={handlePrint} variant="outline">
+  <Printer className="w-4 h-4 mr-2" /> Print
+</Button>
           </div>
         </CardHeader>
         <CardContent>

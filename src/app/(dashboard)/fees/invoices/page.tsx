@@ -160,18 +160,6 @@ useEffect(() => {
   loadStudents();
 }, []);
 
-useEffect(() => {
-  const fetchClasses = async () => {
-    try {
-      const data = await classService.getAll(); // or your actual fetch function
-      setClasses(data);
-    } catch (err) {
-      console.error("Failed to load classes!", err);
-    }
-  };
-
-  fetchClasses();
-}, []);
 
 // ✅ 1) Outside or inside - doesn't matter
 useEffect(() => {
@@ -386,103 +374,58 @@ const handleSubmit = async (e: React.FormEvent) => {
   }
 
   const isRegistration = formData.receipt_type.some(item => item.type === 'registration');
-
   if (isRegistration && exams.length === 0) {
     toast.error("No exams available. Cannot create registration receipt.");
     return;
   }
 
-  try {
-    // Enforce correct ID based on payer type
-    if (isRegistration) {
-      if (!formData.registration_id) {
-        toast.error("Please select an applicant for this receipt.");
-        return;
-      }
-    } else {
-      if (!formData.student_id) {
-        toast.error("Please select a student for this receipt.");
-        return;
-      }
+  // ✅ Open popup FIRST
+  let printWindow: Window | null = null;
+  printWindow = window.open('', '_blank');
+  if (!printWindow) {
+    toast.warning("Please allow pop-ups to print the receipt.");
+  }
 
-      const exists = realStudents.some((s) => s.id === formData.student_id);
-      if (!exists) {
-        toast.error("Selected student does not exist in the database.");
-        return;
-      }
+  try {
+    if (isRegistration && !formData.registration_id) {
+      toast.error("Please select an applicant.");
+      return;
     }
 
-    // Safely construct payload
+    if (!isRegistration && !formData.student_id) {
+      toast.error("Please select a student.");
+      return;
+    }
+
+    const exists = realStudents.some((s) => s.id === formData.student_id);
+    if (!isRegistration && !exists) {
+      toast.error("Student not in database.");
+      return;
+    }
+
     const payload: any = {
       ...formData,
       fee_id: formData.student_id ? `02500${formData.student_id}` : undefined,
     };
 
-    if (isRegistration) {
-      delete payload.student_id;
-    } else {
-      delete payload.registration_id;
-    }
+    if (isRegistration) delete payload.student_id;
+    else delete payload.registration_id;
 
-    // ✅ Create the receipt and get the response with the receipt ID
     const createdReceipt = await createReceipt(payload);
-    
-    toast.success("Receipt created successfully!");
+    toast.success("Receipt created!");
 
-    // ✅ Update payment status if it's a registration
-    if (
-      formData.receipt_type?.some(item => item.type === 'registration') &&
-      formData.registration_id
-    ) {
+    if (isRegistration && formData.registration_id) {
       try {
         await registrationService.updatePartial(formData.registration_id, {
-          payment_status: 'paid'
+          payment_status: 'paid',
         });
-        console.log("Registration marked as paid");
-      } catch (err) {
-        console.error("Failed to update payment status", err);
-        toast.warning("Receipt created, but payment status update failed.");
+      } catch {
+        toast.warning("Receipt created but payment status not updated.");
       }
     }
 
-    // ✅ Close the dialog first
-    setShowCreateDialog(false);
-    
-    // ✅ Refresh the receipts list
-    fetchReceipts();
-
-    // ✅ Auto-print the receipt
-    try {
-      // Get the receipt ID from the created receipt response
-      const receiptId = createdReceipt.id || createdReceipt.id;
-      
-      if (receiptId) {
-        // Generate and open the printable receipt
-        const html = await getPrintableReceipt(receiptId);
-        const newWindow = window.open('', '_blank');
-        
-        if (newWindow) {
-          newWindow.document.write(html);
-          newWindow.document.close();
-          
-          // ✅ Automatically trigger print dialog
-          newWindow.onload = () => {
-            newWindow.print();
-          };
-          
-          toast.success("Receipt created and print dialog opened!");
-        } else {
-          toast.warning("Receipt created successfully, but unable to open print window. Please allow pop-ups and try printing manually.");
-        }
-      } else {
-        toast.warning("Receipt created successfully, but unable to get receipt ID for printing.");
-      }
-    } catch (printError) {
-      console.error("Print error:", printError);
-      toast.warning("Receipt created successfully, but failed to generate printable version.");
-    }
-
-    // ✅ Reset form
+    // reset
+        // Reset form + close dialog
     setFormData({
       student_id: undefined,
       registration_id: undefined,
@@ -496,12 +439,21 @@ const handleSubmit = async (e: React.FormEvent) => {
       class_id: undefined,
       exam_date: ''
     });
+    setShowCreateDialog(false);
+    await fetchReceipts();
+
+    // ✅ Finally, trigger print
+    if (printWindow && createdReceipt?.id) {
+      printWindow.location.href = `/print/receipt/${createdReceipt.id}`;
+    }
 
   } catch (error) {
     console.error(error);
     toast.error("Failed to create receipt");
   }
 };
+
+
 
 
 const isRegistration = formData.receipt_type?.some(item => item.type === 'registration');
@@ -762,7 +714,8 @@ return (
         type="text"
         placeholder="Type to search..."
         value={studentSearchQuery}
-        onChange={(e) => setSearchInput(e.target.value)} // real-time here
+onChange={(e) => setStudentSearchQuery(e.target.value)}
+
         onFocus={() => setOpenStudentCombobox(true)}
       />
       {openStudentCombobox && filteredStudents.length > 0 && (
@@ -937,23 +890,28 @@ return (
           <p className="text-muted-foreground">Manage and track payment receipts</p>
         </div>
 
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Receipt
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Create New Receipt</DialogTitle>
-              <DialogDescription>
-                Generate a new receipt for a student payment
-              </DialogDescription>
-            </DialogHeader>
-            <CreateReceiptForm categories={categories}/>
-          </DialogContent>
-        </Dialog>
+      <Dialog
+  open={showCreateDialog}
+  onOpenChange={(open) => {
+    setShowCreateDialog(open);
+  }}
+>
+  <DialogTrigger asChild>
+    <Button>
+      <Plus className="mr-2 h-4 w-4" />
+      Create Receipt
+    </Button>
+  </DialogTrigger>
+  <DialogContent className="max-w-md" key={showCreateDialog ? 'open' : 'closed'}>
+    <DialogHeader>
+      <DialogTitle>Create New Receipt</DialogTitle>
+      <DialogDescription>
+        Generate a new receipt for a student payment
+      </DialogDescription>
+    </DialogHeader>
+    <CreateReceiptForm categories={categories} />
+  </DialogContent>
+</Dialog>
       </div>
 
       {/* Search and Filters */}
@@ -1144,17 +1102,9 @@ return (
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => handleAction('view', receipt.id)}>
-                <Eye className="mr-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAction('print', receipt.id)}>
                 <Printer className="mr-2 h-4 w-4" />
                 Print
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAction('download', receipt.id)}>
-                <Download className="mr-2 h-4 w-4" />
-                Download PDF
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

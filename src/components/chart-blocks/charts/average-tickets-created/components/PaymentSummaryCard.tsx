@@ -340,12 +340,11 @@ const calculateSummary = () => {
       </div>
        {/* Category Breakdown Section */}
 <div className="mt-6 max-w-5xl mx-auto">
-  <h2 className="text-xl font-semibold mb-4 w-full">Category Breakdown</h2>
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     {summary.categories.map((cat) => (
       <div
         key={cat.name}
-        className="p-4 rounded-lg shadow-sm border bg-white flex flex-col justify-between"
+        className="p-4 rounded-lg shadow-sm border dark::bg-white flex flex-col justify-between"
         style={{ borderLeft: `6px solid ${cat.color}` }}
       >
         <div className="flex items-center space-x-3 mb-2">

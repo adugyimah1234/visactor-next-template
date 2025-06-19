@@ -357,7 +357,7 @@ const pendingApplicants = useMemo(() => {
   return applicants
     .filter((a) => {
       const matchesStatus = a.status === 'pending';
-      const isPaymentValid = a.payment_status !== 'unpaid';
+      const isPaymentValid = a.payment_status === 'unpaid';
       const matchesClass = selectedClassId === '' || a.class_id === selectedClassId;
       const matchesAppliedClass = selectedAppliedClass === '' || a.class_applying_for === selectedAppliedClass;
 
@@ -580,9 +580,7 @@ const handleSaveScores = async () => {
                     >
                       Promote
                       </Button>
-                      
                     )}
-
                     </TableCell>
                   )}
               </TableRow>
