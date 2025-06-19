@@ -14,12 +14,17 @@ import {
   Filter
 } from 'lucide-react';
 import { getReceipts } from '@/services/receipt'
+import { Category, getAllCategories } from '@/services/categories';
+import { Student } from '@/types/student';
+import studentService from '@/services/students';
 // Import types and API function
 
 interface ReceiptItem {
   id: number;
   receipt_type: 'registration' | 'levy' | 'textBooks' | 'exerciseBooks' | 'furniture' | 'jersey_crest';
   amount: number;
+  student_id?: number;
+  category_name?: string;
 }
 
 
@@ -55,6 +60,34 @@ export default function DailyPaymentDashboard() {
   const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+const [categories, setCategories] = useState<Category[]>([]);
+const [students, setStudents] = useState<Student[]>([]);
+
+
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const [receiptData, categoryData, studentData] = await Promise.all([
+        getReceipts(),
+        getAllCategories(),
+        studentService.getAll()
+      ]);
+      setReceipts(receiptData);
+      setCategories(categoryData);
+      setStudents(studentData);
+    } catch (err) {
+      console.error('Failed to fetch data:', err);
+      setError('Failed to load payment or category data');
+      setReceipts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, []);
+
+
 
   useEffect(() => {
     const fetchReceipts = async () => {
@@ -154,22 +187,98 @@ const formatCurrency = (amount: number): string => {
     });
   };
 
+
+  
 const calculateSummary = () => {
   const currentReceipts = getFilteredReceipts();
   const previousReceipts = getPreviousPeriodData();
 
+  // Total revenue calculations
   const currentTotal = currentReceipts.reduce(
-    (sum, r) => sum + r.receipt_items?.reduce((s, item) => s + Number(item.amount || 0), 0),
+    (sum, r) =>
+      sum + r.receipt_items?.reduce((s, item) => s + Number(item.amount || 0), 0),
     0
   );
+
   const previousTotal = previousReceipts.reduce(
-    (sum, r) => sum + r.receipt_items?.reduce((s, item) => s + Number(item.amount || 0), 0),
+    (sum, r) =>
+      sum + r.receipt_items?.reduce((s, item) => s + Number(item.amount || 0), 0),
     0
   );
 
   const change =
     previousTotal > 0 ? ((currentTotal - previousTotal) / previousTotal) * 100 : 0;
 
+// Step 1: Build Maps
+const studentCategoryMap: Record<number, number> = {};
+students.forEach(s => {
+  studentCategoryMap[s.id] = s.category_id;
+});
+
+const categoryNameMap: Record<number, string> = {};
+const categoryAmountMap: Record<number, number> = {};
+categories.forEach(c => {
+  categoryNameMap[c.id] = c.name;
+  categoryAmountMap[c.id] = typeof c.amount === 'string'
+    ? parseFloat(c.amount)
+    : Number(c.amount) || 0;
+});
+
+// Step 2: Count total students per category
+const studentCountMap: Record<number, number> = {};
+students.forEach(s => {
+  const cid = s.category_id;
+  studentCountMap[cid] = (studentCountMap[cid] || 0) + 1;
+});
+
+// Step 3: Track only LEVY payments
+const levyPaidStudentSet: Record<number, Set<number>> = {}; // categoryId -> Set of studentIds
+const actualLevyAmountMap: Record<number, number> = {};      // categoryId -> total paid
+
+currentReceipts.forEach((receipt) => {
+  const studentId = receipt.student_id;
+  const categoryId = studentCategoryMap[studentId];
+
+  if (!categoryId || !categoryNameMap[categoryId]) return;
+
+  const levyItems = receipt.receipt_items?.filter(item => item.receipt_type === 'levy') || [];
+
+  if (levyItems.length > 0) {
+    if (!levyPaidStudentSet[categoryId]) levyPaidStudentSet[categoryId] = new Set();
+    if (!actualLevyAmountMap[categoryId]) actualLevyAmountMap[categoryId] = 0;
+
+    levyPaidStudentSet[categoryId].add(studentId);
+
+    actualLevyAmountMap[categoryId] += levyItems.reduce(
+      (sum, item) => sum + Number(item.amount || 0), 0
+    );
+  }
+});
+
+// Step 4: Build the final summary
+const categoryTotals = Object.keys(categoryNameMap).map(cidStr => {
+  const cid = Number(cidStr);
+  const name = categoryNameMap[cid];
+  const levyAmount = categoryAmountMap[cid];
+  const totalStudents = studentCountMap[cid] || 0;
+  const expected = levyAmount * totalStudents;
+  const actual = actualLevyAmountMap[cid] || 0;
+  const studentsPaid = levyPaidStudentSet[cid]?.size || 0;
+
+  return {
+    name,
+    count: totalStudents,
+    expected,
+    actual,
+    studentsPaid,
+  };
+});
+
+
+
+
+
+  // ✅ Original summary by receipt_item.receipt_type
   const categoryMap: Record<string, { amount: number; count: number }> = {};
 
   currentReceipts.forEach((r) => {
@@ -183,7 +292,7 @@ const calculateSummary = () => {
     });
   });
 
-  const categories = Object.entries(categoryConfig)
+  const categoriesSummary = Object.entries(categoryConfig)
     .map(([key, config]) => {
       const cat = categoryMap[key] || { amount: 0, count: 0 };
       const percentage = currentTotal > 0 ? (cat.amount / currentTotal) * 100 : 0;
@@ -203,11 +312,13 @@ const calculateSummary = () => {
   return {
     totalRevenue: currentTotal,
     totalTransactions: currentReceipts.length,
-    categories,
+    categories: categoriesSummary,
+    categoryTotals, // ✅ NEW: Grouped by category name from receipt.category_id
     change,
     previousTotal,
   };
 };
+
 
 
     const summary = calculateSummary();
@@ -339,19 +450,19 @@ const calculateSummary = () => {
 
       </div>
        {/* Category Breakdown Section */}
-<div className="mt-6 max-w-5xl mx-auto">
+<div className="mt-6 max-w-7xl mx-auto">
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     {summary.categories.map((cat) => (
       <div
         key={cat.name}
-        className="p-4 rounded-lg shadow-sm border dark::bg-white flex flex-col justify-between"
-        style={{ borderLeft: `6px solid ${cat.color}` }}
+        className="p-4 rounded-md  border dark::bg-white flex flex-col justify-between"
+        style={{ borderLeft: `4px solid ${cat.color}` }}
       >
         <div className="flex items-center space-x-3 mb-2">
           <cat.icon className="w-6 h-6" style={{ color: cat.color }} />
           <h3 className="text-md font-bold">{cat.name}</h3>
         </div>
-        <div className="text-sm text-gray-600">
+        <div className="text-sm ">
           <p>Amount: <span className="font-semibold">{formatCurrency(cat.amount)}</span></p>
           <p>Transactions: <span className="font-semibold">{cat.count}</span></p>
           <p>{cat.percentage.toFixed(1)}% of total</p>
@@ -360,6 +471,30 @@ const calculateSummary = () => {
     ))}
   </div>
 </div>
+<div className="mt-10 max-w-5xl mx-auto">
+  <h2 className="text-lg font-bold mb-4">Category Expected vs Actual</h2>
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    {summary.categoryTotals.map((cat) => (
+      <div
+        key={cat.name}
+        className="p-4 rounded-lg shadow-sm border bg-white"
+        style={{ borderLeft: `6px solid #eab308` }} // yellow border
+      >
+        <h3 className="text-md font-bold mb-1">{cat.name}</h3>
+        <p className="text-sm text-gray-600">Students Paid: <strong>{cat.count}</strong></p>
+        <p className="text-sm text-gray-600">Expected: <strong>{formatCurrency(cat.expected)}</strong></p>
+        <p className="text-sm text-gray-600">Actual: <strong>{formatCurrency(cat.actual)}</strong></p>
+        <p className="text-sm text-gray-600">
+          {cat.expected > 0
+            ? `Collected ${((cat.actual / cat.expected) * 100).toFixed(1)}%`
+            : 'No expected value'}
+        </p>
+      </div>
+    ))}
+  </div>
+</div>
+
+
     </div>
   );
 }

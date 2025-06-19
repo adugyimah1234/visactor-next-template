@@ -18,7 +18,7 @@ export default function PrintableReceiptPage() {
         const html = await getPrintableReceipt(Number(id));
         setHtmlContent(html);
 
-        setTimeout(() => window.print(), 200);
+        setTimeout(() => window.print(), 100);
       } catch (err) {
         console.error('Failed to load receipt:', err);
       }
