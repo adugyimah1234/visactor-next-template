@@ -65,7 +65,7 @@ const navigationItems: NavItem[] = [
   {
     name: "Enrollment",
     icon: GraduationCap,
-    href: "/admissions",
+    href: "/admission",
   },
   {
     name: "Fee Management",

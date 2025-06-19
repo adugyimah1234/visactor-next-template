@@ -136,7 +136,7 @@ export default function ReceiptManagement() {
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ReceiptFilters>({});
   const [searchInput, setSearchInput] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showFilterDialog, setShowFilterDialog] = useState(false);
   const [processingAction, setProcessingAction] = useState<number | null>(null);
@@ -147,15 +147,6 @@ export default function ReceiptManagement() {
 const [payerType, setPayerType] = useState<'applicant' | 'student'>('applicant');
     const [categories, setCategories] = useState<Category[]>([]);
 const [classes, setClasses] = useState<{ id: number; name: string }[]>([]);
-
-
-useEffect(() => {
-  const timer = setTimeout(() => {
-    setDebouncedSearch(searchInput);
-  }, 300); // 300ms delay
-
-  return () => clearTimeout(timer);
-}, [searchInput]);
 
 useEffect(() => {
   async function loadStudents() {
@@ -241,12 +232,32 @@ useEffect(() => {
 }, []);
 
 
+
   // Handle search
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setFilters({ ...filters, search: searchInput });
   };
 
+const filteredReceipts = receipts.filter((receipt) => {
+  const searchTerm = searchInput.toLowerCase().trim();
+  if (!searchTerm) return true;
+
+  const student = realStudents.find((s) => Number(s.id) === Number(receipt.student_id));
+  const studentName = student
+    ? `${student.first_name} ${student.middle_name || ''} ${student.last_name}`.toLowerCase()
+    : '';
+
+  const receiptId = `r-${receipt.id.toString().padStart(6, '0')}`;
+
+  return (
+    studentName.includes(searchTerm) ||
+    receiptId.includes(searchTerm) ||
+    receipt.id.toString().includes(searchTerm)
+  );
+});
+
+  
   // Handle receipt actions
   const handleAction = async (actionType: string, receiptId: number) => {
     setProcessingAction(receiptId);
@@ -545,6 +556,13 @@ const getCategoryName = (id: number | string) => {
   return found ? found.name : undefined;
 };
 
+// ✅ NEW: Check if selected student has null/empty academic_year_id (existing student)
+const selectedStudent = realStudents.find(s => s.id === formData.student_id);
+const isExistingStudent = selectedStudent && (!selectedStudent.academic_year_id || selectedStudent.academic_year_id === null);
+
+// ✅ NEW: Warning when student tries to add registration
+const hasRegistrationPayment = formData.receipt_type?.some(item => item.type === 'registration');
+const showRegistrationWarning = selectedStudent && hasRegistrationPayment;
 
  useEffect(() => {
     if (!formData.receipt_type?.length) return;
@@ -629,6 +647,8 @@ const getCategoryName = (id: number | string) => {
     categories,
     classes,
   ]);
+
+
 
 
 const isAmountLocked = useMemo(() => {
@@ -720,6 +740,15 @@ return (
   <Plus className="w-4 h-4 mr-1" />
   Add Option
 </Button>
+ {showRegistrationWarning && (
+      <Alert variant="destructive" className="mt-2">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Invalid Payment Type</AlertTitle>
+        <AlertDescription>
+          Students cannot pay registration fees. Please remove the registration option or select an applicant instead.
+        </AlertDescription>
+      </Alert>
+    )}
   </div>
 
   {/* === Search Student === */}
@@ -733,7 +762,7 @@ return (
         type="text"
         placeholder="Type to search..."
         value={studentSearchQuery}
-        onChange={(e) => setStudentSearchQuery(e.target.value)}
+        onChange={(e) => setSearchInput(e.target.value)} // real-time here
         onFocus={() => setOpenStudentCombobox(true)}
       />
       {openStudentCombobox && filteredStudents.length > 0 && (
@@ -784,7 +813,9 @@ return (
     <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)}>
       Cancel
     </Button>
-    <Button type="submit">Create Receipt</Button>
+    <Button type="submit" disabled={showRegistrationWarning}>
+    Create Receipt</Button>
+    
   </div>
 </form>
 
@@ -936,7 +967,7 @@ return (
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by student name or receipt ID..."
+                  placeholder="Search by receipt ID..."
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   className="pl-10"
@@ -1009,6 +1040,7 @@ return (
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>#</TableHead>
                   <TableHead>Receipt #</TableHead>
                   <TableHead>Student</TableHead>
                   <TableHead>Type</TableHead>
@@ -1027,10 +1059,10 @@ return (
                 </TableRow>
               </TableHeader>
               <TableBody>
-  {receipts.map((receipt: Receipt) => {
-    const realstudent: Student | undefined = realStudents.find(
-      (s) => Number(s.id) === Number(receipt.student_id)
-    );
+  {filteredReceipts.map((receipt: Receipt, index: number) => {
+  const realstudent: Student | undefined = realStudents.find(
+    (s) => Number(s.id) === Number(receipt.student_id)
+  );
 
     const renderStudentName = () => {
       if (
@@ -1056,7 +1088,8 @@ return (
     };
 
     return (
-      <TableRow key={receipt.id}>
+      <TableRow key={receipt.id || index}>
+      <TableCell>{index + 1}</TableCell>
         <TableCell className="font-mono">
           R-{receipt.id.toString().padStart(6, '0')}
         </TableCell>

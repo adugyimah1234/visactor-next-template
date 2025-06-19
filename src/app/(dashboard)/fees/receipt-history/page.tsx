@@ -109,6 +109,25 @@ export default function PaymentHistoryPage() {
     }
   };
 
+const filteredReceipts = receipts.filter((receipt) => {
+  const searchTerm = search.toLowerCase().trim();
+
+
+  const student = realStudents.find((s) => Number(s.id) === Number(receipt.student_id));
+  const studentName = student
+    ? `${student.first_name} ${student.middle_name || ''} ${student.last_name}`.toLowerCase()
+    : '';
+
+  const receiptId = `r-${receipt.id.toString().padStart(6, '0')}`;
+
+  return (
+    studentName.includes(searchTerm) ||
+    receiptId.includes(searchTerm) ||
+    receipt.id.toString().includes(searchTerm)
+  );
+});
+
+
   // 🟢 Extract unique receipt types
   const allTypes = Array.from(new Set(
     receipts.flatMap(r => r.receipt_items?.map(i => i.receipt_type) ?? [r.receipt_type])
@@ -117,35 +136,39 @@ export default function PaymentHistoryPage() {
   const tabs = ["all", ...allTypes];
 
   // 🟢 Dynamic filter
-  const tabData = tab === "all"
-    ? receipts
-    : receipts.filter(r =>
-        r.receipt_items?.some(i => i.receipt_type === tab) || r.receipt_type === tab
-      );
+const tabFilteredReceipts = tab === "all"
+  ? filteredReceipts
+  : filteredReceipts.filter(r =>
+      r.receipt_items?.some(i => i.receipt_type === tab) || r.receipt_type === tab
+    );
+const tabData  = tab === "all"
+  ? filteredReceipts
+  : filteredReceipts.filter(r =>
+      r.receipt_items?.some(i => i.receipt_type === tab) || r.receipt_type === tab
+    );
+
 
   // 🟢 Render Table
   const renderTable = (data: Receipt[]) => (
     <Table>
       <TableHeader>
         <TableRow>
+          <TableHead>#</TableHead>
           <TableHead>Receipt #</TableHead>
           <TableHead>Student</TableHead>
           <TableHead>Types</TableHead>
           <TableHead>Total Paid</TableHead>
-          <TableHead>Remaining</TableHead>
-          <TableHead>Balance</TableHead>
           <TableHead>Date</TableHead>
           <TableHead>Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {data.map((r) => {
-          const paid = r.amount_paid ?? r.amount ?? 0;
-          const remaining = r.amount - paid;
-          const balance = remaining; // same here, adjust if needed
+        {data.map((r, index) => {
+          const paid = r.amount ?? 0;
 
           return (
-            <TableRow key={r.id}>
+            <TableRow key={r.id || index}>
+              <TableCell>{index + 1}</TableCell>
               <TableCell>R-{r.id.toString().padStart(6, "0")}</TableCell>
               <TableCell>{renderStudentName(r)}</TableCell>
               <TableCell className="space-x-1">
@@ -162,8 +185,6 @@ export default function PaymentHistoryPage() {
                 )}
               </TableCell>
               <TableCell>{formatCurrency(paid)}</TableCell>
-              <TableCell>{formatCurrency(remaining)}</TableCell>
-              <TableCell>{formatCurrency(balance)}</TableCell>
               <TableCell>{format(new Date(r.date_issued), "MMM dd, yyyy")}</TableCell>
               <TableCell className="flex space-x-2">
                 <Button size="icon" variant="ghost" onClick={() => handleAction("print", r.id)}>
@@ -192,11 +213,13 @@ export default function PaymentHistoryPage() {
               <Search className="h-4 w-4" />
             </span>
             <Input
-              placeholder="Search student or receipt..."
-              className="pl-10 w-full"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+  placeholder="Search by student name or receipt ID..."
+value={search}
+onChange={(e) => setSearch(e.target.value)}
+                className="pl-10 w-full"
+
+/>
+
           </div>
 
           <Popover>
@@ -245,7 +268,8 @@ export default function PaymentHistoryPage() {
                   {t === "all" ? "All Receipts" : getReceiptTypeBadge(t).label} ({tabData.length})
                 </CardTitle>
               </CardHeader>
-              <CardContent>{renderTable(tabData)}</CardContent>
+<CardContent>{renderTable(tabFilteredReceipts)}</CardContent>
+
             </Card>
           </TabsContent>
         ))}

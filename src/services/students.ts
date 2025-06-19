@@ -14,7 +14,6 @@ export interface CreateStudentPayload {
   admission_status: string;
   status: string;
   school_id?: number;
-   category?: 'SVC' | 'MOD' | 'CIV'; // ✅ Add this
 }
 
 const studentService = {

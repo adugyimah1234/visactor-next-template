@@ -30,6 +30,8 @@ import SlotsChart from './components/SlotsChart';
 import DailyPaymentDashboard from './components/PaymentSummaryCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllRoles } from '@/services/roles';
+import PaymentBreakdownComponent from './components/PaymentBreakdownComponent';
+import CategoryStatsCards from './components/CategoryStatsCards';
 
 interface RegistrationStats {
   totalRegistered: number;
@@ -377,21 +379,14 @@ const isAdmin = roleName === 'admin';
             </>
           )}
         </div>
-    <div className="p-6">
-      {isAdmin ? (
-        <>
-          <DailyPaymentDashboard />
-          <SlotsChart />
-        </>
-      ) : (
-        <div className="text-center py-10 text-red-500">
-          // Access restricted. You do not have permission to view this section.
-        </div>
-      )}
-    </div>
-        {/* Charts Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
+<div className="p-6">
+  {isAdmin ? (
+    <>
+       <DailyPaymentDashboard />
+      <SlotsChart />
+    {/* Charts Grid */}
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    
           {/* Area Chart */}
           <ChartCard 
             title="Registration Trends" 
@@ -417,8 +412,8 @@ const isAdmin = roleName === 'admin';
                   <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} />
                   <Tooltip content={<CustomTooltip />} />
                   <Area
-                    type="monotone"
-                    dataKey="approved"
+                  type="monotone"
+                  dataKey="approved"
                     stackId="1"
                     stroke="#10B981"
                     fill="#10B981"
@@ -443,18 +438,18 @@ const isAdmin = roleName === 'admin';
                     fillOpacity={0.6}
                     name="Rejected"
                   />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-          </ChartCard>
-
-          {/* Pie Chart */}
-          <ChartCard 
-            title="Status Distribution" 
-            description="Current application status breakdown"
-          >
-            {loading ? (
-              <div className="h-[300px] bg-gray-100 rounded-lg animate-pulse flex items-center justify-center">
+                  </AreaChart>
+                  </ResponsiveContainer>
+                )}
+                </ChartCard>
+                
+                {/* Pie Chart */}
+                <ChartCard 
+                title="Status Distribution" 
+                description="Current application status breakdown"
+                >
+                {loading ? (
+                  <div className="h-[300px] bg-gray-100 rounded-lg animate-pulse flex items-center justify-center">
                 <div className="text-gray-500">Loading chart...</div>
               </div>
             ) : (
@@ -475,8 +470,8 @@ const isAdmin = roleName === 'admin';
                       ))}
                     </Pie>
                     <Tooltip 
-                      formatter={(value, name) => [value, name]}
-                      contentStyle={{
+                    formatter={(value, name) => [value, name]}
+                    contentStyle={{
                         backgroundColor: 'white',
                         border: '1px solid #e5e7eb',
                         borderRadius: '8px',
@@ -489,8 +484,8 @@ const isAdmin = roleName === 'admin';
                   {pieData.map((item, index) => (
                     <div key={index} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full"
+                      <div 
+                      className="w-3 h-3 rounded-full"
                           style={{ backgroundColor: item.color }}
                         />
                         <span className="text-sm text-gray-600">{item.name}</span>
@@ -504,9 +499,17 @@ const isAdmin = roleName === 'admin';
               </>
             )}
           </ChartCard>
-        </div>
+          </div>
+    </>
 
-        {/* Bar Chart */}
+        ) : (
+          <div className="text-center py-10 text-red-500">
+            Access restricted. You do not have permission to view this section.
+          </div>
+        )}
+      </div>
+          
+          {/* Bar Chart */}
         <ChartCard 
           title="Weekly Performance" 
           description="Comparison of application processing by day"

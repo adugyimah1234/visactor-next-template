@@ -15,11 +15,19 @@ import {
 } from 'lucide-react';
 import { getReceipts } from '@/services/receipt'
 // Import types and API function
+
+interface ReceiptItem {
+  id: number;
+  receipt_type: 'registration' | 'levy' | 'textBooks' | 'exerciseBooks' | 'furniture' | 'jersey_crest';
+  amount: number;
+}
+
+
 interface Receipt {
   id: number;
   student_id: number;
   payment_id?: number | null;
-  receipt_type: 'registration' | 'levy' | 'textBooks' | 'exerciseBooks' | 'furniture' | 'jersey_crest';
+  receipt_items: ReceiptItem[]; // ✅ New field
   amount: number;
   issued_by?: number;
   date_issued: string;
@@ -146,43 +154,61 @@ const formatCurrency = (amount: number): string => {
     });
   };
 
-  const calculateSummary = () => {
-    const currentReceipts = getFilteredReceipts();
-    const previousReceipts = getPreviousPeriodData();
-    
-const currentTotal = currentReceipts.reduce((sum, r) => sum + Number(r.amount || 0), 0);
-const previousTotal = previousReceipts.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+const calculateSummary = () => {
+  const currentReceipts = getFilteredReceipts();
+  const previousReceipts = getPreviousPeriodData();
 
-    console.log('currentReceipts:', currentReceipts);
-console.log('Amounts:', currentReceipts.map(r => r.amount));
+  const currentTotal = currentReceipts.reduce(
+    (sum, r) => sum + r.receipt_items?.reduce((s, item) => s + Number(item.amount || 0), 0),
+    0
+  );
+  const previousTotal = previousReceipts.reduce(
+    (sum, r) => sum + r.receipt_items?.reduce((s, item) => s + Number(item.amount || 0), 0),
+    0
+  );
 
-    const change = previousTotal > 0 ? ((currentTotal - previousTotal) / previousTotal) * 100 : 0;
-    
-    const categories = Object.entries(categoryConfig).map(([key, config]) => {
-      const categoryReceipts = currentReceipts.filter(r => r.receipt_type === key);
-      const amount = categoryReceipts.reduce((sum, r) => sum + r.amount, 0);
-      const count = categoryReceipts.length;
-      const percentage = currentTotal > 0 ? (amount / currentTotal) * 100 : 0;
+  const change =
+    previousTotal > 0 ? ((currentTotal - previousTotal) / previousTotal) * 100 : 0;
+
+  const categoryMap: Record<string, { amount: number; count: number }> = {};
+
+  currentReceipts.forEach((r) => {
+    r.receipt_items?.forEach((item) => {
+      const key = item.receipt_type;
+      if (!categoryMap[key]) {
+        categoryMap[key] = { amount: 0, count: 0 };
+      }
+      categoryMap[key].amount += item.amount;
+      categoryMap[key].count += 1;
+    });
+  });
+
+  const categories = Object.entries(categoryConfig)
+    .map(([key, config]) => {
+      const cat = categoryMap[key] || { amount: 0, count: 0 };
+      const percentage = currentTotal > 0 ? (cat.amount / currentTotal) * 100 : 0;
 
       return {
         name: config.name,
-        amount,
-        count,
+        amount: cat.amount,
+        count: cat.count,
         percentage,
         color: config.color,
-        icon: config.icon
+        icon: config.icon,
       };
-    }).filter(cat => cat.amount > 0)
-      .sort((a, b) => b.amount - a.amount);
+    })
+    .filter((cat) => cat.amount > 0)
+    .sort((a, b) => b.amount - a.amount);
 
-    return {
-      totalRevenue: currentTotal,
-      totalTransactions: currentReceipts.length,
-      categories,
-      change,
-      previousTotal
-    };
+  return {
+    totalRevenue: currentTotal,
+    totalTransactions: currentReceipts.length,
+    categories,
+    change,
+    previousTotal,
   };
+};
+
 
     const summary = calculateSummary();
 
@@ -254,6 +280,7 @@ console.log('Amounts:', currentReceipts.map(r => r.amount));
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      
         {/* Total Revenue */}
         <div className="dark::bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
@@ -307,7 +334,33 @@ console.log('Amounts:', currentReceipts.map(r => r.amount));
             Per transaction
           </p>
         </div>
+
+
+
       </div>
+       {/* Category Breakdown Section */}
+<div className="mt-6 max-w-5xl mx-auto">
+  <h2 className="text-xl font-semibold mb-4 w-full">Category Breakdown</h2>
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    {summary.categories.map((cat) => (
+      <div
+        key={cat.name}
+        className="p-4 rounded-lg shadow-sm border bg-white flex flex-col justify-between"
+        style={{ borderLeft: `6px solid ${cat.color}` }}
+      >
+        <div className="flex items-center space-x-3 mb-2">
+          <cat.icon className="w-6 h-6" style={{ color: cat.color }} />
+          <h3 className="text-md font-bold">{cat.name}</h3>
+        </div>
+        <div className="text-sm text-gray-600">
+          <p>Amount: <span className="font-semibold">{formatCurrency(cat.amount)}</span></p>
+          <p>Transactions: <span className="font-semibold">{cat.count}</span></p>
+          <p>{cat.percentage.toFixed(1)}% of total</p>
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
     </div>
   );
 }

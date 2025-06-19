@@ -24,6 +24,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { getFeePresets, FeePreset } from "@/services/feePresets";
+
 
 export default function PaymentHistoryPage() {
   const [schools, setSchools] = useState<any[]>([]);
@@ -31,7 +33,7 @@ export default function PaymentHistoryPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const [feePresets, setFeePresets] = useState<FeePreset[]>([]);
   const [search, setSearch] = useState("");
   const [date, setDate] = useState<Date | undefined>();
   const [activeSchool, setActiveSchool] = useState<string | null>(null);
@@ -40,18 +42,46 @@ export default function PaymentHistoryPage() {
 
   // === Load base data ===
   useEffect(() => {
-    const loadAll = async () => {
-      const [s, c, st] = await Promise.all([
-        schoolService.getAll(),
-        classService.getAll(),
-        studentService.getAll()
-      ]);
-      setSchools(s);
-      setClasses(c);
-      setStudents(st);
-    };
-    loadAll();
-  }, []);
+  const loadAll = async () => {
+    const [s, c, st, fp] = await Promise.all([
+      schoolService.getAll(),
+      classService.getAll(),
+      studentService.getAll(),
+      getFeePresets()  // ✅ fetch fee presets
+    ]);
+    setSchools(s);
+    setClasses(c);
+    setStudents(st);
+    setFeePresets(fp); // ✅ set them
+  };
+  loadAll();
+}, []);
+
+const getTotalFeeForStudent = (student: Student): number => {
+  const classData = classes.find((c) => c.id === student.class_id);
+  const studentClass = classData?.name?.toLowerCase();
+  const studentCategory = student.category;
+
+  if (!studentClass && !studentCategory) return 0;
+
+  const total = feePresets.reduce((sum, preset) => {
+    const presetClass = preset.class_name?.toLowerCase();
+    const presetCategory = preset.category;
+
+    // Match based on the logic:
+    const isClassMatch = presetClass && presetClass === studentClass;
+    const isCategoryMatch = preset.type === "levy" && presetCategory === studentCategory;
+    const isGlobal = !preset.class_name && !preset.category;
+
+    if (isClassMatch || isCategoryMatch || isGlobal) {
+      return sum + Number(preset.amount);
+    }
+
+    return sum;
+  }, 0);
+
+  return total;
+};
 
   const fetchReceipts = useCallback(async () => {
     try {
@@ -170,13 +200,19 @@ export default function PaymentHistoryPage() {
           ).filter(Boolean) as string[];
 
           const selectedReceiptTab = activeReceiptTab[schoolId] || "all";
-          const receiptTabData =
-            selectedReceiptTab === "all"
-              ? filteredReceipts
-              : filteredReceipts.filter((r) =>
-                  r.receipt_items?.some((i) => i.receipt_type === selectedReceiptTab) ||
-                  r.receipt_type === selectedReceiptTab
-                );
+          const receiptTabData = (
+  selectedReceiptTab === "all"
+    ? filteredReceipts
+    : filteredReceipts.filter((r) =>
+        r.receipt_items?.some((i) => i.receipt_type === selectedReceiptTab) ||
+        r.receipt_type === selectedReceiptTab
+      )
+).filter((r) => {
+  // Filter out registration-only receipts
+  const types = r.receipt_items?.map((i) => i.receipt_type) ?? [r.receipt_type];
+  return !types.every((t) => t === "registration");
+});
+
 
           return (
             <TabsContent key={school.id} value={schoolId} className="space-y-6">
@@ -227,72 +263,64 @@ export default function PaymentHistoryPage() {
                           <Table>
                             <TableHeader>
                               <TableRow>
+                                <TableHead>#</TableHead>
                                 <TableHead>Receipt #</TableHead>
                                 <TableHead>Student</TableHead>
                                 <TableHead>Types</TableHead>
-                                <TableHead>Paid</TableHead>
-                                <TableHead>Remaining</TableHead>
+                                <TableHead>Amount Paid</TableHead>
+                                <TableHead>Total Amount</TableHead>
                                 <TableHead>Balance</TableHead>
+                                <TableHead>Payment</TableHead>
                                 <TableHead>Date</TableHead>
                                 <TableHead>Actions</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {receiptTabData.map((r) => {
-                                const paid = r.amount_paid ?? r.amount ?? 0;
-                                const remaining = r.amount - paid;
-                                const balance = remaining;
+{receiptTabData.map((r, index) => {
+  const student = students.find((s) => s.id === r.student_id);
+  const amountPaid = r.amount ?? 0;
+  const totalAmount = student ? getTotalFeeForStudent(student) : 0;
+  const balance = totalAmount - amountPaid;
+  const isFullyPaid = balance <= 0;
+  const statusLabel = isFullyPaid ? "Paid in Full" : "Partially Paid";
+  const statusVariant = isFullyPaid ? "default" : "secondary";
 
-                                return (
-                                  <TableRow key={r.id}>
-                                    <TableCell>
-                                      R-{r.id.toString().padStart(6, "0")}
-                                    </TableCell>
-                                    <TableCell>{renderStudentName(r)}</TableCell>
-                                    <TableCell className="space-x-1">
-                                      {(r.receipt_items ?? [{ receipt_type: r.receipt_type }]).map(
-                                        (i, idx) => (
-                                          <Badge
-                                            key={`${i.receipt_type}-${idx}`}
-                                            {...getReceiptTypeBadge(i.receipt_type)}
-                                          >
-                                            {getReceiptTypeBadge(i.receipt_type).label}
-                                          </Badge>
-                                        )
-                                      )}
-                                    </TableCell>
-                                    <TableCell>{formatCurrency(paid)}</TableCell>
-                                    <TableCell>{formatCurrency(remaining)}</TableCell>
-                                    <TableCell>{formatCurrency(balance)}</TableCell>
-                                    <TableCell>
-                                      {format(new Date(r.date_issued), "MMM dd, yyyy")}
-                                    </TableCell>
-                                    <TableCell className="flex space-x-2">
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        onClick={() => handleAction("print", r.id)}
-                                      >
-                                        <Printer className="w-4 h-4" />
-                                      </Button>
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        onClick={() => handleAction("download", r.id)}
-                                      >
-                                        <Download className="w-4 h-4" />
-                                      </Button>
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        onClick={() => handleAction("email", r.id)}
-                                      >
-                                        <Mail className="w-4 h-4" />
-                                      </Button>
-                                    </TableCell>
-                                  </TableRow>
-                                );
-                              })}
+  return (
+    <TableRow key={r.id || index}>
+        <TableCell>{index + 1}</TableCell>
+
+      <TableCell>R-{r.id.toString().padStart(6, "0")}</TableCell>
+      <TableCell>{renderStudentName(r)}</TableCell>
+      <TableCell className="space-x-1">
+        {(r.receipt_items ?? [{ receipt_type: r.receipt_type }]).map((i, idx) => (
+          <Badge key={`${i.receipt_type}-${idx}`} {...getReceiptTypeBadge(i.receipt_type)}>
+            {getReceiptTypeBadge(i.receipt_type).label}
+          </Badge>
+        ))}
+      </TableCell>
+      <TableCell>{formatCurrency(amountPaid)}</TableCell>
+      <TableCell>{formatCurrency(totalAmount)}</TableCell>
+      <TableCell>{formatCurrency(balance)}</TableCell>
+      <TableCell>
+        <Badge variant={statusVariant}>{statusLabel}</Badge>
+      </TableCell>
+      <TableCell>{format(new Date(r.date_issued), "MMM dd, yyyy")}</TableCell>
+      <TableCell className="flex space-x-2">
+        <Button size="icon" variant="ghost" onClick={() => handleAction("print", r.id)}>
+          <Printer className="w-4 h-4" />
+        </Button>
+        <Button size="icon" variant="ghost" disabled>
+          <Download className="w-4 h-4" />
+        </Button>
+        <Button size="icon" variant="ghost" disabled>
+          <Mail className="w-4 h-4" />
+        </Button>
+      </TableCell>
+    </TableRow>
+  );
+})}
+
+
                             </TableBody>
                           </Table>
                         </CardContent>

@@ -109,17 +109,6 @@ export default function TopNav({ title }: { title: string }) {
 
       {/* Right side: Search, notifications, user menu */}
       <div className="flex items-center gap-3">
-        {/* Search Bar */}
-        <div className="hidden md:flex items-center relative">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search..."
-              className="rounded-md border border-border bg-background py-2 pl-8 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-64"
-            />
-          </div>
-        </div>
 
         {/* Notifications */}
         <div className="relative">
