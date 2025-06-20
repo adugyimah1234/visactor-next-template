@@ -13,11 +13,18 @@ import {
   ArrowDown,
   Filter
 } from 'lucide-react';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@/components/ui/card";
 import { getReceipts } from '@/services/receipt'
 import { Category, getAllCategories } from '@/services/categories';
 import { Student } from '@/types/student';
 import studentService from '@/services/students';
 // Import types and API function
+import { HiUserGroup, HiCurrencyDollar, HiCheckCircle, HiChartBar } from "react-icons/hi";
 
 interface ReceiptItem {
   id: number;
@@ -32,7 +39,7 @@ interface Receipt {
   id: number;
   student_id: number;
   payment_id?: number | null;
-  receipt_items: ReceiptItem[]; // ✅ New field
+  receipt_items: ReceiptItem[]; 
   amount: number;
   issued_by?: number;
   date_issued: string;
@@ -208,16 +215,15 @@ const calculateSummary = () => {
 
   const change =
     previousTotal > 0 ? ((currentTotal - previousTotal) / previousTotal) * 100 : 0;
-
-// Step 1: Build Maps
+// Step 1: Build lookup maps
 const studentCategoryMap: Record<number, number> = {};
-students.forEach(s => {
+students.forEach((s) => {
   studentCategoryMap[s.id] = s.category_id;
 });
 
 const categoryNameMap: Record<number, string> = {};
 const categoryAmountMap: Record<number, number> = {};
-categories.forEach(c => {
+categories.forEach((c) => {
   categoryNameMap[c.id] = c.name;
   categoryAmountMap[c.id] = typeof c.amount === 'string'
     ? parseFloat(c.amount)
@@ -226,56 +232,59 @@ categories.forEach(c => {
 
 // Step 2: Count total students per category
 const studentCountMap: Record<number, number> = {};
-students.forEach(s => {
+students.forEach((s) => {
   const cid = s.category_id;
   studentCountMap[cid] = (studentCountMap[cid] || 0) + 1;
 });
 
-// Step 3: Track only LEVY payments
-const levyPaidStudentSet: Record<number, Set<number>> = {}; // categoryId -> Set of studentIds
-const actualLevyAmountMap: Record<number, number> = {};      // categoryId -> total paid
+// Step 3: Identify levy-paying students and actual levy payments per category
+const levyPayingStudentSet: Record<number, Set<number>> = {}; // categoryId → Set of studentIds
+const actualLevyAmountMap: Record<number, number> = {}; // categoryId → total levy paid
 
 currentReceipts.forEach((receipt) => {
   const studentId = receipt.student_id;
   const categoryId = studentCategoryMap[studentId];
 
+  // Guard: skip if category info is missing
   if (!categoryId || !categoryNameMap[categoryId]) return;
 
-  const levyItems = receipt.receipt_items?.filter(item => item.receipt_type === 'levy') || [];
+  // Check if this receipt has any levy items
+  const hasLevy = receipt.receipt_items?.some(item => item.receipt_type === 'levy');
 
-  if (levyItems.length > 0) {
-    if (!levyPaidStudentSet[categoryId]) levyPaidStudentSet[categoryId] = new Set();
-    if (!actualLevyAmountMap[categoryId]) actualLevyAmountMap[categoryId] = 0;
+  if (hasLevy) {
+    // Track unique student
+    if (!levyPayingStudentSet[categoryId]) {
+      levyPayingStudentSet[categoryId] = new Set();
+    }
+    levyPayingStudentSet[categoryId].add(studentId);
 
-    levyPaidStudentSet[categoryId].add(studentId);
+    // Sum all levy item amounts
+    const levyTotal = receipt.receipt_items
+      ?.filter(item => item.receipt_type === 'levy')
+      .reduce((sum, item) => sum + Number(item.amount || 0), 0) || 0;
 
-    actualLevyAmountMap[categoryId] += levyItems.reduce(
-      (sum, item) => sum + Number(item.amount || 0), 0
-    );
+    actualLevyAmountMap[categoryId] = (actualLevyAmountMap[categoryId] || 0) + levyTotal;
   }
 });
 
-// Step 4: Build the final summary
-const categoryTotals = Object.keys(categoryNameMap).map(cidStr => {
+
+  const categoryTotals = Object.keys(categoryNameMap).map((cidStr) => {
   const cid = Number(cidStr);
   const name = categoryNameMap[cid];
   const levyAmount = categoryAmountMap[cid];
   const totalStudents = studentCountMap[cid] || 0;
   const expected = levyAmount * totalStudents;
   const actual = actualLevyAmountMap[cid] || 0;
-  const studentsPaid = levyPaidStudentSet[cid]?.size || 0;
+  const studentsPaid = levyPayingStudentSet[cid]?.size || 0;
 
   return {
     name,
     count: totalStudents,
+    studentsPaid,
     expected,
     actual,
-    studentsPaid,
   };
 });
-
-
-
 
 
   // ✅ Original summary by receipt_item.receipt_type
@@ -308,6 +317,8 @@ const categoryTotals = Object.keys(categoryNameMap).map(cidStr => {
     })
     .filter((cat) => cat.amount > 0)
     .sort((a, b) => b.amount - a.amount);
+
+  
 
   return {
     totalRevenue: currentTotal,
@@ -445,51 +456,107 @@ const categoryTotals = Object.keys(categoryNameMap).map(cidStr => {
             Per transaction
           </p>
         </div>
-
-
-
       </div>
-       {/* Category Breakdown Section */}
-<div className="mt-6 max-w-7xl mx-auto">
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+      {/* Category Breakdown Section */}
+
+<div className="mt-10 max-w-7xl mx-auto">
+  <h2 className="text-xl font-semibold mb-4">📂 Category Breakdown</h2>
+
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
     {summary.categories.map((cat) => (
-      <div
+      <Card
         key={cat.name}
-        className="p-4 rounded-md  border dark::bg-white flex flex-col justify-between"
+        className="relative overflow-hidden border shadow-sm rounded-xl"
         style={{ borderLeft: `4px solid ${cat.color}` }}
       >
-        <div className="flex items-center space-x-3 mb-2">
-          <cat.icon className="w-6 h-6" style={{ color: cat.color }} />
-          <h3 className="text-md font-bold">{cat.name}</h3>
-        </div>
-        <div className="text-sm ">
-          <p>Amount: <span className="font-semibold">{formatCurrency(cat.amount)}</span></p>
-          <p>Transactions: <span className="font-semibold">{cat.count}</span></p>
-          <p>{cat.percentage.toFixed(1)}% of total</p>
-        </div>
-      </div>
+        <CardHeader className="pb-1">
+          <div className="flex items-center space-x-2">
+            <cat.icon className="w-5 h-5 text-muted" style={{ color: cat.color }} />
+            <CardTitle className="text-sm font-medium">{cat.name}</CardTitle>
+          </div>
+        </CardHeader>
+
+        <CardContent className="text-sm text-muted-foreground space-y-1">
+          <div className="flex justify-between">
+            <span>Amount</span>
+            <span className="font-semibold text-gray-900 dark:text-white">
+              {formatCurrency(cat.amount)}
+            </span>
+          </div>
+
+          <div className="flex justify-between">
+            <span>Transactions</span>
+            <span className="font-semibold text-gray-900 dark:text-white">
+              {cat.count}
+            </span>
+          </div>
+
+          <div className="flex justify-between">
+            <span>Share of Total</span>
+            <span className="font-semibold text-gray-900 dark:text-white">
+              {cat.percentage.toFixed(1)}%
+            </span>
+          </div>
+        </CardContent>
+      </Card>
     ))}
   </div>
 </div>
-<div className="mt-10 max-w-5xl mx-auto">
-  <h2 className="text-lg font-bold mb-4">Category Expected vs Actual</h2>
+
+
+<div className="mt-10 max-w-6xl mx-auto">
+  <h2 className="text-xl font-semibold mb-4">📊 Category Expected vs Actual</h2>
+
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     {summary.categoryTotals.map((cat) => (
-      <div
-        key={cat.name}
-        className="p-4 rounded-lg shadow-sm border bg-white"
-        style={{ borderLeft: `6px solid #eab308` }} // yellow border
-      >
-        <h3 className="text-md font-bold mb-1">{cat.name}</h3>
-        <p className="text-sm text-gray-600">Students Paid: <strong>{cat.count}</strong></p>
-        <p className="text-sm text-gray-600">Expected: <strong>{formatCurrency(cat.expected)}</strong></p>
-        <p className="text-sm text-gray-600">Actual: <strong>{formatCurrency(cat.actual)}</strong></p>
-        <p className="text-sm text-gray-600">
-          {cat.expected > 0
-            ? `Collected ${((cat.actual / cat.expected) * 100).toFixed(1)}%`
-            : 'No expected value'}
-        </p>
-      </div>
+      <Card key={cat.name} className="shadow-sm border rounded-xl">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <HiChartBar className="text-yellow-500" />
+            {cat.name}
+          </CardTitle>
+        </CardHeader>
+
+        <CardContent className="text-sm text-muted-foreground space-y-1">
+          <div className="flex justify-between">
+            <span className="flex items-center gap-1">
+              <HiUserGroup /> Total
+            </span>
+            <span className="font-medium">{cat.count}</span>
+          </div>
+
+          <div className="flex justify-between">
+            <span className="flex items-center gap-1">
+              <HiCheckCircle className="text-green-500" /> Paid
+            </span>
+            <span className="font-medium">{cat.studentsPaid}</span>
+          </div>
+
+          <div className="flex justify-between">
+            <span className="flex items-center gap-1">
+              <HiCurrencyDollar /> Expected
+            </span>
+            <span className="font-medium">{formatCurrency(cat.expected)}</span>
+          </div>
+
+          <div className="flex justify-between">
+            <span className="flex items-center gap-1">
+              <HiCurrencyDollar className="text-blue-500" /> Actual
+            </span>
+            <span className="font-medium">{formatCurrency(cat.actual)}</span>
+          </div>
+
+          <div className="flex justify-between">
+            <span>Collected</span>
+            <span className="font-medium">
+              {cat.expected > 0
+                ? `${((cat.actual / cat.expected) * 100).toFixed(1)}%`
+                : "—"}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
     ))}
   </div>
 </div>
