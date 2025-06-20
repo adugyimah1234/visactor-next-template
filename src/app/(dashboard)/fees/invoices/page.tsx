@@ -87,6 +87,7 @@ import { Category, getAllCategories } from '@/services/categories';
 import { useAuth } from "@/contexts/AuthContext";
 import classService from '@/services/class';
 import { isDeepStrictEqual } from 'util';
+import { calculateStudentTotalDue } from './calculateStudentTotalDue';
 
 // Types based on your backend structure
 
@@ -126,6 +127,14 @@ function deepEqual(x: any, y: any): boolean {
     if (!deepEqual(x[key], y[key])) return false;
   }
   return true;
+}
+
+// Add this helper to sum all receipts for a student
+function getStudentTotalPaid(studentId: number, receipts: Receipt[]): number {
+  if (!studentId || !receipts) return 0;
+  return receipts
+    .filter(r => Number(r.student_id) === Number(studentId))
+    .reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
 }
 
 export default function ReceiptManagement() {
@@ -648,11 +657,13 @@ return (
         <SelectValue placeholder="Select type" />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="registration">Registration</SelectItem>
+          {!isExistingStudent && (
+    <SelectItem value="registration">Registration</SelectItem>
+  )}
         <SelectItem value="levy">Levy</SelectItem>
         <SelectItem value="furniture">Furniture</SelectItem>
-        <SelectItem value="textBooks">TextBooks</SelectItem>
-        <SelectItem value="exerciseBooks">ExerciseBooks</SelectItem>
+        <SelectItem value="textBooks">Text Books</SelectItem>
+        <SelectItem value="exerciseBooks">Exercise Books</SelectItem>
         <SelectItem value="jersey_crest">Jersey/Crest</SelectItem>
       </SelectContent>
     </Select>
@@ -867,6 +878,11 @@ onChange={(e) => setStudentSearchQuery(e.target.value)}
     );
   };
 
+  // Define this function somewhere above where you use it
+function renderStudentName(receipt: Receipt) {
+  return receipt.student_name || `${receipt.registration_first_name ?? ''} ${receipt.registration_last_name ?? ''}`.trim();
+}
+
   if (error && !loading) {
     return (
       <Alert variant="destructive">
@@ -1006,6 +1022,7 @@ onChange={(e) => setStudentSearchQuery(e.target.value)}
                   <TableHead>Date</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Payment Type</TableHead>
+                  <TableHead>Amount Left</TableHead> {/* <-- Add this column */}
                   <TableHead className="w-24">
                     <div className="flex items-center justify-between">
                       Actions
@@ -1017,79 +1034,77 @@ onChange={(e) => setStudentSearchQuery(e.target.value)}
                 </TableRow>
               </TableHeader>
               <TableBody>
-  {filteredReceipts.map((receipt: Receipt, index: number) => {
-  const realstudent: Student | undefined = realStudents.find(
-    (s) => Number(s.id) === Number(receipt.student_id)
-  );
+                
+                {filteredReceipts.map((receipt: Receipt, index: number) => {
+    const realstudent = realStudents.find(s => Number(s.id) === Number(receipt.student_id));
+    const applicant = applicants.find(a => Number(a.id) === Number(receipt.registration_id));
+    const studentForCalc = realstudent || applicant;
 
-    const renderStudentName = () => {
-      if (
-        receipt.receipt_items?.some(item => item.receipt_type === "registration")
-      ) {
-        return receipt.student_name || 'Unknown Student';
-      }
+    // Gather all receipts for this student/applicant UP TO AND INCLUDING this receipt
+    const allStudentReceiptsUpToCurrent = receipts
+      .filter(
+        r =>
+          Number(r.student_id) === Number(receipt.student_id) &&
+          Number(r.id) <= Number(receipt.id)
+      );
 
-      if (!realstudent) return 'Unknown Student';
+    // Collect all paid receipt items' types for this student up to this receipt
+    const paidTypes = new Set<string>();
+    allStudentReceiptsUpToCurrent.forEach(r => {
+      (r.receipt_items || []).forEach(item => {
+        paidTypes.add(item.receipt_type);
+      });
+    });
 
-      const fullName = [
-        realstudent.first_name,
-        realstudent.middle_name,
-        realstudent.last_name,
-      ].filter(Boolean).join(' ').trim();
-
-      if (fullName) return fullName;
-
-      return (
-        (realstudent.first_name?.[0]?.toUpperCase() ?? '') +
-        (realstudent.last_name?.[0]?.toUpperCase() ?? '')
-      ) || 'NA';
-    };
+    let amountLeft = 'N/A';
+    if (studentForCalc && categories.length && classes.length) {
+      const totalDue = calculateStudentTotalDue(
+        studentForCalc,
+        categories,
+        classes,
+        Array.from(paidTypes)
+      );
+      amountLeft = formatCurrency(totalDue);
+    }
 
     return (
       <TableRow key={receipt.id || index}>
-      <TableCell>{index + 1}</TableCell>
+        <TableCell>{index + 1}</TableCell>
         <TableCell className="font-mono">
           R-{receipt.id.toString().padStart(6, '0')}
         </TableCell>
-
         <TableCell>
           <div>
-            <p className="font-medium">{renderStudentName()}</p>
+            <p className="font-medium">{receipt.student_name || `${receipt.registration_first_name ?? ''} ${receipt.registration_last_name ?? ''}`.trim()}</p>
             <p className="text-sm text-muted-foreground">{receipt.class_name}</p>
           </div>
         </TableCell>
-
-        {/* ✅ MULTIPLE RECEIPT TYPES */}
         <TableCell>
           <div className="flex flex-wrap gap-1">
-{receipt.receipt_items?.map(item => (
-  <Badge key={item.id} {...getReceiptTypeBadge(item.receipt_type)}>
-    {getReceiptTypeBadge(item.receipt_type).label}
-  </Badge>
-))}
-
+            {receipt.receipt_items?.map(item => (
+              <Badge key={item.id} {...getReceiptTypeBadge(item.receipt_type)}>
+                {getReceiptTypeBadge(item.receipt_type).label}
+              </Badge>
+            ))}
           </div>
         </TableCell>
-
-        {/* ✅ SHOW TOTAL AMOUNT AS BEFORE */}
         <TableCell className="font-medium">
           {formatCurrency(receipt.amount)}
         </TableCell>
-
         <TableCell>{formatDate(receipt.date_issued)}</TableCell>
-
         <TableCell>
           <Badge variant={receipt.payment_method === 'Paid' ? 'default' : 'secondary'}>
             {receipt.payment_method || 'Paid'}
           </Badge>
         </TableCell>
-
         <TableCell>
           <Badge variant={receipt.payment_type ? 'default' : 'secondary'}>
             {receipt.payment_type || 'cash'}
           </Badge>
         </TableCell>
-
+        <TableCell>
+          {studentForCalc  ? amountLeft : '0.00'}
+        </TableCell>
         <TableCell>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -1113,7 +1128,6 @@ onChange={(e) => setStudentSearchQuery(e.target.value)}
     );
   })}
 </TableBody>
-
             </Table>
           )}
 

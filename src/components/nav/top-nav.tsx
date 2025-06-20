@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import Container from "../container";
 import { ThemeToggle } from "../theme-toggle";
 import { Bell, Search, Menu, User, ChevronDown, LogOut, Settings, HelpCircle } from "lucide-react";
-import { logout } from "@/services/auth";
 import { useAuth } from "@/hooks/useAuth"; // Import your useAuth hook
 import Image from "next/image"; // Import Image for profile picture
 import { useRouter } from 'next/navigation'; // Replace react-router-dom import
@@ -18,7 +17,7 @@ export default function TopNav({ title }: { title: string }) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user } = useAuth(); // Access the user object from the AuthContext
+  const { user, logout } = useAuth(); // Access the user object from the AuthContext
   const [profileImage, setProfileImage] = useState<string | null>(null); // State for profile image
   const router = useRouter(); // Use Next.js router instead
   const [isOpen, setIsOpen] = useState(true);

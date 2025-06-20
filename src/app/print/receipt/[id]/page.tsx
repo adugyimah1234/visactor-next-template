@@ -1,9 +1,30 @@
 'use client';
 
-import React from 'react'; // ✅ Needed for JSX rendering
+import React from 'react';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { getPrintableReceipt } from '@/services/receipt';
+
+const PRINT_STYLES = `
+  .receipt-logo {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+  }
+  @media print {
+    body {
+      margin: 0;
+      padding: 0;
+    }
+    .receipt-logo {
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: center;
+    }
+  }
+`;
 
 export default function PrintableReceiptPage() {
   const params = useParams();
@@ -16,9 +37,10 @@ export default function PrintableReceiptPage() {
     async function fetchHtml() {
       try {
         const html = await getPrintableReceipt(Number(id));
-        setHtmlContent(html);
-
-        setTimeout(() => window.print(), 100);
+        // Inject style at the top
+        setHtmlContent(
+          `<style>${PRINT_STYLES}</style>` + html
+        );
       } catch (err) {
         console.error('Failed to load receipt:', err);
       }
@@ -26,6 +48,13 @@ export default function PrintableReceiptPage() {
 
     fetchHtml();
   }, [id]);
+
+  // Print only after content is rendered
+  useEffect(() => {
+    if (htmlContent) {
+      setTimeout(() => window.print(), 100);
+    }
+  }, [htmlContent]);
 
   if (!htmlContent) {
     return <p>Loading printable receipt...</p>;
