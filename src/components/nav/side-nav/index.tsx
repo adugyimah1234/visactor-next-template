@@ -134,7 +134,7 @@ export default function SideNav() {
         }
         return item;
       }),
-    accountant: items.filter(item => ['Dashboard', 'Fee Management', 'Profile'].includes(item.name)),
+    accountant: items.filter(item => ['Dashboard', 'Fee Management', 'Profile', 'Enrollment'].includes(item.name)),
     teacher: items.filter(item => ['Dashboard', 'Enrollment', 'Profile'].includes(item.name)),
   };
 
