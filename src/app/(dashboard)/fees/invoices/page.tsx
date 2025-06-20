@@ -353,7 +353,7 @@ useEffect(() => {
 }
 
 const CreateReceiptForm: React.FC<CreateReceiptFormProps> = ({ categories }) => {
-const [formData, setFormData] = useState<CreateReceiptData>({
+  const [formData, setFormData] = useState<CreateReceiptData>({
   student_id: 0,
   registration_id: undefined,
   payment_id: undefined,
@@ -609,8 +609,31 @@ const showRegistrationWarning = selectedStudent && hasRegistrationPayment;
     classes,
   ]);
 
+const paidTypes = useMemo(() => {
+  // If no student/applicant selected, nothing is paid
+  if (!formData.student_id && !formData.registration_id) return [];
 
+  // Find all receipts for this student/applicant
+  const relevantReceipts = receipts.filter(r =>
+    isRegistration
+      ? Number(r.registration_id) === Number(formData.registration_id)
+      : Number(r.student_id) === Number(formData.student_id)
+  );
 
+  // Collect all paid types
+  const types = new Set<string>();
+  relevantReceipts.forEach(r => {
+    (r.receipt_items || []).forEach(item => {
+      types.add(item.receipt_type);
+    });
+  });
+  return Array.from(types);
+}, [
+  formData.student_id,
+  formData.registration_id,
+  isRegistration,
+  receipts
+]);
 
 const isAmountLocked = useMemo(() => {
   return formData.receipt_type?.some(item =>
@@ -657,14 +680,25 @@ return (
         <SelectValue placeholder="Select type" />
       </SelectTrigger>
       <SelectContent>
-          {!isExistingStudent && (
-    <SelectItem value="registration">Registration</SelectItem>
-  )}
-        <SelectItem value="levy">Levy</SelectItem>
-        <SelectItem value="furniture">Furniture</SelectItem>
-        <SelectItem value="textBooks">Text Books</SelectItem>
-        <SelectItem value="exerciseBooks">Exercise Books</SelectItem>
-        <SelectItem value="jersey_crest">Jersey/Crest</SelectItem>
+        {/* 2️⃣ Only show options NOT in paidTypes */}
+        {!isExistingStudent && !paidTypes.includes('registration') && (
+          <SelectItem value="registration">Registration</SelectItem>
+        )}
+        {!paidTypes.includes('levy') && (
+          <SelectItem value="levy">Levy</SelectItem>
+        )}
+        {!paidTypes.includes('furniture') && (
+          <SelectItem value="furniture">Furniture</SelectItem>
+        )}
+        {!paidTypes.includes('textBooks') && (
+          <SelectItem value="textBooks">Text Books</SelectItem>
+        )}
+        {!paidTypes.includes('exerciseBooks') && (
+          <SelectItem value="exerciseBooks">Exercise Books</SelectItem>
+        )}
+        {!paidTypes.includes('jersey_crest') && (
+          <SelectItem value="jersey_crest">Jersey/Crest</SelectItem>
+        )}
       </SelectContent>
     </Select>
 
