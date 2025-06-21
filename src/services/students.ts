@@ -32,6 +32,21 @@ const studentService = {
     return res.data;
   },
 
+  
+    promote: async (id: number) => {
+      const res = await api.post(`/students/${id}/promote`);
+      return res.data;
+    },
+  
+    transfer: async (id: number, newSchoolId: number, newClassId: number) => {
+      const res = await api.post(`/students/${id}/transfer`, {
+        school_id: newSchoolId,
+        class_id: newClassId,
+      });
+      return res.data;
+    },
+  
+
   enroll: async (id: number, class_id: number, school_id: number) => {
     const res = await api.post(`/students/${id}/enroll`, {
       class_id,

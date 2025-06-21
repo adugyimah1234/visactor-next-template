@@ -821,102 +821,6 @@ onChange={(e) => setStudentSearchQuery(e.target.value)}
     );
   };
 
-  // Receipt Details Component
-  const ReceiptDetails = ({ receipt }: { receipt: Receipt }) => {
-  const receiptNumber = `R-${receipt.id.toString().padStart(6, '0')}`;
-
-    return (
-      <div className="space-y-6">
-        <div className="text-center border-b pb-4">
-          <h3 className="text-lg font-semibold">{receipt.school_name}</h3>
-          <p className="text-sm text-muted-foreground">Official Receipt</p>
-          <p className="font-mono text-lg">{receiptNumber}</p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm font-medium">Student Name</p>
-            <p className="text-sm text-muted-foreground">{receipt.student_name}</p>
-          </div>
-          {receipt.payment_type && (
-  <div>
-    <p className="text-sm font-medium">Payment Type</p>
-    <p className="text-sm text-muted-foreground">{receipt.payment_type}</p>
-  </div>
-)}
-
-{receipt.payment_method && (
-  <div>
-    <p className="text-sm font-medium">Payment Method</p>
-    <p className="text-sm text-muted-foreground">{receipt.payment_method}</p>
-  </div>
-)}
-          <div>
-            <p className="text-sm font-medium">Class</p>
-            <p className="text-sm text-muted-foreground">{receipt.class_name}</p>
-          </div>
-          <div>
-            <p className="text-sm font-medium">Receipt Type</p>
-{receipt.receipt_items?.map(item => (
-  <Badge key={item.id} {...getReceiptTypeBadge(item.receipt_type)}>
-    {getReceiptTypeBadge(item.receipt_type).label}
-  </Badge>
-))}
-
-          </div>
-          <div>
-            <p className="text-sm font-medium">Date Issued</p>
-            <p className="text-sm text-muted-foreground">{formatDate(receipt.date_issued)}</p>
-          </div>
-          <div>
-            <p className="text-sm font-medium">Amount</p>
-            <p className="text-lg font-semibold">{formatCurrency(receipt.amount)}</p>
-          </div>
-          <div>
-            <p className="text-sm font-medium">Issued By</p>
-            <p className="text-sm text-muted-foreground">{receipt.issued_by_name}</p>
-          </div>
-        </div>
-
-        {receipt.payment_date && (
-          <div className="border-t pt-4">
-            <p className="text-sm font-medium">Payment Information</p>
-            <div className="grid grid-cols-2 gap-4 mt-2">
-              <div>
-                <p className="text-xs text-muted-foreground">Payment Date</p>
-                <p className="text-sm">{formatDate(receipt.payment_date)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Amount Paid</p>
-                <p className="text-sm">{formatCurrency(receipt.amount_paid || 0)}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="flex justify-end space-x-2 pt-4">
-          <Button variant="outline" onClick={() => handleAction('print', receipt.id)}>
-            <Printer className="mr-2 h-4 w-4" />
-            Print
-          </Button>
-          <Button variant="outline" onClick={() => handleAction('download', receipt.id)}>
-            <Download className="mr-2 h-4 w-4" />
-            Download
-          </Button>
-          <Button variant="outline" onClick={() => handleAction('email', receipt.id)}>
-            <Mail className="mr-2 h-4 w-4" />
-            Email
-          </Button>
-        </div>
-      </div>
-    );
-  };
-
-  // Define this function somewhere above where you use it
-function renderStudentName(receipt: Receipt) {
-  return receipt.student_name || `${receipt.registration_first_name ?? ''} ${receipt.registration_last_name ?? ''}`.trim();
-}
-
   if (error && !loading) {
     return (
       <Alert variant="destructive">
@@ -1100,6 +1004,25 @@ function renderStudentName(receipt: Receipt) {
       );
       amountLeft = formatCurrency(totalDue);
     }
+// Add this helper at the top of your file
+// Add this helper at the top of your file
+function getReceiptDisplayName(receipt: any) {
+  // Try student_name
+  if (receipt.student_name && receipt.student_name.trim()) return receipt.student_name.trim();
+
+  // Try registration_first_name + registration_last_name
+  const regFirst = receipt.registration_first_name?.trim() || '';
+  const regLast = receipt.registration_last_name?.trim() || '';
+  if (regFirst || regLast) return `${regFirst} ${regLast}`.trim();
+
+  // Try student_id or registration_id
+  if (receipt.student_id) return `Student #${receipt.student_id}`;
+  if (receipt.registration_id) return `Applicant #${receipt.registration_id}`;
+
+  // Fallback
+  return 'N/A';
+}
+console.log('Rendering receipt:', receipt);
 
     return (
       <TableRow key={receipt.id || index}>
@@ -1109,7 +1032,7 @@ function renderStudentName(receipt: Receipt) {
         </TableCell>
         <TableCell>
           <div>
-            <p className="font-medium">{receipt.student_name || `${receipt.registration_first_name ?? ''} ${receipt.registration_last_name ?? ''}`.trim()}</p>
+            <p className="font-medium">{getReceiptDisplayName(receipt)}</p>
             <p className="text-sm text-muted-foreground">{receipt.class_name}</p>
           </div>
         </TableCell>
@@ -1173,16 +1096,6 @@ function renderStudentName(receipt: Receipt) {
           )}
         </CardContent>
       </Card>
-
-      {/* Receipt Details Dialog */}
-      <Dialog open={showReceiptDetails} onOpenChange={setShowReceiptDetails}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Receipt Details</DialogTitle>
-          </DialogHeader>
-          {selectedReceipt && <ReceiptDetails receipt={selectedReceipt} />}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

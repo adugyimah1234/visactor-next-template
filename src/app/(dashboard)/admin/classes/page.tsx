@@ -257,9 +257,15 @@ if (cls.id >= 1000000000) {
 
 // Suggested options
 const CLASS_OPTIONS = [
-  "KG1",
-  "KG2",
-  ...Array.from({ length: 8 }, (_, i) => `Basic ${i + 1}`),
+  "KG 1 A",
+  "KG 1 B",
+  "KG 1 C",
+  "KG 1 D",
+  "KG 2 A",
+  "KG 2 B",
+  "KG 2 C",
+  "KG 2 D",
+  ...Array.from({ length: 9 }, (_, i) => `Basic ${i + 1}`),
 ];
 
   return (

@@ -26,12 +26,21 @@ import { Toaster, toast } from 'sonner';
 import { getAllRoles, Role } from '@/services/roles';
 import { Class } from '@/types/class';
 import { getAllCategories } from '@/services/categories';
+import { getAllAcademicYear } from '@/services/academic_year';
+
+interface NamedItem {
+  id: number;
+  name: string;
+  year?: string;
+}
 
 export default function ResultsPage() {
   const [applicants, setApplicants] = useState<RegistrationData[]>([]);
   const [schools, setSchools] = useState<School[]>([]);
   const [classes, setClasses] = useState<ClassData[]>([]);
+    const [allStudents, setAllStudents] = useState<any[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
+    const [academicYears, setAcademicYears] = useState<NamedItem[]>([]);
   const [userRole, setUserRole] = useState<string>('');
   const [passMark, setPassMark] = useState<number>(50);
   const [classSlots, setClassSlots] = useState<Record<number, number>>({});
@@ -84,21 +93,46 @@ const [selectedCategoryName, setSelectedCategoryName] = useState('');
   fetchCategories();
 }, []);
 
+useEffect(() => {
+  const fetchAllStudents = async () => {
+    try {
+      const students = await studentService.getAll();
+      setAllStudents(students);
+    } catch (error) {
+      console.error('Error fetching all students:', error);
+    }
+  };
+  fetchAllStudents();
+}, []);
+
+  const [currentAcademicYearId, setCurrentAcademicYearId] = useState<number | null>(null);
+  
+  useEffect(() => {
+    const fetchYear = async () => {
+      try {
+        const yearData = await getAllAcademicYear();
+        setAcademicYears(yearData);
+  
+        // Set the most recent year as current (adjust logic as needed)
+        if (yearData && yearData.length > 0) {
+          // If your API returns years sorted, pick the last one
+          setCurrentAcademicYearId(yearData[yearData.length - 1].id);
+        }
+      } catch (error) {
+        console.error('Error fetching academic years:', error);
+      }
+    };
+    fetchYear();
+  }, []);
+
 const handleSchoolChange = async (index: number, schoolId: number) => {
   if (typeof schoolId === 'number') {
     const filtered = await classService.getBySchool(schoolId);
 
-    // Count how many students are already in each class from the students table
+    // Use allStudents to count students per class
     const slotMap: Record<number, number> = {};
     for (const cls of filtered) {
-      try {
-        // Get actual count from students table for this class
-        const studentsInClass = await studentService.getById(cls.id);
-        slotMap[cls.id] = studentsInClass.length;
-      } catch (error) {
-        console.error(`Error fetching students for class ${cls.id}:`, error);
-        slotMap[cls.id] = 0;
-      }
+      slotMap[cls.id] = allStudents.filter(s => s.class_id === cls.id).length;
     }
 
     setClasses(filtered);
@@ -223,11 +257,13 @@ if (applicant.class_id && applicant.school_id) {
     toast.warning(`Class "${selectedClass.name}" is full. Skipping ${applicant.first_name}.`);
     continue; // Skip if class is full
   }
+      // ...existing code...
       const studentPayload = {
         first_name: applicant.first_name,
         last_name: applicant.last_name,
         school_id: applicant.school_id,
         admission_status: 'admitted',
+        academic_year_id: applicant.academic_year_id ?? 3,
         dob: dob,
         gender: applicant.gender,
         scores: applicant.scores ?? 0,
@@ -237,6 +273,7 @@ if (applicant.class_id && applicant.school_id) {
         status: 'inactive',
         middle_name: applicant.middle_name ?? ''
       };
+      // ...existing code...
       
       setClassSlots(prev => ({
         ...prev,
@@ -320,6 +357,7 @@ const handleSinglePromote = async (applicant: RegistrationData) => {
       last_name: applicant.last_name,
       school_id: applicant.school_id,
       admission_status: 'admitted',
+      academic_year_id: applicant.academic_year_id ?? 3,// Use current year if not set 
       dob: dob,
       gender: applicant.gender,
       scores: applicant.scores ?? 0,
