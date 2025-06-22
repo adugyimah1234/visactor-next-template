@@ -123,7 +123,7 @@ export default function SideNav() {
     admin: items,
     frontdesk: items
       .filter(item =>
-        ['Dashboard', 'Profile', 'Registration', 'Entrance Exams'].includes(item.name)
+        ['Dashboard', 'Profile', 'Registration', 'Entrance Exams', 'Enrollment'].includes(item.name)
       )
       .map(item => {
         if (item.name === 'Entrance Exams') {
