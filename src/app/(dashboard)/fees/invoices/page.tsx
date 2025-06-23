@@ -388,6 +388,19 @@ const handleSubmit = async (e: React.FormEvent) => {
     return;
   }
 
+  // 🚫 Prevent duplicate registration receipt for applicants
+  if (isRegistration && formData.registration_id) {
+    const alreadyExists = receipts.some(
+      r =>
+        Number(r.registration_id) === Number(formData.registration_id) &&
+        r.receipt_items?.some(item => item.receipt_type === 'registration')
+    );
+    if (alreadyExists) {
+      toast.error("A registration receipt already exists for this applicant.");
+      return;
+    }
+  }
+
   // ✅ Open popup FIRST
   let printWindow: Window | null = null;
   printWindow = window.open('', '_blank');
@@ -434,7 +447,6 @@ const handleSubmit = async (e: React.FormEvent) => {
     }
 
     // reset
-        // Reset form + close dialog
     setFormData({
       student_id: undefined,
       registration_id: undefined,
@@ -641,6 +653,19 @@ const isAmountLocked = useMemo(() => {
   );
 }, [formData.receipt_type]);
 
+
+
+// 🚫 Check if duplicate registration receipt exists for selected applicant
+const duplicateRegistrationReceipt = useMemo(() => {
+  if (!isRegistration || !formData.registration_id) return false;
+  return receipts.some(
+    r =>
+      Number(r.registration_id) === Number(formData.registration_id) &&
+      r.receipt_items?.some(item => item.receipt_type === 'registration')
+  );
+}, [isRegistration, formData.registration_id, receipts]);
+
+
 return (
 <form onSubmit={handleSubmit} className="space-y-4">
 
@@ -747,7 +772,16 @@ return (
       </Alert>
     )}
   </div>
-
+{/* 🚫 Duplicate registration receipt warning */}
+    {duplicateRegistrationReceipt && (
+      <Alert variant="destructive" className="mt-2">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Duplicate Registration Receipt</AlertTitle>
+        <AlertDescription>
+          A registration receipt has already been created for this applicant. You cannot create another.
+        </AlertDescription>
+      </Alert>
+    )}
   {/* === Search Student === */}
   <div className="grid grid-cols-4 items-center gap-4 relative">
     <div className="col-span-3 relative">
@@ -808,11 +842,15 @@ onChange={(e) => setStudentSearchQuery(e.target.value)}
 
   {/* === Submit Buttons === */}
   <div className="flex justify-end space-x-2 pt-4">
-    <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)}>
-      Cancel
-    </Button>
-    <Button type="submit" disabled={showRegistrationWarning}>
-    Create Receipt</Button>
+      <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)}>
+        Cancel
+      </Button>
+      <Button
+        type="submit"
+        disabled={showRegistrationWarning || duplicateRegistrationReceipt}
+      >
+        Create Receipt
+      </Button>
     
   </div>
 </form>

@@ -103,16 +103,19 @@ async function loadSchools() {
   try {
     const allClasses = await classService.getAll();
 
-    // Extract unique class names
+    // Extract unique class names (case-insensitive)
     const uniqueClassMap = new Map<string, ClassData>();
-
     for (const classItem of allClasses) {
-      if (!uniqueClassMap.has(classItem.name)) {
-        uniqueClassMap.set(classItem.name, classItem);
+      const lowerName = classItem.name.toLowerCase();
+      if (!uniqueClassMap.has(lowerName)) {
+        uniqueClassMap.set(lowerName, classItem);
       }
     }
 
-    setClasses(Array.from(uniqueClassMap.values()));
+    // Only take the first 10 unique classes
+    const filteredClasses = Array.from(uniqueClassMap.values()).slice(0, 10);
+
+    setClasses(filteredClasses);
   } catch {
     setError("Failed to load schools.");
   } finally {
@@ -120,7 +123,6 @@ async function loadSchools() {
   }
 }
 
-    
       useEffect(() => {
         loadSchools();
       }, []);
@@ -248,8 +250,6 @@ const handleSubmit = async (event: React.FormEvent) => {
     setLoading(false);
   }
 };
-
-
 
 const handleFinalSubmit = async () => {
   setLoading(true);

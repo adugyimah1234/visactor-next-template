@@ -38,6 +38,8 @@ export interface ReceiptFilters {
   date_to?: string;
   student_id?: number;
   school_id?: number;
+  registration_id?: number;
+  class_id?: number;
 }
 
 export interface CreateReceiptPayload {

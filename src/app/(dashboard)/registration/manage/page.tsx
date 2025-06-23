@@ -73,6 +73,7 @@ import {
 import { toast, Toaster } from 'sonner';
 import schoolService from '@/services/schools';
 import { Category, getAllCategories } from '@/services/categories';
+import { getReceipts } from '@/services/receipt';
 
 // ...other imports...
 interface Applicant {
@@ -239,30 +240,46 @@ const handleUpdateRegistration = async (id: number, data: RegistrationUpdateInpu
   }
 };
 
-
-
-    const handleDeleteClick = (registration: RegistrationData) => {
-        setSelectedRegistration(registration);
-        setIsDeleteDialogOpen(true);
-    };
-
     const handleEditClick = (registration: RegistrationData) => {
         setSelectedRegistration(registration);
         setIsEditDialogOpen(true);
     };
 
-    const confirmDelete = async () => {
-        if (selectedRegistration?.id) {
+    const handleDeleteClick = (registration: RegistrationData) => {
+        setSelectedRegistration(registration);
+        setIsDeleteDialogOpen(true);
+    };
+    
+        
+        const confirmDelete = async () => {
+            const id = Number(selectedRegistration?.id);
+        
+            if (!id) {
+                toast.error("Invalid registration selected.");
+                setIsDeleteDialogOpen(false);
+                setSelectedRegistration(null);
+                return;
+            }
+        
             try {
-                await handleDeleteRegistration(selectedRegistration.id);
+                // Fetch receipts for this registration
+                const receipts = await getReceipts({ registration_id: id });
+                if (receipts && receipts.length > 0) {
+                    toast.error("Cannot delete registration: There are receipts linked to this registration.");
+                    setIsDeleteDialogOpen(false);
+                    setSelectedRegistration(null);
+                    return;
+                }
+        
+                // No receipts, safe to delete
+                await handleDeleteRegistration(id);
                 toast.success("Registration deleted successfully");
-            } catch (error) {
+            } catch (error: any) {
                 toast.error("Failed to delete registration");
             }
-        }
-        setIsDeleteDialogOpen(false);
-        setSelectedRegistration(null);
-    };
+            setIsDeleteDialogOpen(false);
+            setSelectedRegistration(null);
+        };
 
 
 const handleSubmitEdit = async (e: React.FormEvent) => {
