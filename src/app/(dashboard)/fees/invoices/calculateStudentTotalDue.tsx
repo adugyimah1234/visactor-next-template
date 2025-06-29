@@ -2,7 +2,7 @@ export function calculateStudentTotalDue(
   student: any, // Student | RegistrationData
   categories: { id: number; name: string }[],
   classes: { id: number; name: string }[],
-  paidTypes: string[] = [] // <-- add this parameter
+  paidTypes: string[] = []
 ): number {
   if (!student) return 0;
 
@@ -13,8 +13,63 @@ export function calculateStudentTotalDue(
     ? student.class_applying_for
     : student.class_id;
 
-  const categoryName = categories.find(c => Number(c.id) === Number(categoryId))?.name?.toUpperCase() || "";
-  const className = classes.find(cls => Number(cls.id) === Number(classId))?.name?.trim().toLowerCase() || "";
+    
+    // Use the exact mappings from your page.tsx
+    const textBooksMap: Record<string, number> = {
+  'kg 1 a': 345,
+  'kg 1 d': 345,
+  'kg 1 c': 345,
+  'kg 1 b': 345,
+  'kg 2 a': 345,
+  'kg 2 b': 345,
+  'kg 2 c': 345,
+  'kg 2 d': 345,
+  'basic 1': 615,
+    'basic 2': 590,
+    'basic 3': 590,
+    'basic 4': 660,
+    'basic 5': 650,
+    'basic 6': 650,
+    'basic 7': 985,
+    'basic 8': 415,
+    'basic 9': 350,
+  };
+  
+  const exerciseBooksMap: Record<string, number> = {
+    'kg 1 a': 30,
+    'kg 1 b': 30,
+    'kg 1 c': 30,
+    'kg 1 d': 30,
+    'kg 2 a': 30,
+    'kg 2 b': 30,
+    'kg 2 c': 30,
+    'kg 2 d': 30,
+    'basic 1': 50,
+    'basic 2': 50,
+    'basic 3': 60,
+    'basic 4': 60,
+    'basic 5': 70,
+    'basic 6': 70,
+    'basic 7': 80,
+    'basic 8': 80,
+    'basic 9': 50,
+  };
+  // Partial match fallback
+  const categoryName = categories.find(c => Number(c.id) === Number(categoryId))?.name || "";
+// With this (handles both ID and name):
+const classNameRaw =
+  classes.find(
+    cls =>
+      Number(cls.id) === Number(classId) ||
+    cls.name.trim().toLowerCase() === String(classId).trim().toLowerCase()
+  )?.name || "";
+  const normalizedClassName = classNameRaw.trim().toLowerCase().replace(/\s+/g, ' ');
+  console.log('classId:', classId, 'classNameRaw:', classNameRaw, 'normalizedClassName:', normalizedClassName);
+  // console.log('clasName:', normalizedClassName, 'classes:', classes);
+let textBookKey = Object.keys(textBooksMap).find(key => normalizedClassName.startsWith(key));
+let exerciseBookKey = Object.keys(exerciseBooksMap).find(key => normalizedClassName.startsWith(key));
+
+// console.log('classId:', classId, 'classes:', classes);
 
   const feeTypes = isApplicant
     ? ["registration", "levy", "furniture", "jersey_crest", "textBooks", "exerciseBooks"]
@@ -22,9 +77,12 @@ export function calculateStudentTotalDue(
 
   let total = 0;
   for (const type of feeTypes) {
-    if (paidTypes.includes(type)) continue; // skip already paid types
+    if (paidTypes.includes(type)) continue;
     let fixedAmount = 0;
     switch (type) {
+      case "registration":
+        fixedAmount = 40;
+        break;
       case "levy":
         if (categoryName === "SVC" || categoryName === "MOD") fixedAmount = 200;
         else if (categoryName === "CIV") fixedAmount = 220;
@@ -35,29 +93,26 @@ export function calculateStudentTotalDue(
       case "jersey_crest":
         fixedAmount = 120;
         break;
-      case "registration":
-        fixedAmount = 40;
+      case "textBooks": {
+        // Lookup key here
+        const textBookKey = Object.keys(textBooksMap).find(key => normalizedClassName.startsWith(key));
+        fixedAmount = textBookKey ? textBooksMap[textBookKey] : 0;
         break;
-      case "textBooks":
-        if (className.includes("kg")) fixedAmount = 100;
-        else if (className.includes("basic 1") || className.includes("basic 2")) fixedAmount = 120;
-        else if (className.includes("basic 3") || className.includes("basic 4")) fixedAmount = 150;
-        else if (className.includes("basic 5") || className.includes("basic 6")) fixedAmount = 180;
-        else if (className.includes("basic 7") || className.includes("basic 8")) fixedAmount = 200;
-        else fixedAmount = 200;
+      }
+      case "exerciseBooks": {
+        // Lookup key here
+        const exerciseBookKey = Object.keys(exerciseBooksMap).find(key => normalizedClassName.startsWith(key));
+        fixedAmount = exerciseBookKey ? exerciseBooksMap[exerciseBookKey] : 0;
         break;
-      case "exerciseBooks":
-        if (className.includes("kg")) fixedAmount = 30;
-        else if (className.includes("basic 1") || className.includes("basic 2")) fixedAmount = 50;
-        else if (className.includes("basic 3") || className.includes("basic 4")) fixedAmount = 60;
-        else if (className.includes("basic 5") || className.includes("basic 6")) fixedAmount = 70;
-        else if (className.includes("basic 7") || className.includes("basic 8")) fixedAmount = 80;
-        else fixedAmount = 50;
-        break;
+      }
       default:
         fixedAmount = 0;
     }
     total += fixedAmount;
   }
+    console.log('classes:', classes.map(c => ({ id: c.id, name: c.name })));
+    // console.log('classId:', classId, typeof classId, 'classes ids:', classes.map(c => c.id));
+    // console.log('exerciseBookKey:', classNameRaw, 'normalizedClassName:', normalizedClassName);
+    // console.log('Unpaid types:', feeTypes.filter(type => !paidTypes.includes(type)), 'Total left:', total);
   return Number.isNaN(total) ? 0 : total;
 }

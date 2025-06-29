@@ -564,9 +564,7 @@ const handleSaveScores = async () => {
   className="w-20"
   placeholder="0"
 />
-
                 </TableCell>
-
                 {isAdmin && (
                   <TableCell>
                   <select

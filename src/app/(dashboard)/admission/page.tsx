@@ -196,6 +196,7 @@ await studentService.create({
   const currentStudents = filteredStudents.slice(indexOfFirst, indexOfLast);
   const totalPages = Math.ceil(filteredStudents.length / studentsPerPage);
 
+  
   const handleRefresh = async () => {
   setLoading(true);
   try {
@@ -251,7 +252,7 @@ const handlePrint = () => {
           <tbody>
             ${filteredStudents.map((s, index) => `
               <tr>
-                <td>${index + 1}</td>
+                <td>${ indexOfFirst + index + 1 }</td>
                 <td>${s.first_name} ${s.middle_name || ''} ${s.last_name}</td>
                 <td>${s.gender}</td>
                 <td>${getNameById(categories, s.category_id)}</td>
@@ -458,7 +459,7 @@ return (
   {currentStudents.length > 0 ? (
     currentStudents.map((s, index) => (
       <TableRow key={s.id || index}>
-        <TableCell>{index + 1}</TableCell>
+        <TableCell>{indexOfFirst + index + 1}</TableCell>
         <TableCell>{s.first_name}</TableCell>
         <TableCell>{s.middle_name}</TableCell>
         <TableCell>{s.last_name}</TableCell>

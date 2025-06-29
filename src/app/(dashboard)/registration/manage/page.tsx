@@ -1170,7 +1170,7 @@ animate = {{ opacity: 1, x: 0 }}
 exit = {{ opacity: 0, x: 20 }}
 transition = {{ duration: 0.2 }}
                                 >
-    <TableCell>{ idx + 1}</TableCell>
+        <TableCell>{ indexOfFirstItem + idx + 1 }</TableCell>
         <TableCell>
 {/* Format registration.registration_date as "MMM dd, yyyy" if available */ }
 {

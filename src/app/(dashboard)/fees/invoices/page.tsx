@@ -187,12 +187,8 @@ useEffect(() => {
 useEffect(() => {
   const fetchClasses = async () => {
     try {
-            const data = await classService.getAll(); // or your actual fetch function
-      // Deduplicate by name (case-insensitive)
-      const uniqueByName = Array.from(
-        new Map(data.map(cls => [cls.name.trim().toLowerCase(), cls])).values()
-      );
-      setClasses(uniqueByName);
+      const data = await classService.getAll();
+      setClasses(data); // <-- Use all classes, no deduplication!
     } catch (err) {
       console.error("Failed to load classes!", err);
     }
@@ -558,46 +554,72 @@ const showRegistrationWarning = selectedStudent && hasRegistrationPayment;
     const classNameRaw = classId ? classes.find(cls => cls.id === Number(classId))?.name : undefined;
     const className = classNameRaw?.trim().toLowerCase();
 
-    const updatedTypes = formData.receipt_type.map(item => {
-      let fixedAmount = item.amount; // Keep previous by default
+// ...inside your useEffect for updating amounts...
 
-      switch (item.type) {
-        case "levy":
-          if (categoryName === "SVC" || categoryName === "MOD") fixedAmount = 200;
-          else if (categoryName === "CIV") fixedAmount = 220;
-          else fixedAmount = 0;
-          break;
-        case "furniture":
-          fixedAmount = 100;
-          break;
-        case "jersey_crest":
-          fixedAmount = 120;
-          break;
-        case "registration":
-          fixedAmount = 40;
-          break;
-        case "textBooks":
-          if (className?.includes("kg")) fixedAmount = 100;
-          else if (className?.includes("basic 1") || className?.includes("basic 2")) fixedAmount = 120;
-          else if (className?.includes("basic 3") || className?.includes("basic 4")) fixedAmount = 150;
-          else if (className?.includes("basic 5") || className?.includes("basic 6")) fixedAmount = 180;
-          else if (className?.includes("basic 7") || className?.includes("basic 8")) fixedAmount = 200;
-          else fixedAmount = 200;
-          break;
-        case "exerciseBooks":
-          if (className?.includes("kg")) fixedAmount = 30;
-          else if (className?.includes("basic 1") || className?.includes("basic 2")) fixedAmount = 50;
-          else if (className?.includes("basic 3") || className?.includes("basic 4")) fixedAmount = 60;
-          else if (className?.includes("basic 5") || className?.includes("basic 6")) fixedAmount = 70;
-          else if (className?.includes("basic 7") || className?.includes("basic 8")) fixedAmount = 80;
-          else fixedAmount = 50;
-          break;
-        default:
-          // no auto amount for other types
-      }
+const textBooksMap: Record<string, number> = {
+  'kg 1 a': 345,
+  'basic 1': 615,
+  'basic 2': 590,
+  'basic 3': 590,
+  'basic 4': 660,
+  'basic 5': 650,
+  'basic 6': 650,
+  'basic 7': 985,
+  'basic 8': 415,
+  'basic 9': 350,
+};
 
-      return { ...item, amount: fixedAmount };
-    });
+const exerciseBooksMap: Record<string, number> = {
+  'kg 1 a': 30,
+  'kg 1 b': 30,
+  'kg 1 c': 30,
+  'kg 1 d': 30,
+  'kg 2 a': 30,
+  'kg 2 b': 30,
+  'kg 2 c': 30,
+  'kg 2 d': 30,
+  'basic 1': 50,
+  'basic 2': 50,
+  'basic 3': 60,
+  'basic 4': 60,
+  'basic 5': 70,
+  'basic 6': 70,
+  'basic 7': 80,
+  'basic 8': 80,
+  'basic 9': 50,
+};
+
+const updatedTypes = formData.receipt_type.map(item => {
+  let fixedAmount = item.amount; // Keep previous by default
+
+  switch (item.type) {
+    case "levy":
+      if (categoryName === "SVC" || categoryName === "MOD") fixedAmount = 200;
+      else if (categoryName === "CIV") fixedAmount = 220;
+      else fixedAmount = 0;
+      break;
+    case "furniture":
+      fixedAmount = 100;
+      break;
+    case "jersey_crest":
+      fixedAmount = 120;
+      break;
+    case "registration":
+      fixedAmount = 40;
+      break;
+    case "textBooks":
+      fixedAmount = textBooksMap[className || ''] || 0;
+      break;
+    case "exerciseBooks":
+      fixedAmount = exerciseBooksMap[className || ''] || 0;
+      break;
+    default:
+      // no auto amount for other types
+      fixedAmount = 0;
+  }
+
+  return { ...item, amount: fixedAmount };
+});
 
     const newTotal = updatedTypes.reduce((sum, item) => sum + item.amount, 0);
 
@@ -1060,7 +1082,7 @@ function getReceiptDisplayName(receipt: any) {
   // Fallback
   return 'N/A';
 }
-console.log('Rendering receipt:', receipt);
+// console.log('Rendering receipt:', receipt);
 
     return (
       <TableRow key={receipt.id || index}>
