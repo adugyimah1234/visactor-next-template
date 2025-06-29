@@ -302,15 +302,17 @@ const filteredReceipts = receipts.filter((receipt) => {
   };
 
   // Get receipt type badge variant
- const getReceiptTypeBadge = (type: string) => {
-    const variants = {
-      levy: { variant: 'default' as const, label: 'Levy' },
-      registration: { variant: 'secondary' as const, label: 'Registration' },
-      textBooks: { variant: 'outline' as const, label: 'Text Books' },
-      exerciseBooks: { variant: 'destructive' as const, label: 'Exercise Books' }
-    };
-    return variants[type as keyof typeof variants] || { variant: 'default' as const, label: type };
+const getReceiptTypeBadge = (type: string) => {
+  const variants = {
+    levy: { variant: 'default' as const, label: 'Levy' },
+    registration: { variant: 'secondary' as const, label: 'Registration' },
+    textBooks: { variant: 'outline' as const, label: 'Text Books' },
+    exerciseBooks: { variant: 'destructive' as const, label: 'Exercise Books' },
+    jersey: { variant: 'default' as const, label: 'Jersey' },
+    crest: { variant: 'secondary' as const, label: 'Crest' },
   };
+  return variants[type as keyof typeof variants] || { variant: 'default' as const, label: type };
+};
 
   // Format currency
   const formatCurrency = (amount: number) => {
@@ -610,8 +612,11 @@ const updatedTypes = formData.receipt_type.map(item => {
     case "furniture":
       fixedAmount = 100;
       break;
-    case "jersey_crest":
-      fixedAmount = 120;
+    case "jersey":
+      fixedAmount = 120; // or your desired jersey amount
+      break;
+    case "crest":
+      fixedAmount = 10;
       break;
     case "registration":
       fixedAmount = 40;
@@ -623,7 +628,6 @@ const updatedTypes = formData.receipt_type.map(item => {
       fixedAmount = exerciseBooksMap[className || ''] || 0;
       break;
     default:
-      // no auto amount for other types
       fixedAmount = 0;
   }
 
@@ -752,8 +756,11 @@ return (
         {!paidTypes.includes('exerciseBooks') && (
           <SelectItem value="exerciseBooks">Exercise Books</SelectItem>
         )}
-        {!paidTypes.includes('jersey_crest') && (
-          <SelectItem value="jersey_crest">Jersey/Crest</SelectItem>
+        {!paidTypes.includes('jersey') && (
+          <SelectItem value="jersey">Jersey</SelectItem>
+        )}
+        {!paidTypes.includes('crest') && (
+          <SelectItem value="crest">Crest</SelectItem>
         )}
       </SelectContent>
     </Select>

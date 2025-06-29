@@ -72,8 +72,8 @@ let exerciseBookKey = Object.keys(exerciseBooksMap).find(key => normalizedClassN
 // console.log('classId:', classId, 'classes:', classes);
 
   const feeTypes = isApplicant
-    ? ["registration", "levy", "furniture", "jersey_crest", "textBooks", "exerciseBooks"]
-    : ["levy", "furniture", "jersey_crest", "textBooks", "exerciseBooks"];
+    ? ["registration", "levy", "furniture", "jersey", "crest", "textBooks", "exerciseBooks"]
+    : ["levy", "furniture", "jersey", "crest", "textBooks", "exerciseBooks"];
 
   let total = 0;
   for (const type of feeTypes) {
@@ -90,17 +90,18 @@ let exerciseBookKey = Object.keys(exerciseBooksMap).find(key => normalizedClassN
       case "furniture":
         fixedAmount = 100;
         break;
-      case "jersey_crest":
-        fixedAmount = 120;
+      case "jersey":
+        fixedAmount = 120; // <-- Set your jersey amount here
+        break;
+      case "crest":
+        fixedAmount = 10; // <-- Crest is always 10
         break;
       case "textBooks": {
-        // Lookup key here
         const textBookKey = Object.keys(textBooksMap).find(key => normalizedClassName.startsWith(key));
         fixedAmount = textBookKey ? textBooksMap[textBookKey] : 0;
         break;
       }
       case "exerciseBooks": {
-        // Lookup key here
         const exerciseBookKey = Object.keys(exerciseBooksMap).find(key => normalizedClassName.startsWith(key));
         fixedAmount = exerciseBookKey ? exerciseBooksMap[exerciseBookKey] : 0;
         break;

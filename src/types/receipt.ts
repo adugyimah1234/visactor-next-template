@@ -2,7 +2,7 @@ export interface Receipt {
   id: number;
   student_id: number;
   payment_id?: number | null;
-  receipt_type: 'registration' | 'levy' | 'textBooks' | 'exerciseBooks' | 'furniture' | 'jersey_crest';
+  receipt_type: 'registration' | 'levy' | 'textBooks' | 'exerciseBooks' | 'furniture' | 'jersey' | 'crest';
   amount: number;
   issued_by?: number;
   date_issued: string;
@@ -19,7 +19,7 @@ export interface Receipt {
   fullName?: string;
   school_name?: string;
   payment_date?: string;
-   receipt_items: {
+  receipt_items: {
     id: number;
     receipt_type: string;
     amount: number;
