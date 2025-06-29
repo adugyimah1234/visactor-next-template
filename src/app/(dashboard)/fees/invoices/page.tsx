@@ -426,12 +426,6 @@ const handleSubmit = async (e: React.FormEvent) => {
       fee_id: formData.student_id ? `02500${formData.student_id}` : undefined,
     };
 
-    if (isRegistration) delete payload.student_id;
-    else delete payload.registration_id;
-
-    const createdReceipt = await createReceipt(payload);
-    toast.success("Receipt created!");
-
     if (isRegistration && formData.registration_id) {
       try {
         await registrationService.updatePartial(formData.registration_id, {
@@ -441,6 +435,14 @@ const handleSubmit = async (e: React.FormEvent) => {
         toast.warning("Receipt created but payment status not updated.");
       }
     }
+    
+    if (isRegistration) delete payload.student_id;
+    else delete payload.registration_id;
+
+    const createdReceipt = await createReceipt(payload);
+    toast.success("Receipt created!");
+
+
 
     // reset
     setFormData({
@@ -558,35 +560,42 @@ const showRegistrationWarning = selectedStudent && hasRegistrationPayment;
 
 const textBooksMap: Record<string, number> = {
   'kg 1 a': 345,
+  'kg 1 b': 345,
+  'kg 1 c': 345,
+  'kg 1 d': 345,
+  'kg 2 a': 345,
+  'kg 2 b': 345,
+  'kg 2 c': 345,
+  'kg 2 d': 345,
   'basic 1': 615,
   'basic 2': 590,
   'basic 3': 590,
   'basic 4': 660,
   'basic 5': 650,
   'basic 6': 650,
-  'basic 7': 985,
+  'basic 7': 990,
   'basic 8': 415,
   'basic 9': 350,
 };
 
 const exerciseBooksMap: Record<string, number> = {
-  'kg 1 a': 30,
-  'kg 1 b': 30,
-  'kg 1 c': 30,
-  'kg 1 d': 30,
-  'kg 2 a': 30,
-  'kg 2 b': 30,
-  'kg 2 c': 30,
-  'kg 2 d': 30,
-  'basic 1': 50,
-  'basic 2': 50,
-  'basic 3': 60,
-  'basic 4': 60,
-  'basic 5': 70,
-  'basic 6': 70,
-  'basic 7': 80,
-  'basic 8': 80,
-  'basic 9': 50,
+  'kg 1 a': 104,
+  'kg 1 b': 104,
+  'kg 1 c': 104,
+  'kg 1 d': 104,
+  'kg 2 a': 104,
+  'kg 2 b': 104,
+  'kg 2 c': 104,
+  'kg 2 d': 104,
+  'basic 1': 181,
+  'basic 2': 181,
+  'basic 3': 181,
+  'basic 4': 186,
+  'basic 5': 274,
+  'basic 6': 274,
+  'basic 7': 341,
+  'basic 8': 341,
+  'basic 9': 341,
 };
 
 const updatedTypes = formData.receipt_type.map(item => {

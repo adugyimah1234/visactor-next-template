@@ -1012,7 +1012,6 @@ const handleChange = (field: keyof RegistrationData, value: any) => {
                     })
                     : ''}</td>
                                         <td>${registration.first_name} ${registration.middle_name} ${registration.last_name}</td>
-                                       
                                         <td>${registration.class_applying_for}</td>
                                         <td>${registration.gender}</td>
                                         <td>${registration.scores ?? ''}</td>

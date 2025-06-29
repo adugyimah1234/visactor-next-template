@@ -180,14 +180,51 @@ useEffect(() => {
           const schoolClasses = classes.filter((c) => `${c.school_id}` === schoolId);
           const schoolStudents = students.filter((s) => `${s.school_id}` === schoolId);
 
-          const selectedStudents = schoolStudents.filter((s) =>
-            selectedClassTab === "all" ? true : `${s.class_id}` === selectedClassTab
+          // Get students in the selected school and class
+          const selectedStudents = students.filter(
+            (s) =>
+              `${s.school_id}` === schoolId &&
+              (selectedClassTab === "all" ? true : `${s.class_id}` === selectedClassTab)
           );
           const studentIds = selectedStudents.map((s) => s.id);
 
-          const filteredReceipts = receipts.filter((r) =>
-            r.student_id ? studentIds.includes(r.student_id) : true
+          // Get applicants in the selected school and class (if applicable)
+          const selectedApplicants = applicants.filter(
+            (a) =>
+              `${a.school_id}` === schoolId &&
+              (selectedClassTab === "all" ? true : `${a.class_id}` === selectedClassTab)
           );
+          const applicantIds = selectedApplicants.map((a) => a.id);
+
+          const selectedStudentsAndApplicants = [...selectedStudents, ...selectedApplicants];
+
+          const filteredReceipts = receipts.filter((receipt) => {
+  // Only include receipts for students/applicants in the selected school/class
+  const isStudentInClass = studentIds.includes(receipt.student_id);
+  const isApplicantInClass = applicantIds.includes(receipt.registration_id);
+
+  if (!isStudentInClass && !isApplicantInClass) return false;
+
+  const searchLower = search.trim().toLowerCase();
+
+  // Receipt number match (e.g., "R-000123" or "123")
+  const receiptNumber = `R-${receipt.id.toString().padStart(6, "0")}`;
+  const matchesReceiptNumber =
+    receiptNumber.toLowerCase().includes(searchLower) ||
+    receipt.id.toString().includes(searchLower);
+
+  // Student/applicant name match
+  const student =
+    students.find((s) => Number(s.id) === Number(receipt.student_id)) ||
+    applicants.find((a) => Number(a.id) === Number(receipt.registration_id));
+  const fullName = student
+    ? [student.first_name, student.middle_name, student.last_name].filter(Boolean).join(" ").toLowerCase()
+    : "";
+
+  const matchesName = fullName.includes(searchLower);
+
+  return !searchLower || matchesReceiptNumber || matchesName;
+});
 
           const allTypes = Array.from(
             new Set(
@@ -274,7 +311,7 @@ useEffect(() => {
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-  {receipts.map((receipt, index) => {
+  {filteredReceipts.map((receipt, index) => {
     // Find student or applicant
     const studentForCalc =
       students.find(s => Number(s.id) === Number(receipt.student_id)) ||
@@ -324,7 +361,10 @@ useEffect(() => {
         <TableCell>{renderStudentName(receipt)}</TableCell>
         <TableCell className="space-x-1">
           {(receipt.receipt_items ?? [{ receipt_type: receipt.receipt_type }]).map((i, idx) => (
-            <Badge key={`${i.receipt_type}-${idx}`} {...getReceiptTypeBadge(i.receipt_type)}>
+            <Badge
+              key={`${i.receipt_type}-${idx}`}
+              variant={getReceiptTypeBadge(i.receipt_type).variant as "default" | "secondary" | "outline" | "destructive"}
+            >
               {getReceiptTypeBadge(i.receipt_type).label}
             </Badge>
           ))}

@@ -38,6 +38,10 @@ export default function PaymentHistoryPage() {
   const [search, setSearch] = useState("");
   const [date, setDate] = useState<Date | undefined>();
   const [tab, setTab] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20; // or any number you prefer
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
 
   const fetchPayments = useCallback(async () => {
     try {
@@ -109,23 +113,31 @@ export default function PaymentHistoryPage() {
     }
   };
 
-const filteredReceipts = receipts.filter((receipt) => {
-  const searchTerm = search.toLowerCase().trim();
+  const filteredReceipts = receipts.filter((receipt) => {
+    const searchTerm = search.toLowerCase().trim();
 
+    // Try to find student
+    const student = realStudents.find((s) => Number(s.id) === Number(receipt.student_id));
+    // Try to find applicant (if you have an applicants array)
+    // const applicant = applicants.find((a) => Number(a.id) === Number(receipt.registration_id));
+    // If you have applicants, uncomment above and include in fullName below
 
-  const student = realStudents.find((s) => Number(s.id) === Number(receipt.student_id));
-  const studentName = student
-    ? `${student.first_name} ${student.middle_name || ''} ${student.last_name}`.toLowerCase()
-    : '';
+    const studentName = student
+      ? `${student.first_name} ${student.middle_name || ''} ${student.last_name}`.toLowerCase()
+      : '';
+    // const applicantName = applicant
+    //   ? `${applicant.first_name} ${applicant.middle_name || ''} ${applicant.last_name}`.toLowerCase()
+    //   : '';
 
-  const receiptId = `r-${receipt.id.toString().padStart(6, '0')}`;
+    const receiptId = `r-${receipt.id.toString().padStart(6, '0')}`;
 
-  return (
-    studentName.includes(searchTerm) ||
-    receiptId.includes(searchTerm) ||
-    receipt.id.toString().includes(searchTerm)
-  );
-});
+    return (
+      studentName.includes(searchTerm) ||
+      // applicantName.includes(searchTerm) || // Uncomment if you have applicants
+      receiptId.includes(searchTerm) ||
+      receipt.id.toString().includes(searchTerm)
+    );
+  });
 
 
   // 🟢 Extract unique receipt types
@@ -136,17 +148,15 @@ const filteredReceipts = receipts.filter((receipt) => {
   const tabs = ["all", ...allTypes];
 
   // 🟢 Dynamic filter
-const tabFilteredReceipts = tab === "all"
-  ? filteredReceipts
-  : filteredReceipts.filter(r =>
-      r.receipt_items?.some(i => i.receipt_type === tab) || r.receipt_type === tab
-    );
-const tabData  = tab === "all"
-  ? filteredReceipts
-  : filteredReceipts.filter(r =>
-      r.receipt_items?.some(i => i.receipt_type === tab) || r.receipt_type === tab
-    );
+  
+  const tabData  = tab === "all"
+    ? filteredReceipts
+    : filteredReceipts.filter(r =>
+        r.receipt_items?.some(i => i.receipt_type === tab) || r.receipt_type === tab
+      );
 
+
+  const paginatedReceipts = tabData.slice(indexOfFirstItem, indexOfLastItem);
 
   // 🟢 Render Table
   const renderTable = (data: Receipt[]) => (
@@ -168,18 +178,21 @@ const tabData  = tab === "all"
 
           return (
             <TableRow key={r.id || index}>
-              <TableCell>{index + 1}</TableCell>
+              <TableCell>{indexOfFirstItem + index + 1}</TableCell>
               <TableCell>R-{r.id.toString().padStart(6, "0")}</TableCell>
               <TableCell>{renderStudentName(r)}</TableCell>
               <TableCell className="space-x-1">
                 {r.receipt_items?.length ? (
                   r.receipt_items.map((i, idx) => (
-                    <Badge key={`${i.receipt_type}-${idx}`} {...getReceiptTypeBadge(i.receipt_type)}>
+                    <Badge
+                      key={`${i.receipt_type}-${idx}`}
+                      variant={getReceiptTypeBadge(i.receipt_type).variant}
+                    >
                       {getReceiptTypeBadge(i.receipt_type).label}
                     </Badge>
                   ))
                 ) : (
-                  <Badge {...getReceiptTypeBadge(r.receipt_type as string)}>
+                  <Badge variant={getReceiptTypeBadge(r.receipt_type as string).variant}>
                     {getReceiptTypeBadge(r.receipt_type as string).label}
                   </Badge>
                 )}
@@ -268,12 +281,34 @@ onChange={(e) => setSearch(e.target.value)}
                   {t === "all" ? "All Receipts" : getReceiptTypeBadge(t).label} ({tabData.length})
                 </CardTitle>
               </CardHeader>
-<CardContent>{renderTable(tabFilteredReceipts)}</CardContent>
+<CardContent>{renderTable(paginatedReceipts)}</CardContent>
 
             </Card>
           </TabsContent>
         ))}
       </Tabs>
+
+      <div className="flex justify-end items-center gap-2 mt-4">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={currentPage === 1}
+          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+        >
+          Prev
+        </Button>
+        <span>
+          Page {currentPage} of {Math.ceil(tabData.length / itemsPerPage)}
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={indexOfLastItem >= tabData.length}
+          onClick={() => setCurrentPage((p) => p + 1)}
+        >
+          Next
+        </Button>
+      </div>
     </div>
   );
 }
