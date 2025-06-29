@@ -1003,7 +1003,7 @@ const handleChange = (field: keyof RegistrationData, value: any) => {
                             <tbody>
                                 ${filteredRegistrations.map((registration, idx) => `
                                     <tr>
-                                        <td>${idx + 1}</td>
+                                        <TableCell>{ indexOfFirstItem + idx + 1 }</TableCell>
                                         <td>${registration.registration_date
                     ? new Date(registration.registration_date).toLocaleDateString('en-US', {
                         year: 'numeric',
