@@ -613,7 +613,7 @@ const updatedTypes = formData.receipt_type.map(item => {
       fixedAmount = 100;
       break;
     case "jersey":
-      fixedAmount = 120; // or your desired jersey amount
+      fixedAmount = 0; // or your desired jersey amount
       break;
     case "crest":
       fixedAmount = 10;

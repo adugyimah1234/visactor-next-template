@@ -113,7 +113,13 @@ async function loadSchools() {
     }
 
     // Only take the first 10 unique classes
-    const filteredClasses = Array.from(uniqueClassMap.values()).slice(0, 10);
+    // Only take the first 17 unique classes, but for KG only include "KG 1 A" and "KG 2 A"
+    let filteredClasses = Array.from(uniqueClassMap.values()).filter((cls) => {
+      if (cls.name.toUpperCase().startsWith("KG")) {
+      return cls.name === "KG 1 A" || cls.name === "KG 2 A";
+      }
+      return true;
+    }).slice(0, 12);
 
     setClasses(filteredClasses);
   } catch {

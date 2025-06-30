@@ -91,7 +91,7 @@ let exerciseBookKey = Object.keys(exerciseBooksMap).find(key => normalizedClassN
         fixedAmount = 100;
         break;
       case "jersey":
-        fixedAmount = 120; // <-- Set your jersey amount here
+        fixedAmount = 0; // <-- Set your jersey amount here
         break;
       case "crest":
         fixedAmount = 10; // <-- Crest is always 10
