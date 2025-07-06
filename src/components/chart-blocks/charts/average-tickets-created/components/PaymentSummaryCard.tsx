@@ -61,13 +61,16 @@ interface Receipt {
 }
 
 export default function DailyPaymentDashboard() {
-  const [receipts, setReceipts] = useState<Receipt[]>([]);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+ const [receipts, setReceipts] = useState<Receipt[]>([]);
+  // Set default date to empty string to show all payments by default
+  const [selectedDate, setSelectedDate] = useState('');
+  // Set default viewMode to 'all' to show all payments by default
+  const [viewMode, setViewMode] = useState<'all' | 'daily' | 'weekly' | 'monthly'>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-const [categories, setCategories] = useState<Category[]>([]);
-const [students, setStudents] = useState<Student[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+
 
 
 useEffect(() => {
@@ -160,30 +163,66 @@ const formatCurrency = (amount: number): string => {
 };
 
 
-  const getDateRange = () => {
-    const selected = new Date(selectedDate);
-    
-    switch (viewMode) {
-      case 'daily':
-        return {
-          start: new Date(selected.setHours(0, 0, 0, 0)),
-          end: new Date(selected.setHours(23, 59, 59, 999))
-        };
-      case 'weekly':
-        const weekStart = new Date(selected);
-        weekStart.setDate(selected.getDate() - selected.getDay());
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6);
-        return { start: weekStart, end: weekEnd };
-      case 'monthly':
-        return {
-          start: new Date(selected.getFullYear(), selected.getMonth(), 1),
-          end: new Date(selected.getFullYear(), selected.getMonth() + 1, 0)
-        };
-      default:
-        return { start: new Date(), end: new Date() };
-    }
-  };
+  // Update: Filter receipts when selectedDate or viewMode changes
+    const getDateRange = () => {
+      if (viewMode === 'all') {
+        // Show all payments, ignore selectedDate
+        return { start: new Date('2000-01-01'), end: new Date('2999-12-31') };
+      }
+      if (!selectedDate) {
+        // If no date picked, do NOT show all, but default to today/this week/this month
+        const today = new Date();
+        switch (viewMode) {
+          case 'daily':
+            return {
+              start: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0),
+              end: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999)
+            };
+          case 'weekly': {
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() - today.getDay());
+            weekStart.setHours(0, 0, 0, 0);
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            weekEnd.setHours(23, 59, 59, 999);
+            return { start: weekStart, end: weekEnd };
+          }
+          case 'monthly':
+            return {
+              start: new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0, 0),
+              end: new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999)
+            };
+          default:
+            return { start: new Date('2000-01-01'), end: new Date('2999-12-31') };
+        }
+      }
+      // If a date is picked, use that date for the filter
+      const selected = new Date(selectedDate);
+  
+      switch (viewMode) {
+        case 'daily':
+          return {
+            start: new Date(selected.getFullYear(), selected.getMonth(), selected.getDate(), 0, 0, 0, 0),
+            end: new Date(selected.getFullYear(), selected.getMonth(), selected.getDate(), 23, 59, 59, 999)
+          };
+        case 'weekly': {
+          const weekStart = new Date(selected);
+          weekStart.setDate(selected.getDate() - selected.getDay());
+          weekStart.setHours(0, 0, 0, 0);
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekStart.getDate() + 6);
+          weekEnd.setHours(23, 59, 59, 999);
+          return { start: weekStart, end: weekEnd };
+        }
+        case 'monthly':
+          return {
+            start: new Date(selected.getFullYear(), selected.getMonth(), 1, 0, 0, 0, 0),
+            end: new Date(selected.getFullYear(), selected.getMonth() + 1, 0, 23, 59, 59, 999)
+          };
+        default:
+          return { start: new Date('2000-01-01'), end: new Date('2999-12-31') };
+      }
+    };
 
   const getFilteredReceipts = () => {
     const { start, end } = getDateRange();
@@ -398,7 +437,7 @@ currentReceipts.forEach((receipt) => {
       <div className="dark::bg-white rounded-lg shadow-sm p-6">
         <h1 className="text-2xl font-bold dark::text-gray-900 mb-4">Daily Payment Collections</h1>
         
-        {/* Controls */}
+{/* Controls */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
           <div className="flex items-center space-x-2">
             <Calendar className="h-5 w-5 text-gray-500" />
@@ -407,6 +446,7 @@ currentReceipts.forEach((receipt) => {
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
               className="px-3 py-2 border dark::border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={viewMode === 'all'}
             />
           </div>
           
@@ -414,9 +454,10 @@ currentReceipts.forEach((receipt) => {
             <Filter className="h-5 w-5 text-gray-500" />
             <select
               value={viewMode}
-              onChange={(e) => setViewMode(e.target.value)}
+              onChange={(e) => setViewMode(e.target.value as any)}
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
+              <option value="all">All Payments</option>
               <option value="daily">Daily View</option>
               <option value="weekly">Weekly View</option>
               <option value="monthly">Monthly View</option>
