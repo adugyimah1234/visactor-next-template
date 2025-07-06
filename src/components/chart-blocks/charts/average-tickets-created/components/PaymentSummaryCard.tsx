@@ -26,14 +26,13 @@ import studentService from '@/services/students';
 // Import types and API function
 import { HiUserGroup, HiCurrencyDollar, HiCheckCircle, HiChartBar } from "react-icons/hi";
 
+type ReceiptType = "registration" | "levy" | "textBooks" | "exerciseBooks" | "furniture" | "jersey" | "crest";
+
 interface ReceiptItem {
   id: number;
-  receipt_type: 'registration' | 'levy' | 'textBooks' | 'exerciseBooks' | 'furniture' | 'jersey_crest';
+  receipt_type: ReceiptType;
   amount: number;
-  student_id?: number;
-  category_name?: string;
 }
-
 
 interface Receipt {
   id: number;
@@ -72,24 +71,50 @@ const [students, setStudents] = useState<Student[]>([]);
 
 
 useEffect(() => {
+  setLoading(true);
+  const allowedTypes = [
+  "registration",
+  "levy",
+  "textBooks",
+  "exerciseBooks",
+  "furniture",
+  "jersey",
+  "crest"
+] as const;
+
+type ReceiptType = typeof allowedTypes[number];
+
+const normalizeReceiptItems = (items: any[]): ReceiptItem[] =>
+  items
+    .filter(item => allowedTypes.includes(item.receipt_type))
+    .map(item => ({
+      ...item,
+      receipt_type: item.receipt_type as ReceiptType
+    }));
+
   const fetchData = async () => {
-    try {
-      const [receiptData, categoryData, studentData] = await Promise.all([
-        getReceipts(),
-        getAllCategories(),
-        studentService.getAll()
-      ]);
-      setReceipts(receiptData);
-      setCategories(categoryData);
-      setStudents(studentData);
-    } catch (err) {
-      console.error('Failed to fetch data:', err);
-      setError('Failed to load payment or category data');
-      setReceipts([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    const [receiptData, categoryData, studentData] = await Promise.all([
+      getReceipts(),
+      getAllCategories(),
+      studentService.getAll()
+    ]);
+    setReceipts(
+      receiptData.map((receipt: any) => ({
+        ...receipt,
+        receipt_items: normalizeReceiptItems(receipt.receipt_items)
+      }))
+    );
+    setCategories(categoryData);
+    setStudents(studentData);
+  } catch (err) {
+    console.error('Failed to fetch data:', err);
+    setError('Failed to load payment or category data');
+    setReceipts([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   fetchData();
 }, []);

@@ -111,7 +111,13 @@ useEffect(() => {
     const fetchYear = async () => {
       try {
         const yearData = await getAllAcademicYear();
-        setAcademicYears(yearData);
+                setAcademicYears(
+          yearData.map((y: any) => ({
+            id: y.id,
+            name: y.name ?? y.year ?? String(y.id), // fallback if no name
+            year: y.year
+          }))
+        );
   
         // Set the most recent year as current (adjust logic as needed)
         if (yearData && yearData.length > 0) {
@@ -329,6 +335,10 @@ const handleSinglePromote = async (applicant: RegistrationData) => {
     const refreshedApplicants = await registrationService.getAll();
     setApplicants(refreshedApplicants);
     return;
+  }
+
+  if(scores === 0) {
+    toast.warning(`${applicant.first_name} scores was not entered!!`)
   }
 
   // ✅ Passed, now ensure class and school are set

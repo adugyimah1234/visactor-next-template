@@ -53,6 +53,8 @@ const [academicYear, setAcademicYear] = useState('');
       level: 1, // or get this from another input if applicable
       school_id: newClass.school === 'primary' ? 1 : 2, // example mapping
       slots: newClass.capacity,
+      capacity: newClass.capacity,
+      students_count: 0
     });
     setClasses(prev => [...prev, {
       ...newClass,
@@ -167,6 +169,8 @@ useEffect(() => {
           level: 1,
           school_id: school === 'primary' ? 1 : 2,
           slots: payload.capacity,
+          capacity: payload.capacity,
+          students_count: 0
         });
 
         setClasses(prev =>
@@ -182,6 +186,8 @@ useEffect(() => {
           level: 1,
           school_id: school === 'primary' ? 1 : 2,
           slots: payload.capacity,
+          capacity: payload.capacity,
+          students_count: 0
         });
 
         setClasses(prev => [

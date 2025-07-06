@@ -39,10 +39,13 @@ export interface User extends BaseUser {
 /**
  * Registration payload type
  */
-export interface RegisterPayload {
-  username: string;
+interface RegisterPayload {
+  full_name: string;
+  email: string;
   password: string;
-  name: string;
+  username: string;
+  role: string;
+  school_id: number;
 }
 
 /**

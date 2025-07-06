@@ -26,18 +26,10 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { createCategory, getAllCategories, updateCategory } from '@/services/categories';
+import { createCategory, getAllCategories, updateCategory, Category } from '@/services/categories';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-
-interface Category {
-  id: string;
-  name: string;
-  description: string;
-  type: 'fee' | 'class' | 'student';
-  isActive: boolean;
-}
 
 const categoryFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -92,20 +84,29 @@ export default function CategorySettings() {
   
     const onSubmit = async (values: CategoryFormValues) => {
       try {
+        // Transform fees to amount for API compatibility
+        const apiData = {
+          name: values.name,
+          code: values.code,
+          description: values.description,
+          amount: values.fees, // Transform fees to amount
+          status: values.status
+        };
+        
         if (editingCategory) {
-          await updateCategory(editingCategory.id, values);
+          await updateCategory(Number(editingCategory.id), apiData);
           toast({
             title: "Success",
             description: "Category updated successfully"
           });
         } else {
-          await createCategory(values);
+          await createCategory(apiData);
           toast({
             title: "Success",
             description: "Category created successfully"
           });
         }
-        setIsAddingCategory(false);
+        setIsDialogOpen(false);
         setEditingCategory(null);
         form.reset();
         fetchCategories();
@@ -117,6 +118,18 @@ export default function CategorySettings() {
         });
       }
     };
+
+  const handleCategoryEdit = (category: Category) => {
+    setEditingCategory(category);
+    form.reset({
+      name: category.name,
+      code: category.code,
+      description: category.description,
+      fees: category.amount || 0,
+      status: category.status
+    });
+    setIsDialogOpen(true);
+  };
 
   return (
     <Card>
@@ -195,16 +208,16 @@ export default function CategorySettings() {
                   <TableCell>{category.description}</TableCell>
                   <TableCell>
                     <Badge variant="secondary">
-                      {category.type.charAt(0).toUpperCase() + category.type.slice(1)}
+                      {category.code}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={category.isActive ? 'default' : 'secondary'}>
-                      {category.isActive ? 'Active' : 'Inactive'}
+                    <Badge variant={category.status === 'active' ? 'default' : 'secondary'}>
+                      {category.status === 'active' ? 'Active' : 'Inactive'}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right space-x-2">
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="icon" onClick={() => handleCategoryEdit(category)}>
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="icon" className="text-destructive">

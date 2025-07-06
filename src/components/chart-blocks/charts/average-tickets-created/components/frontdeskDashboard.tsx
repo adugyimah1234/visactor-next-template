@@ -56,7 +56,11 @@ const FrontDeskDashboard: React.FC = () => {
   }, []);
 
   if (loading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-lg font-medium text-gray-600">Loading...</div>
+      </div>
+    );
   }
 
   if (error) {

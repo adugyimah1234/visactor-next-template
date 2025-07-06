@@ -168,12 +168,12 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label })
 
 // Main Dashboard Component
 export default function ProfessionalDashboard() {
-  const [timeRange, setTimeRange] = useState('7d');
+  const [timeRange, setTimeRange] = useState('360d');
   const [stats, setStats] = useState<RegistrationStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-    const { user } = useAuth();
-    const [roleName, setRoleName] = useState('');
+  const { user } = useAuth();
+  const [roleName, setRoleName] = useState('');
 
 useEffect(() => {
   const loadRole = async () => {
@@ -192,17 +192,28 @@ const isAdmin = roleName === 'admin';
     const end = new Date();
     const start = new Date();
     
-    switch (range) {
-      case '7d':
-        start.setDate(end.getDate() - 7);
-        break;
-      case '30d':
-        start.setDate(end.getDate() - 30);
-        break;
-      case '90d':
-        start.setDate(end.getDate() - 90);
-        break;
-    }
+  switch (range) {
+    case 'today':
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+      break;
+    case '7d':
+      start.setDate(end.getDate() - 7);
+      break;
+    case '30d':
+      start.setDate(end.getDate() - 30);
+      break;
+    case '90d':
+      start.setDate(end.getDate() - 90);
+      break;
+    case '360d':
+      start.setDate(end.getDate() - 360);
+      break;
+    case 'all':
+      // Set to a very early date to include all records
+      start.setFullYear(2000, 0, 1);
+      break;
+  }
     
     return { start: start.toISOString(), end: end.toISOString() };
   };
@@ -320,9 +331,12 @@ const isAdmin = roleName === 'admin';
               onChange={(e) => setTimeRange(e.target.value)}
               className=" border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="7d">Last 7 days</option>
-              <option value="30d">Last 30 days</option>
-              <option value="90d">Last 90 days</option>
+                <option value="today">Today</option>
+  <option value="7d">Last 7 days</option>
+  <option value="30d">Last 30 days</option>
+  <option value="90d">Last 90 days</option>
+  <option value="360d">Last 12 months</option>
+  <option value="all">All</option>
             </select>
           </div>
         </div>

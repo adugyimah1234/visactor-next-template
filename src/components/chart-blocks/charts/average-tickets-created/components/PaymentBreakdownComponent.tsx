@@ -116,7 +116,7 @@ const PaymentBreakdownComponent: React.FC = () => {
 
         const categoryMap: Record<string, { studentIds: number[] }> = {};
 
-        students.forEach(student => {
+        students.forEach((student: Student) => {
           const category = categoryIdToName[student.category_id] || 'Unknown';
           if (!categoryMap[category]) {
             categoryMap[category] = { studentIds: [] };

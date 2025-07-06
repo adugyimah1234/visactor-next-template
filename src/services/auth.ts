@@ -10,13 +10,13 @@ interface LoginPayload {
   password: string;
 }
 
-interface RegisterPayload {
+export interface RegisterPayload {
   full_name: string;
   email: string;
   password: string;
   username: string;
   role: string;
-  school_id: number;
+  school_id: number | null;
 }
 
 export const login = async (username: string, password: string) => {
@@ -46,4 +46,15 @@ export const logout = async () => {
     // Redirect to login page or update authentication state
     window.location.href = '/login'; // Or use your router's navigation
   }
+};
+
+interface ChangePasswordPayload {
+  username: string;
+  currentPassword: string;
+  newPassword: string;
+}
+
+export const changePassword = async (payload: ChangePasswordPayload) => {
+  const response = await api.post('/auth/change-password', payload);
+  return response.data; // { message }
 };

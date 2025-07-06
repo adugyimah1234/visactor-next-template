@@ -11,6 +11,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Switch } from "@/components/ui/switch";
 import { Loader2, Shield } from 'lucide-react';
 import { toast } from "sonner";
+import { useAuth } from '@/contexts/AuthContext';
+import { changePassword } from '@/services/auth';
 
 const passwordFormSchema = z.object({
   currentPassword: z.string().min(8, "Password must be at least 8 characters"),
@@ -24,6 +26,7 @@ const passwordFormSchema = z.object({
 export default function SecuritySettings() {
   const [isTwoFactorEnabled, setIsTwoFactorEnabled] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const { user } = useAuth();
 
   const form = useForm<z.infer<typeof passwordFormSchema>>({
     resolver: zodResolver(passwordFormSchema),
@@ -34,16 +37,24 @@ export default function SecuritySettings() {
     },
   });
 
-  async function onSubmit(_data: z.infer<typeof passwordFormSchema>) {
+  async function onSubmit(data: z.infer<typeof passwordFormSchema>) {
+    if (!user?.username) {
+      toast.error("User information not available");
+      return;
+    }
+
     try {
       setIsUpdating(true);
-      // API call to change password would go here
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      await changePassword({
+        username: user.username,
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword
+      });
       toast.success("Password changed successfully");
       form.reset();
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
-      toast.error("Failed to change password");
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || "Failed to change password";
+      toast.error(errorMessage);
     } finally {
       setIsUpdating(false);
     }

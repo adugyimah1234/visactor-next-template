@@ -61,4 +61,7 @@ const studentService = {
   },
 };
 
+// Named export for getStudents
+export const getStudents = studentService.getAll;
+
 export default studentService;

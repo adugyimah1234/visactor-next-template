@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 import Container from "../container";
 import { ThemeToggle } from "../theme-toggle";
-import { Bell, Search, Menu, User, ChevronDown, LogOut, Settings, HelpCircle } from "lucide-react";
+import { Bell, Search, Menu, User, ChevronDown, LogOut, Settings, HelpCircle, KeyRound } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth"; // Import your useAuth hook
 import Image from "next/image"; // Import Image for profile picture
 import { useRouter } from 'next/navigation'; // Replace react-router-dom import
@@ -192,6 +192,18 @@ export default function TopNav({ title }: { title: string }) {
                       <Settings size={16} />
                     )}
                     <span>Settings</span>
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => {
+                      router.push('/change-password');
+                      setIsUserMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-accent flex items-center gap-2"
+                  >
+                    <KeyRound size={16} />
+                    <span>Change Password</span>
                   </button>
                 </li>
                 <li>

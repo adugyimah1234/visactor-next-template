@@ -3,20 +3,16 @@
 'use client';
 import { useState } from 'react';
 import { register } from '@/services/auth';
-import { RegisterPayload } from '@/types/user';
+import { RegisterPayload } from '@/services/auth';
 
-interface CreateUserPayload {
-  full_name: string;
-  email: string;
-  password: string;
-  role: string;
-  school_id: number | null;
-}
+
+
 
 const CreateUserPage = () => {
-  const [formData, setFormData] = useState<CreateUserPayload>({
+  const [formData, setFormData] = useState<RegisterPayload>({
     full_name: '',
     email: '',
+    username: '',
     password: '',
     role: '',
     school_id: null,
@@ -37,15 +33,18 @@ const CreateUserPage = () => {
     try {
       // Create a RegisterPayload from the form data
       const registerPayload: RegisterPayload = {
-        name: formData.full_name,
+        full_name: formData.full_name,
         email: formData.email,
-        password: formData.password
+        username: formData.username,
+        password: formData.password,
+        role: formData.role,
+        school_id: formData.school_id
       };
 
       const response = await register(registerPayload);
       setMessage(response);
       // Optionally reset the form after successful creation
-      setFormData({ full_name: '', email: '', password: '', role: '', school_id: null });
+      setFormData({ full_name: '', email: '', username: '', password: '', role: '', school_id: null });
     } catch (err: any) {
       setError(err.message || 'Could not create user');
     }
@@ -80,9 +79,8 @@ const CreateUserPage = () => {
           </select>
         </div>
         <div>
-          <label htmlFor="school_id" className="block text-sm font-medium text-gray-700">School ID (if applicable)</label>
+          <label htmlFor="school_id" className="block text-sm font-medium text-gray-700">School ID</label>
           <input type="number" id="school_id" name="school_id" value={formData.school_id || ''} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-          <p className="text-xs text-gray-500">Leave blank if not applicable.</p>
         </div>
         <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Create User</button>
       </form>

@@ -112,7 +112,12 @@ const onSubmit = async (data: CreateStudentPayload) => {
         setStudents(studentsData);
         setCategories(catData);
         setClasses(classData);
-        setAcademicYears(yearData);
+        // Transform academicYear to NamedItem format
+        const transformedYearData = yearData.map(year => ({
+          id: year.id,
+          name: year.year
+        }));
+        setAcademicYears(transformedYearData);
         setSchools(schoolData);
       } catch (err: any) {
         console.error(err);
@@ -210,7 +215,12 @@ await studentService.create({
     setStudents(studentsData);
     setCategories(catData);
     setClasses(classData);
-    setAcademicYears(yearData);
+    // Transform academicYear to NamedItem format for refresh too
+    const transformedYearData = yearData.map(year => ({
+      id: year.id,
+      name: year.year
+    }));
+    setAcademicYears(transformedYearData);
     setSchools(schoolData);
     toast.success('Data refreshed');
   } catch (err: any) {
@@ -294,11 +304,11 @@ return (
 
       <select {...register("class_id", { required: true })} className="input">
         <option value="">Select Class</option>
-        {classes.map(cls => (
-          <option key={cls.id} value={cls.id}>
-            {cls.name} ({schools.find(s => s.id === cls.school_id)?.name})
-          </option>
-        ))}
+{classes.map(cls => (
+  <option key={cls.id} value={cls.id}>
+    {cls.name} ({'school_id' in cls ? schools.find(s => s.id === (cls as any).school_id)?.name : ''})
+  </option>
+))}
       </select>
 
       <select {...register("category_id", { required: true })} className="input">
@@ -425,7 +435,7 @@ return (
             >
               Export to Excel
             </Button>
-            <input label="excel" type="file" accept=".xlsx, .xls" onChange={handleExcelUpload} />
+            <input type="file" accept=".xlsx, .xls" onChange={handleExcelUpload} aria-label="Upload Excel file" />
             <Button variant="outline">
               <Upload className="w-4 h-4 mr-2" /> Upload Excel
             </Button>

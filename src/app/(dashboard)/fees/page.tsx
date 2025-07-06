@@ -211,7 +211,6 @@ export default function FeesPage() {
                       Create a new invoice for a student. Add items to the invoice.
                     </DialogDescription>
                   </DialogHeader>
-                  
                   <CreateInvoiceForm 
                     onSuccess={handleNewInvoiceCreated}
                     onCancel={() => setShowNewInvoiceDialog(false)}
@@ -261,7 +260,7 @@ export default function FeesPage() {
                       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
                   ) : (
-                    <InvoicesPage onCreateInvoice={() => setShowNewInvoiceDialog(true)} />
+                    <InvoicesPage  />
                   )}
                 </CardContent>
               </Card>
@@ -298,7 +297,7 @@ export default function FeesPage() {
         </div>
       </div>
       {showNewInvoiceDialog && (
-        <InvoiceForm onCreateInvoice={handleNewInvoiceCreated} />
+        <CreateInvoiceForm onSuccess={handleNewInvoiceCreated} onCancel={() => setShowNewInvoiceDialog(false)} />
       )}
     </div>
   );

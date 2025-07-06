@@ -6,6 +6,7 @@ export interface User {
   id: number;
   full_name: string;
   username: string;
+  email: string; // Added email field
   phone_number?: string;
   role_id: number;
   school_id?: number | null;
@@ -18,7 +19,7 @@ export interface UpdateUserPayload {
   full_name?: string;
   phone_number?: string;
   username?: string;
-  
+  email?: string; // Added email field
   password?: string;
   role_id?: number;
   status?: 'active' | 'inactive';

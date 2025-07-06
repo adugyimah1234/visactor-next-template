@@ -83,3 +83,20 @@ export enum ErrorCode {
   DATABASE_ERROR = 'DATABASE_ERROR',
 }
 
+/**
+ * Validation error class
+ */
+export class ValidationError extends Error {
+  public readonly code: string = ErrorCode.VALIDATION_ERROR;
+  public readonly status: number = HttpStatus.UNPROCESSABLE_ENTITY;
+  
+  constructor(
+    message: string,
+    public readonly field?: string,
+    public readonly details?: Record<string, any>
+  ) {
+    super(message);
+    this.name = 'ValidationError';
+  }
+}
+

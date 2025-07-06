@@ -62,7 +62,7 @@ import { useToast } from '@/hooks/use-toast';
 import { updateCategory, createCategory, deleteCategory, getAllCategories, Category } from '@/services/categories';
 import classService from '@/services/class';
 import schoolService from '@/services/schools';
-import { Class } from '@/types/exam';
+import { ClassData } from '@/services/class';
 
 // Update the schema definition
 // Define the Zod schema for form validation
@@ -102,11 +102,11 @@ export default function SchoolManagement() {
   const [editingSchool, setEditingSchool] = useState<SchoolType | null>(null);
   const { toast } = useToast();
 
-  const [classes, setClasses] = useState<Class[]>([]); // Initialize as empty array
+  const [classes, setClasses] = useState<ClassData[]>([]); // Initialize as empty array
   const [categories, setCategories] = useState<Category[]>([]); // Initialize as empty array
   const [isAddingClass, setIsAddingClass] = useState(false);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
-  const [editingClass, setEditingClass] = useState<Class | null>(null);
+  const [editingClass, setEditingClass] = useState<ClassData | null>(null);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
   const fetchClasses = async () => {
@@ -279,13 +279,25 @@ export default function SchoolManagement() {
   const handleClassSubmit: SubmitHandler<ClassFormValues> = async (values) => {
     try {
       if (editingClass) {
-        await schoolService.update(editingClass.id);
+        const updateData = {
+          ...editingClass,
+          ...values,
+          slots: values.capacity || editingClass.slots,
+          students_count: editingClass.students_count || 0
+        };
+        await classService.update(updateData);
         toast({
           title: "Success",
           description: "Class updated successfully"
         });
       } else {
-        await schoolService.create(values);
+        const createData = {
+          ...values,
+          slots: values.capacity || 0,
+          capacity: values.capacity || 0,
+          students_count: 0
+        };
+        await classService.create(createData);
         toast({
           title: "Success",
           description: "Class created successfully"
@@ -306,14 +318,23 @@ export default function SchoolManagement() {
 
    const handleCategorySubmit: SubmitHandler<CategoryFormValues> = async (values) => {
     try {
+      // Transform fees to amount for API compatibility
+      const apiData = {
+        name: values.name,
+        code: values.code,
+        description: values.description,
+        amount: values.fees, // Transform fees to amount
+        status: values.status
+      };
+
       if (editingCategory) {
-        await updateCategory(editingCategory.id, values);
+        await updateCategory(editingCategory.id, apiData);
         toast({
           title: "Success",
           description: "Category updated successfully"
         });
       } else {
-        await createCategory(values);
+        await createCategory(apiData);
         toast({
           title: "Success",
           description: "Category created successfully"
@@ -366,7 +387,7 @@ export default function SchoolManagement() {
     }
   };
 
-  const handleClassEdit = (cls: Class) => {
+  const handleClassEdit = (cls: ClassData) => {
     setEditingClass(cls);
     classForm.reset({
       name: cls.name,
@@ -383,7 +404,7 @@ export default function SchoolManagement() {
       name: category.name,
       code: category.code,
       description: category.description,
-      fees: category.fees,
+      fees: category.amount || 0,
       status: category.status
     });
     setIsAddingCategory(true);

@@ -56,11 +56,11 @@ export default function StudentSelect({ value, onChange }: Props) {
             <CommandInput placeholder="Search student..." />
             <CommandEmpty>No student found.</CommandEmpty>
             <CommandGroup>
-              {students.map((student) => (
+              {students.filter(student => student.id !== undefined).map((student) => (
                 <CommandItem
                   key={student.id}
-                  value={student.id.toString()}
-                  onSelect={(value) => {
+                  value={student.id!.toString()}
+                  onSelect={() => {
                     onChange(Number(student.id));
                     setOpen(false);
                   }}
@@ -73,8 +73,7 @@ export default function StudentSelect({ value, onChange }: Props) {
                         : "opacity-0"
                     )}
                   />
-                  {student.first_name} {student.middle_name || ""}{" "}
-                  {student.last_name}
+                  {student.first_name} {student.middle_name || ""} {student.last_name}
                 </CommandItem>
               ))}
             </CommandGroup>
