@@ -38,18 +38,22 @@ export default function ResultsPage() {
   const [applicants, setApplicants] = useState<RegistrationData[]>([]);
   const [schools, setSchools] = useState<School[]>([]);
   const [classes, setClasses] = useState<ClassData[]>([]);
-    const [allStudents, setAllStudents] = useState<any[]>([]);
+  const [allStudents, setAllStudents] = useState<any[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
-    const [academicYears, setAcademicYears] = useState<NamedItem[]>([]);
+  const [academicYears, setAcademicYears] = useState<NamedItem[]>([]);
   const [userRole, setUserRole] = useState<string>('');
   const [passMark, setPassMark] = useState<number>(50);
   const [classSlots, setClassSlots] = useState<Record<number, number>>({});
   const { token, user } = useAuth();
-const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
-const [selectedClassId, setSelectedClassId] = useState<number | ''>('');
-const [selectedAppliedClass, setSelectedAppliedClass] = useState<string>('');
-const [selectedCategory, setSelectedCategory] = useState<string>('');
-const [selectedCategoryName, setSelectedCategoryName] = useState('');
+  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState<number | ''>('');
+  const [selectedAppliedClass, setSelectedAppliedClass] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedCategoryName, setSelectedCategoryName] = useState('');
+  // Loading state for promote button
+  const [promotingId, setPromotingId] = useState<number | null>(null);
+  // Search bar state
+  const [searchName, setSearchName] = useState('');
 
   // Check if user is admin based on role name from roles table
   const isAdmin = userRole.toLowerCase() === 'admin' || userRole.toLowerCase() === 'administrator';
@@ -96,7 +100,7 @@ const [selectedCategoryName, setSelectedCategoryName] = useState('');
 useEffect(() => {
   const fetchAllStudents = async () => {
     try {
-      const students = await studentService.getAll();
+      const students = await registrationService.getAll();
       setAllStudents(students);
     } catch (error) {
       console.error('Error fetching all students:', error);
@@ -326,6 +330,7 @@ if (applicant.class_id && applicant.school_id) {
 };
 
 const handleSinglePromote = async (applicant: RegistrationData) => {
+  setPromotingId(applicant.id);
   const hasPassed = (applicant.scores ?? 0) >= passMark;
 
   // ❌ If failed, reject and stop here (no need to check class or school)
@@ -334,16 +339,18 @@ const handleSinglePromote = async (applicant: RegistrationData) => {
     toast.warning(`${applicant.first_name} did not meet the pass mark and has been rejected.`);
     const refreshedApplicants = await registrationService.getAll();
     setApplicants(refreshedApplicants);
+    setPromotingId(null);
     return;
   }
 
-  if(scores === 0) {
+  if(applicant.scores === 0) {
     toast.warning(`${applicant.first_name} scores was not entered!!`)
   }
 
   // ✅ Passed, now ensure class and school are set
   if (!applicant.class_id || !applicant.school_id) {
     toast.warning(`Please assign a class and school for ${applicant.first_name} first.`);
+    setPromotingId(null);
     return;
   }
 
@@ -354,6 +361,7 @@ const handleSinglePromote = async (applicant: RegistrationData) => {
 
   if (selectedClass && selectedClass.slots !== undefined && currentCount >= selectedClass.slots) {
     toast.error(`Class "${selectedClass.name}" is full (${selectedClass.slots} slots). Cannot promote ${applicant.first_name}.`);
+    setPromotingId(null);
     return;
   }
 
@@ -395,6 +403,7 @@ const handleSinglePromote = async (applicant: RegistrationData) => {
       console.error(`Promotion error for ${applicant.first_name}:`, err);
     }
   }
+  setPromotingId(null);
 };
 
 
@@ -412,14 +421,19 @@ const pendingApplicants = useMemo(() => {
       const categoryName = categories.find(c => Number(c.id) === Number(a.category))?.name;
       const matchesCategory = categoryName && categoryOrder.includes(categoryName);
 
-      return matchesStatus && isPaymentValid && matchesClass && matchesAppliedClass && matchesCategory;
+      // Search by name
+      const fullName = `${a.first_name} ${a.middle_name ?? ''} ${a.last_name}`.toLowerCase();
+      const searchTerm = searchName.trim().toLowerCase();
+      const matchesSearch = !searchTerm || fullName.includes(searchTerm);
+
+      return matchesStatus && isPaymentValid && matchesClass && matchesAppliedClass && matchesCategory && matchesSearch;
     })
     .sort((a, b) => {
       const aName = categories.find(c => Number(c.id) === Number(a.category))?.name || '';
       const bName = categories.find(c => Number(c.id) === Number(b.category))?.name || '';
       return categoryOrder.indexOf(aName) - categoryOrder.indexOf(bName);
     });
-}, [applicants, selectedClassId, selectedAppliedClass, categories, passMark]);
+}, [applicants, selectedClassId, selectedAppliedClass, categories, passMark, searchName]);
 
 
 const uniqueAppliedClasses = Array.from(
@@ -483,6 +497,14 @@ const handleSaveScores = async () => {
       <h1 className="text-2xl font-bold">Applicant Result Management</h1>
 
       <div className="flex items-center gap-4">
+        {/* Search bar for name */}
+        <Input
+          type="text"
+          placeholder="Search by name..."
+          value={searchName}
+          onChange={e => setSearchName(e.target.value)}
+          className="w-64"
+        />
         {/* Only show pass mark input to admins */}
         {isAdmin && (
           <>
@@ -536,99 +558,103 @@ const handleSaveScores = async () => {
       <Table>
         <TableHeader>
           <TableRow>
-          <TableHead>Category</TableHead>
+            <TableHead>#</TableHead>
+            <TableHead>Category</TableHead>
             <TableHead>Name</TableHead>
             <TableHead>Class Applied For</TableHead>
             <TableHead>Score</TableHead>
-{isAdmin && <TableHead>School</TableHead>}
-{isAdmin && <TableHead>Class</TableHead>}
-{isAdmin && <TableHead>Status</TableHead>}
-{isAdmin && <TableHead>Action</TableHead>}
+            {isAdmin && <TableHead>School</TableHead>}
+            {isAdmin && <TableHead>Class</TableHead>}
+            {isAdmin && <TableHead>Status</TableHead>}
+            {isAdmin && <TableHead>Action</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {pendingApplicants.map((applicant) => {
+          {pendingApplicants.map((applicant, idx) => {
             // Use the original applicant index for state updates
             const originalIndex = applicants.findIndex(a => a.id === applicant.id);
             const passed = (applicant.scores ?? 0) >= passMark;
 
             return (
               <TableRow key={applicant.id}>
-              <TableCell>
-              {categories.find(c => Number(c.id) === Number(applicant.category))?.name || 'Unknown'}
-</TableCell>
-
-<TableCell>{applicant.first_name} {applicant.middle_name} {applicant.last_name}</TableCell>
+                <TableCell>{idx + 1}</TableCell>
+                <TableCell>
+                  {categories.find(c => Number(c.id) === Number(applicant.category))?.name || 'Unknown'}
+                </TableCell>
+                <TableCell>{applicant.first_name} {applicant.middle_name} {applicant.last_name}</TableCell>
                 <TableCell>
                   {applicant.class_applying_for || 'N/A'}
                 </TableCell>
                 <TableCell>
-<Input
-  type="number"
-  value={applicant.scores === undefined || applicant.scores === null ? '' : applicant.scores}
-  onChange={(e) => {
-    const updated = [...applicants];
-    updated[originalIndex].scores = parseFloat(e.target.value);
-    setApplicants(updated); // update UI instantly
-  }}
-  className="w-20"
-  placeholder="0"
-/>
+                  <Input
+                    type="number"
+                    value={applicant.scores === undefined || applicant.scores === null ? '' : applicant.scores}
+                    onChange={(e) => {
+                      const updated = [...applicants];
+                      updated[originalIndex].scores = parseFloat(e.target.value);
+                      setApplicants(updated); // update UI instantly
+                    }}
+                    className="w-20"
+                    placeholder="0"
+                  />
                 </TableCell>
                 {isAdmin && (
                   <TableCell>
-                  <select
-                    title="Select School"
-                    aria-label="Select School"
-                    className="border p-1 rounded"
-                    value={applicant.school_id ?? ''}
-                    onChange={(e) => handleSchoolChange(originalIndex, parseInt(e.target.value))}
-                  >
-                    <option value="">--Select--</option>
-                    {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
-                    </TableCell>
-                  )}
-                  {isAdmin && (
-                    <TableCell>
                     <select
-                    title="Select Class"
-                    aria-label="Select Class"
-                    value={applicant.class_id ?? ''}
-                    onChange={(e) => handleClassSelect(originalIndex, parseInt(e.target.value))}
-                    className="border p-1 rounded w-full"
+                      title="Select School"
+                      aria-label="Select School"
+                      className="border p-1 rounded"
+                      value={applicant.school_id ?? ''}
+                      onChange={(e) => handleSchoolChange(originalIndex, parseInt(e.target.value))}
                     >
-                    <option value="">Select Class</option>
-                    {classes.map((cls) => (
-                      <option key={cls.id} value={cls.id}>
-                        {cls.name} ({classSlots[cls.id] ?? 0}/{cls.slots})
+                      <option value="">--Select--</option>
+                      {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  </TableCell>
+                )}
+                {isAdmin && (
+                  <TableCell>
+                    <select
+                      title="Select Class"
+                      aria-label="Select Class"
+                      value={applicant.class_id ?? ''}
+                      onChange={(e) => handleClassSelect(originalIndex, parseInt(e.target.value))}
+                      className="border p-1 rounded w-full"
+                    >
+                      <option value="">Select Class</option>
+                      {classes.map((cls) => (
+                        <option key={cls.id} value={cls.id}>
+                          {cls.name} ({classSlots[cls.id] ?? 0}/{cls.slots})
                         </option>
                       ))}
-                      </select>
-                      </TableCell>
+                    </select>
+                  </TableCell>
+                )}
+                {isAdmin && (
+                  <TableCell>
+                    {passed ? (
+                      <span className="text-green-600 font-bold">Passed</span>
+                    ) : (
+                      <span className="text-red-600">Failed</span>
                     )}
-                    {isAdmin && (
-                      <TableCell>
-                      {passed ? (
-                        <span className="text-green-600 font-bold">Passed</span>
-                      ) : (
-                        <span className="text-red-600">Failed</span>
-                      )}
-                      </TableCell>
-                    )}
-                    {isAdmin && (
-                      <TableCell>
-                  {applicant.status === 'pending' && (
-                    <Button
-                      onClick={() => handleSinglePromote(applicant)}
-                      size="sm"
-                      className="bg-green-600 text-white"
-                    >
-                      Promote
+                  </TableCell>
+                )}
+                {isAdmin && (
+                  <TableCell>
+                    {applicant.status === 'pending' && (
+                      <Button
+                        onClick={async () => {
+                          await handleSinglePromote(applicant);
+                        }}
+                        size="sm"
+                        className="bg-green-600 text-white"
+                        disabled={promotingId === applicant.id}
+                      >
+                        {promotingId === applicant.id ? 'Promoting...' : 'Promote'}
                       </Button>
                     )}
-                    </TableCell>
-                  )}
+                  </TableCell>
+                )}
               </TableRow>
             );
           })}

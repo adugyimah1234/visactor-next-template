@@ -30,6 +30,7 @@ import { getReceipts, getPrintableReceipt } from "@/services/receipt";
 import studentService from "@/services/students";
 import { Receipt } from "@/types/receipt";
 import { Student } from "@/types/student";
+import type { RegistrationData } from "@/services/registrations";
 
 export default function PaymentHistoryPage() {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
@@ -113,27 +114,38 @@ export default function PaymentHistoryPage() {
     }
   };
 
+  // If you have applicants, fetch and use them for search
+  // For now, let's add a local applicants state and fetch logic
+  const [applicants, setApplicants] = useState<RegistrationData[]>([]);
+  useEffect(() => {
+    // Only fetch if not already fetched
+    if (applicants.length === 0) {
+      import('@/services/registrations').then(mod => {
+        mod.default.getAll().then(setApplicants).catch(() => {});
+      });
+    }
+  }, [applicants.length]);
+
   const filteredReceipts = receipts.filter((receipt) => {
     const searchTerm = search.toLowerCase().trim();
 
     // Try to find student
     const student = realStudents.find((s) => Number(s.id) === Number(receipt.student_id));
-    // Try to find applicant (if you have an applicants array)
-    // const applicant = applicants.find((a) => Number(a.id) === Number(receipt.registration_id));
-    // If you have applicants, uncomment above and include in fullName below
+    // Try to find applicant
+    const applicant = applicants.find((a) => Number(a.id) === Number(receipt.registration_id));
 
     const studentName = student
       ? `${student.first_name} ${student.middle_name || ''} ${student.last_name}`.toLowerCase()
       : '';
-    // const applicantName = applicant
-    //   ? `${applicant.first_name} ${applicant.middle_name || ''} ${applicant.last_name}`.toLowerCase()
-    //   : '';
+    const applicantName = applicant
+      ? `${applicant.first_name} ${applicant.middle_name || ''} ${applicant.last_name}`.toLowerCase()
+      : '';
 
     const receiptId = `r-${receipt.id.toString().padStart(6, '0')}`;
 
     return (
       studentName.includes(searchTerm) ||
-      // applicantName.includes(searchTerm) || // Uncomment if you have applicants
+      applicantName.includes(searchTerm) ||
       receiptId.includes(searchTerm) ||
       receipt.id.toString().includes(searchTerm)
     );

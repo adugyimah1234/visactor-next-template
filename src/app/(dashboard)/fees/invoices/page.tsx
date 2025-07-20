@@ -236,15 +236,24 @@ const filteredReceipts = receipts.filter((receipt) => {
   const searchTerm = searchInput.toLowerCase().trim();
   if (!searchTerm) return true;
 
+  // Student name
   const student = realStudents.find((s) => Number(s.id) === Number(receipt.student_id));
   const studentName = student
     ? `${student.first_name} ${student.middle_name || ''} ${student.last_name}`.toLowerCase()
     : '';
 
+  // Applicant name
+  const applicant = applicants.find((a) => Number(a.id) === Number(receipt.registration_id));
+  const applicantName = applicant
+    ? `${applicant.first_name} ${applicant.middle_name || ''} ${applicant.last_name}`.toLowerCase()
+    : '';
+
+  // Receipt id
   const receiptId = `r-${receipt.id.toString().padStart(6, '0')}`;
 
   return (
     studentName.includes(searchTerm) ||
+    applicantName.includes(searchTerm) ||
     receiptId.includes(searchTerm) ||
     receipt.id.toString().includes(searchTerm)
   );
@@ -707,83 +716,92 @@ return (
   {/* === Payment Option === */}
   <div>
     <label className="block text-sm font-medium mb-1">Payment Options</label>
-{formData.receipt_type.map((opt, idx) => (
-  <div key={idx} className="flex items-center space-x-4 mb-2">
-    {/* ✅ Select using shadcn */}
-    <Select
-      value={opt.type}
-      onValueChange={(newType) => {
-        const newOptions = [...formData.receipt_type];
-        let fixedAmount = 0;
-        switch (newType) {
-          case "registration":
-            fixedAmount = 40;
-            break;
-          case "levy":
-            fixedAmount = 0; // handled in useEffect for SVC/CIV
-            break;
-          case "furniture":
-            fixedAmount = 100;
-            break;
-          case "jersey_crest":
-            fixedAmount = 120;
-            break;
-          default:
-            fixedAmount = 0;
-        }
-        newOptions[idx] = { type: newType, amount: fixedAmount };
-        const totalAmount = newOptions.reduce((sum, item) => sum + item.amount, 0);
-        setFormData({ ...formData, receipt_type: newOptions, amount: totalAmount });
-      }}
-    >
-      <SelectTrigger className="w-[200px]">
-        <SelectValue placeholder="Select type" />
-      </SelectTrigger>
-      <SelectContent>
-        {/* 2️⃣ Only show options NOT in paidTypes */}
-        {!isExistingStudent && !paidTypes.includes('registration') && (
-          <SelectItem value="registration">Registration</SelectItem>
-        )}
-        {!paidTypes.includes('levy') && (
-          <SelectItem value="levy">Levy</SelectItem>
-        )}
-        {!paidTypes.includes('furniture') && (
-          <SelectItem value="furniture">Furniture</SelectItem>
-        )}
-        {!paidTypes.includes('textBooks') && (
-          <SelectItem value="textBooks">Text Books</SelectItem>
-        )}
-        {!paidTypes.includes('exerciseBooks') && (
-          <SelectItem value="exerciseBooks">Exercise Books</SelectItem>
-        )}
-        {!paidTypes.includes('jersey') && (
-          <SelectItem value="jersey">Jersey</SelectItem>
-        )}
-        {!paidTypes.includes('crest') && (
-          <SelectItem value="crest">Crest</SelectItem>
-        )}
-      </SelectContent>
-    </Select>
+{formData.receipt_type.map((opt, idx) => {
+  // Prevent duplicate selection: get all selected types except current index
+  const selectedTypes = formData.receipt_type.map((item, i) => i !== idx ? item.type : null).filter(Boolean);
+  return (
+    <div key={idx} className="flex items-center space-x-4 mb-2">
+      {/* ✅ Select using shadcn */}
+      <Select
+        value={opt.type}
+        onValueChange={(newType) => {
+          // Prevent selecting a type already chosen elsewhere
+          if (selectedTypes.includes(newType)) {
+            toast.error("You cannot select the same payment type twice.");
+            return;
+          }
+          const newOptions = [...formData.receipt_type];
+          let fixedAmount = 0;
+          switch (newType) {
+            case "registration":
+              fixedAmount = 40;
+              break;
+            case "levy":
+              fixedAmount = 0; // handled in useEffect for SVC/CIV
+              break;
+            case "furniture":
+              fixedAmount = 100;
+              break;
+            case "jersey_crest":
+              fixedAmount = 120;
+              break;
+            default:
+              fixedAmount = 0;
+          }
+          newOptions[idx] = { type: newType, amount: fixedAmount };
+          const totalAmount = newOptions.reduce((sum, item) => sum + item.amount, 0);
+          setFormData({ ...formData, receipt_type: newOptions, amount: totalAmount });
+        }}
+      >
+        <SelectTrigger className="w-[200px]">
+          <SelectValue placeholder="Select type" />
+        </SelectTrigger>
+        <SelectContent>
+          {/* Only show options NOT in paidTypes and NOT already selected in other rows */}
+          {!isExistingStudent && !paidTypes.includes('registration') && !selectedTypes.includes('registration') && (
+            <SelectItem value="registration">Registration</SelectItem>
+          )}
+          {!paidTypes.includes('levy') && !selectedTypes.includes('levy') && (
+            <SelectItem value="levy">Levy</SelectItem>
+          )}
+          {!paidTypes.includes('furniture') && !selectedTypes.includes('furniture') && (
+            <SelectItem value="furniture">Furniture</SelectItem>
+          )}
+          {!paidTypes.includes('textBooks') && !selectedTypes.includes('textBooks') && (
+            <SelectItem value="textBooks">Text Books</SelectItem>
+          )}
+          {!paidTypes.includes('exerciseBooks') && !selectedTypes.includes('exerciseBooks') && (
+            <SelectItem value="exerciseBooks">Exercise Books</SelectItem>
+          )}
+          {!paidTypes.includes('jersey') && !selectedTypes.includes('jersey') && (
+            <SelectItem value="jersey">Jersey</SelectItem>
+          )}
+          {!paidTypes.includes('crest') && !selectedTypes.includes('crest') && (
+            <SelectItem value="crest">Crest</SelectItem>
+          )}
+        </SelectContent>
+      </Select>
 
-    {/* ✅ Show amount */}
-    <span className="font-medium text-gray-700">GHS {opt.amount}</span>
+      {/* ✅ Show amount */}
+      <span className="font-medium text-gray-700">GHS {opt.amount}</span>
 
-    {/* ✅ Remove option with icon button */}
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      onClick={() => {
-        const newOptions = [...formData.receipt_type];
-        newOptions.splice(idx, 1);
-        const totalAmount = newOptions.reduce((sum, item) => sum + item.amount, 0);
-        setFormData({ ...formData, receipt_type: newOptions, amount: totalAmount });
-      }}
-    >
-      <X className="w-4 h-4 text-red-600" />
-    </Button>
-  </div>
-))}
+      {/* ✅ Remove option with icon button */}
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={() => {
+          const newOptions = [...formData.receipt_type];
+          newOptions.splice(idx, 1);
+          const totalAmount = newOptions.reduce((sum, item) => sum + item.amount, 0);
+          setFormData({ ...formData, receipt_type: newOptions, amount: totalAmount });
+        }}
+      >
+        <X className="w-4 h-4 text-red-600" />
+      </Button>
+    </div>
+  );
+})}
 
 {/* ✅ Add option button with plus icon */}
 <Button
