@@ -252,21 +252,26 @@ const handlePromote = async () => {
   const errors: string[] = [];
 
 for (const applicant of updatedApplicants) {
-  const hasPassed = (applicant.scores ?? 0) >= passMark;
+  // Prevent promotion if score is default (0, empty, or not changed)
+  if (applicant.scores === undefined || applicant.scores === null || isNaN(applicant.scores) || applicant.scores === 0) {
+    toast.warning(`Cannot promote ${applicant.first_name}: Score not entered or is default.`);
+    continue;
+  }
 
+  const hasPassed = (applicant.scores ?? 0) >= passMark;
   const dob = applicant.date_of_birth 
     ? format(new Date(applicant.date_of_birth), 'yyyy-MM-dd') 
     : '';
 
   if (hasPassed) {
-if (applicant.class_id && applicant.school_id) {
-  const selectedClass = classes.find(c => c.id === applicant.class_id);
-  const currentSlotCount = classSlots[applicant.class_id] || 0;
+    if (applicant.class_id && applicant.school_id) {
+      const selectedClass = classes.find(c => c.id === applicant.class_id);
+      const currentSlotCount = classSlots[applicant.class_id] || 0;
 
-  if (selectedClass && selectedClass.slots !== undefined && currentSlotCount >= selectedClass.slots) {
-    toast.warning(`Class "${selectedClass.name}" is full. Skipping ${applicant.first_name}.`);
-    continue; // Skip if class is full
-  }
+      if (selectedClass && selectedClass.slots !== undefined && currentSlotCount >= selectedClass.slots) {
+        toast.warning(`Class "${selectedClass.name}" is full. Skipping ${applicant.first_name}.`);
+        continue; // Skip if class is full
+      }
       // ...existing code...
       const studentPayload = {
         first_name: applicant.first_name,
@@ -279,12 +284,11 @@ if (applicant.class_id && applicant.school_id) {
         scores: applicant.scores ?? 0,
         registration_date: format(new Date(applicant.registration_date ?? ''), 'yyyy-MM-dd'),
         category_id: Number(applicant.category),
-        class_id: applicant.class_id,
+        class_id: applicant.class_id as number,
         status: 'inactive',
         middle_name: applicant.middle_name ?? ''
       };
       // ...existing code...
-      
       setClassSlots(prev => ({
         ...prev,
         [applicant.class_id!]: (prev[applicant.class_id!] || 0) + 1,
@@ -330,7 +334,33 @@ if (applicant.class_id && applicant.school_id) {
 };
 
 const handleSinglePromote = async (applicant: RegistrationData) => {
+
   setPromotingId(applicant.id);
+  // Validate all required fields before promoting
+  const missingFields: string[] = [];
+  if (!applicant.first_name) missingFields.push('First Name');
+  if (!applicant.last_name) missingFields.push('Last Name');
+  if (!applicant.school_id) missingFields.push('School');
+  if (!applicant.class_id) missingFields.push('Class');
+  if (!applicant.category) missingFields.push('Category');
+  if (!applicant.gender) missingFields.push('Gender');
+  if (!applicant.date_of_birth) missingFields.push('Date of Birth');
+  if (!applicant.registration_date) missingFields.push('Registration Date');
+  if (applicant.scores === undefined || applicant.scores === null || isNaN(applicant.scores)) missingFields.push('Scores');
+
+  // Prevent promotion if score is default (0, empty, or not changed)
+  if (applicant.scores === 0) {
+    toast.warning(`Cannot promote ${applicant.first_name}: Score not entered or is default.`);
+    setPromotingId(null);
+    return;
+  }
+
+  if (missingFields.length > 0) {
+    toast.warning(`Please fill in all required fields for ${applicant.first_name}: ${missingFields.join(', ')}`);
+    setPromotingId(null);
+    return;
+  }
+
   const hasPassed = (applicant.scores ?? 0) >= passMark;
 
   // ❌ If failed, reject and stop here (no need to check class or school)
@@ -343,17 +373,7 @@ const handleSinglePromote = async (applicant: RegistrationData) => {
     return;
   }
 
-  if(applicant.scores === 0) {
-    toast.warning(`${applicant.first_name} scores was not entered!!`)
-  }
-
-  // ✅ Passed, now ensure class and school are set
-  if (!applicant.class_id || !applicant.school_id) {
-    toast.warning(`Please assign a class and school for ${applicant.first_name} first.`);
-    setPromotingId(null);
-    return;
-  }
-
+  // Validate class slots
   const selectedClass = classes.find((cls) => cls.id === applicant.class_id);
   const currentCount = applicants.filter(
     (a) => a.class_id === applicant.class_id && a.status === 'approved'
@@ -381,7 +401,7 @@ const handleSinglePromote = async (applicant: RegistrationData) => {
       scores: applicant.scores ?? 0,
       registration_date: format(new Date(applicant.registration_date ?? ''), 'yyyy-MM-dd'),
       category_id: Number(applicant.category),
-      class_id: applicant.class_id,
+      class_id: applicant.class_id as number,
       status: 'inactive',
       middle_name: applicant.middle_name ?? ''
     };
