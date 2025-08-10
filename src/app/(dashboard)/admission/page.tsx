@@ -258,6 +258,7 @@ const handlePrint = () => {
               <th>Gender</th>
               <th>Category</th>
               <th>School</th>
+              <th>Jersey Size</th>
             </tr>
           </thead>
           <tbody>
@@ -268,6 +269,7 @@ const handlePrint = () => {
                 <td>${s.gender}</td>
                 <td>${getNameById(categories, s.category_id)}</td>
                 <td>${getNameById(schools, s.school_id)}</td>
+                <td>${(s.jersey_size || "-")}</td>
               </tr>
             `).join('')}
           </tbody>
