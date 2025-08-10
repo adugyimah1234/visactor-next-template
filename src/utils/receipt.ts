@@ -97,7 +97,9 @@ export const formatReceiptForDisplay = (receipt: ReceiptWithDetails): Record<str
     formatted_receipt_number: formatReceiptNumber(receipt.id),
     formatted_date: formatReceiptDate(receipt.date_issued),
     formatted_amount: formatReceiptAmount(receipt.amount),
-    receipt_type_display: receipt.receipt_type.charAt(0).toUpperCase() + receipt.receipt_type.slice(1)
+    receipt_type_display: receipt.receipt_items && receipt.receipt_items.length > 0 
+      ? receipt.receipt_items[0].receipt_type.charAt(0).toUpperCase() + receipt.receipt_items[0].receipt_type.slice(1)
+      : 'N/A'
   };
 };
 

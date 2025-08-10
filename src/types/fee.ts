@@ -1,3 +1,5 @@
+import { type Receipt } from './receipt';
+
 /**
  * Fee-related type definitions for the school management system
  */
@@ -52,20 +54,7 @@ export interface PaymentWithDetails extends Payment {
 export type ReceiptType = FeeType;
 
 // Receipt record
-export interface Receipt {
-  id: number;
-  student_id: number;
-  payment_id?: number;
-  receipt_type: ReceiptType;
-  amount: number;
-  issued_by?: number;
-  date_issued: string;
-  venue?: string;
-  logo_url?: string;
-  exam_date?: string;
-  class_id?: number;
-  school_id?: number;
-}
+
 
 // Receipt with related information
 export interface ReceiptWithDetails extends Receipt {

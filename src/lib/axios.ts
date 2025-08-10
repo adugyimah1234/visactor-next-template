@@ -1,4 +1,5 @@
 import axios from 'axios';
+import axiosRetry from 'axios-retry';
 
 const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
     // const storedToken = localStorage.getItem('authToken');
@@ -9,6 +10,12 @@ const api = axios.create({
    headers: {
     ...(token && { Authorization: `Bearer ${token}` }),
   },
+});
+
+axiosRetry(api, {
+  retries: 3, // Number of retries
+  retryDelay: axiosRetry.exponentialDelay, // Exponential backoff
+  retryCondition: (error) => axiosRetry.isNetworkError(error) || axiosRetry.isRetryableError(error),
 });
 
 export default api;

@@ -68,6 +68,14 @@ const navigationItems: NavItem[] = [
     href: "/admission",
   },
   {
+    name: "Students",
+    icon: Users,
+    href: "/students",
+    children: [
+      { name: "Promote Students", href: "/students/promote", icon: GraduationCap },
+    ],
+  },
+  {
     name: "Fee Management",
     icon: CreditCard,
     href: "/fees",

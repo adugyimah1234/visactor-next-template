@@ -1,0 +1,9 @@
+import axios from 'axios';
+const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
+// const storedToken = localStorage.getItem('authToken');
+const api = axios.create({
+    baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.3-gec.com/api',
+    // withCredentials: true, // if you use cookies
+    headers: Object.assign({}, (token && { Authorization: `Bearer ${token}` })),
+});
+export default api;

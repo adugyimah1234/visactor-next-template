@@ -100,7 +100,7 @@ export default function ResultsPage() {
 useEffect(() => {
   const fetchAllStudents = async () => {
     try {
-      const students = await registrationService.getAll();
+      const students = await studentService.getAll();
       setAllStudents(students);
     } catch (error) {
       console.error('Error fetching all students:', error);
@@ -335,7 +335,7 @@ for (const applicant of updatedApplicants) {
 
 const handleSinglePromote = async (applicant: RegistrationData) => {
 
-  setPromotingId(applicant.id);
+  setPromotingId(applicant.id ?? null);
   // Validate all required fields before promoting
   const missingFields: string[] = [];
   if (!applicant.first_name) missingFields.push('First Name');
