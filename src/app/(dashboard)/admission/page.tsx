@@ -26,6 +26,7 @@ interface Student {
   dob: string;
   gender: string;
   category_id: number;
+  jersey_size?: string;
   class_id: number;
   academic_year_id: number;
   school_id: number;
@@ -257,6 +258,7 @@ const handlePrint = () => {
               <th>Gender</th>
               <th>Category</th>
               <th>School</th>
+              <th>Jersey Size</th>
             </tr>
           </thead>
           <tbody>
@@ -267,6 +269,7 @@ const handlePrint = () => {
                 <td>${s.gender}</td>
                 <td>${getNameById(categories, s.category_id)}</td>
                 <td>${getNameById(schools, s.school_id)}</td>
+                <td>${(s.jersey_size || "-")}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -459,6 +462,7 @@ return (
                 <TableHead>Class</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Academic Year</TableHead>
+                <TableHead>Jersey Size</TableHead>
                 <TableHead>School</TableHead>
                 <TableHead>Date of Birth</TableHead>
                 <TableHead>Gender</TableHead>
@@ -476,6 +480,7 @@ return (
         <TableCell>{getNameById(classes, s.class_id)}</TableCell>
         <TableCell>{getNameById(categories, s.category_id)}</TableCell>
         <TableCell>{getNameById(academicYears, s.academic_year_id)}</TableCell>
+        <TableCell>{s.jersey_size || '-'}</TableCell>
         <TableCell>{getNameById(schools, s.school_id)}</TableCell>
         <TableCell>{new Date(s.dob).toISOString().split('T')[0]}</TableCell>
         <TableCell>{s.gender}</TableCell>
