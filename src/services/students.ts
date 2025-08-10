@@ -17,6 +17,11 @@ export interface CreateStudentPayload {
 }
 
 const studentService = {
+  // Partial update (PUT /students/:id)
+  updatePartial: async (id: number, data: Partial<CreateStudentPayload & { jersey_size?: string }>) => {
+    const res = await api.put(`/students/${id}`, data);
+    return res.data;
+  },
   create: async (data: CreateStudentPayload) => {
     const res = await api.post('/students', data);
     return res.data;

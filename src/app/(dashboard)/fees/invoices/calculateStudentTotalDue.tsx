@@ -1,3 +1,10 @@
+// Jersey price map by size
+const jerseyPriceMap: Record<string, number> = {
+  S: 45,
+  M: 55,
+  L: 65,
+  XL: 70,
+};
 export function calculateStudentTotalDue(
   student: any, // Student | RegistrationData
   categories: { id: number; name: string }[],
@@ -64,7 +71,7 @@ const classNameRaw =
     cls.name.trim().toLowerCase() === String(classId).trim().toLowerCase()
   )?.name || "";
   const normalizedClassName = classNameRaw.trim().toLowerCase().replace(/\s+/g, ' ');
-  console.log('classId:', classId, 'classNameRaw:', classNameRaw, 'normalizedClassName:', normalizedClassName);
+  // console.log('classId:', classId, 'classNameRaw:', classNameRaw, 'normalizedClassName:', normalizedClassName);
   // console.log('clasName:', normalizedClassName, 'classes:', classes);
 let textBookKey = Object.keys(textBooksMap).find(key => normalizedClassName.startsWith(key));
 let exerciseBookKey = Object.keys(exerciseBooksMap).find(key => normalizedClassName.startsWith(key));
@@ -90,11 +97,14 @@ let exerciseBookKey = Object.keys(exerciseBooksMap).find(key => normalizedClassN
       case "furniture":
         fixedAmount = 100;
         break;
-      case "jersey":
-        fixedAmount = 0; // <-- Set your jersey amount here
+      case "jersey": {
+        // Use student.jersey_size if available
+        const size = student.jersey_size || '';
+        fixedAmount = jerseyPriceMap[size] || 0;
         break;
+      }
       case "crest":
-        fixedAmount = 10; // <-- Crest is always 10
+        fixedAmount = 30; // <-- Crest is always 10
         break;
       case "textBooks": {
         const textBookKey = Object.keys(textBooksMap).find(key => normalizedClassName.startsWith(key));
@@ -111,7 +121,7 @@ let exerciseBookKey = Object.keys(exerciseBooksMap).find(key => normalizedClassN
     }
     total += fixedAmount;
   }
-    console.log('classes:', classes.map(c => ({ id: c.id, name: c.name })));
+    // console.log('classes:', classes.map(c => ({ id: c.id, name: c.name })));
     // console.log('classId:', classId, typeof classId, 'classes ids:', classes.map(c => c.id));
     // console.log('exerciseBookKey:', classNameRaw, 'normalizedClassName:', normalizedClassName);
     // console.log('Unpaid types:', feeTypes.filter(type => !paidTypes.includes(type)), 'Total left:', total);

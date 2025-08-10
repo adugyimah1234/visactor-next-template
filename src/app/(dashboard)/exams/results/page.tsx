@@ -335,7 +335,7 @@ for (const applicant of updatedApplicants) {
 
 const handleSinglePromote = async (applicant: RegistrationData) => {
 
-  setPromotingId(applicant.id);
+  setPromotingId(applicant.id ?? null);
   // Validate all required fields before promoting
   const missingFields: string[] = [];
   if (!applicant.first_name) missingFields.push('First Name');

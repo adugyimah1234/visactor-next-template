@@ -113,6 +113,7 @@ interface CreateReceiptData {
   exam_id?: number;
   payment_type?: string;
   amount: number; // ✅ total amount
+  jersey_size?: string; // <-- Add jersey size
 }
 
 // ✅ Small deep equal helper for safe comparison
@@ -136,6 +137,14 @@ function getStudentTotalPaid(studentId: number, receipts: Receipt[]): number {
     .filter(r => Number(r.student_id) === Number(studentId))
     .reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
 }
+
+// Jersey price map by size (must be accessible everywhere in component)
+const jerseyPriceMap: Record<string, number> = {
+  S: 45,
+  M: 55,
+  L: 65,
+  XL: 70,
+};
 
 export default function ReceiptManagement() {
   
@@ -361,21 +370,20 @@ useEffect(() => {
 
 const CreateReceiptForm: React.FC<CreateReceiptFormProps> = ({ categories }) => {
   const [formData, setFormData] = useState<CreateReceiptData>({
-  student_id: 0,
-  registration_id: undefined,
-  payment_id: undefined,
-  receipt_type: [
-
-  ], // ✅ now an array
-  fee_id: 0,
-  amount: 0,
-  date_issued: new Date().toISOString().split('T')[0],
-  venue: '',
-  exam_id: undefined,
-  class_id: undefined,
-  exam_date: '',
-  payment_type: ''
-});
+    student_id: 0,
+    registration_id: undefined,
+    payment_id: undefined,
+    receipt_type: [], // ✅ now an array
+    fee_id: 0,
+    amount: 0,
+    date_issued: new Date().toISOString().split('T')[0],
+    venue: '',
+    exam_id: undefined,
+    class_id: undefined,
+    exam_date: '',
+    payment_type: '',
+    jersey_size: '', // <-- Add jersey size
+  });
 
 const [openStudentCombobox, setOpenStudentCombobox] = useState(false);
 const [studentSearchQuery, setStudentSearchQuery] = useState('');
@@ -446,14 +454,22 @@ const handleSubmit = async (e: React.FormEvent) => {
         toast.warning("Receipt created but payment status not updated.");
       }
     }
-    
+
     if (isRegistration) delete payload.student_id;
     else delete payload.registration_id;
 
     const createdReceipt = await createReceipt(payload);
     toast.success("Receipt created!");
 
-
+    // ✅ Update student jersey_size if jersey is selected and student_id exists
+    const hasJersey = formData.receipt_type.some(item => item.type === 'jersey');
+    if (!isRegistration && hasJersey && formData.student_id && formData.jersey_size) {
+      try {
+        await studentService.updatePartial(formData.student_id, { jersey_size: formData.jersey_size });
+      } catch (err) {
+        toast.warning("Receipt created but failed to update jersey size for student.");
+      }
+    }
 
     // reset
     setFormData({
@@ -567,6 +583,8 @@ const showRegistrationWarning = selectedStudent && hasRegistrationPayment;
     const classNameRaw = classId ? classes.find(cls => cls.id === Number(classId))?.name : undefined;
     const className = classNameRaw?.trim().toLowerCase();
 
+
+
 // ...inside your useEffect for updating amounts...
 
 const textBooksMap: Record<string, number> = {
@@ -609,6 +627,8 @@ const exerciseBooksMap: Record<string, number> = {
   'basic 9': 341,
 };
 
+
+
 const updatedTypes = formData.receipt_type.map(item => {
   let fixedAmount = item.amount; // Keep previous by default
 
@@ -621,11 +641,14 @@ const updatedTypes = formData.receipt_type.map(item => {
     case "furniture":
       fixedAmount = 100;
       break;
-    case "jersey":
-      fixedAmount = 0; // or your desired jersey amount
+    case "jersey": {
+      // Use selected jersey size to determine price
+      const size = formData.jersey_size || '';
+      fixedAmount = jerseyPriceMap[size] || 0;
       break;
+    }
     case "crest":
-      fixedAmount = 10;
+      fixedAmount = 30;
       break;
     case "registration":
       fixedAmount = 40;
@@ -719,6 +742,7 @@ return (
 {formData.receipt_type.map((opt, idx) => {
   // Prevent duplicate selection: get all selected types except current index
   const selectedTypes = formData.receipt_type.map((item, i) => i !== idx ? item.type : null).filter(Boolean);
+  const isJersey = opt.type === 'jersey';
   return (
     <div key={idx} className="flex items-center space-x-4 mb-2">
       {/* ✅ Select using shadcn */}
@@ -732,21 +756,27 @@ return (
           }
           const newOptions = [...formData.receipt_type];
           let fixedAmount = 0;
-          switch (newType) {
-            case "registration":
-              fixedAmount = 40;
-              break;
-            case "levy":
-              fixedAmount = 0; // handled in useEffect for SVC/CIV
-              break;
-            case "furniture":
-              fixedAmount = 100;
-              break;
-            case "jersey_crest":
-              fixedAmount = 120;
-              break;
-            default:
-              fixedAmount = 0;
+          if (newType === "jersey") {
+            // Use selected jersey size if available
+            const size = formData.jersey_size || '';
+            fixedAmount = jerseyPriceMap[size] || 0;
+          } else {
+            switch (newType) {
+              case "registration":
+                fixedAmount = 40;
+                break;
+              case "levy":
+                fixedAmount = 0; // handled in useEffect for SVC/CIV
+                break;
+              case "furniture":
+                fixedAmount = 100;
+                break;
+              case "jersey_crest":
+                fixedAmount = 120;
+                break;
+              default:
+                fixedAmount = 0;
+            }
           }
           newOptions[idx] = { type: newType, amount: fixedAmount };
           const totalAmount = newOptions.reduce((sum, item) => sum + item.amount, 0);
@@ -781,6 +811,44 @@ return (
           )}
         </SelectContent>
       </Select>
+
+      {/* Jersey size select if jersey is selected */}
+      {isJersey && (
+        <div className="flex flex-col items-start">
+          <label className="text-xs font-medium mb-1 ml-1">Jersey Size</label>
+          <Select
+            value={formData.jersey_size || ''}
+            onValueChange={value => {
+              // Update jersey size and update jersey price in receipt_type
+              setFormData(prev => {
+                const newReceiptType = prev.receipt_type.map((item) =>
+                  item.type === 'jersey'
+                    ? { ...item, amount: jerseyPriceMap[value] || 0 }
+                    : item
+                );
+                const newTotal = newReceiptType.reduce((sum, item) => sum + item.amount, 0);
+                return {
+                  ...prev,
+                  jersey_size: value,
+                  receipt_type: newReceiptType,
+                  amount: newTotal,
+                };
+              });
+            }}
+            required
+          >
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="Select Size" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="S">S (GHS 45)</SelectItem>
+              <SelectItem value="M">M (GHS 55)</SelectItem>
+              <SelectItem value="L">L (GHS 65)</SelectItem>
+              <SelectItem value="XL">XL (GHS 70)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {/* ✅ Show amount */}
       <span className="font-medium text-gray-700">GHS {opt.amount}</span>
