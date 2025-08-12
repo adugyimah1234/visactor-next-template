@@ -392,6 +392,11 @@ const [loadingStudents, setLoadingStudents] = useState(false);
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
 
+  if (formData.receipt_type.some(opt => !opt.type)) {
+    toast.error("Please select a payment type for each option or remove it.");
+    return;
+  }
+
   if (formData.receipt_type.length === 0) {
     toast.error("Please add at least one payment option.");
     return;

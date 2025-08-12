@@ -7,12 +7,12 @@
  */
 export interface Class {
   level: number | undefined;
-  id: string;
+  id: number;
   name: string;
   grade_level: string;
-  academic_year_id: string;
-  school_id?: string;
-  teacher_id?: string;
+  academic_year_id: number;
+  school_id?: number;
+  teacher_id?: number;
   capacity: number;
   current_students: number;
   sections?: Section[];
@@ -36,9 +36,9 @@ export interface Section {
  * Exam interface
  */
 export interface ClassExam {
-  id: string;
-  class_id: string;
-  category_id: string;
+  id: number;
+  class_id: number;
+  category_id: number;
   category_name?: string;
   name: string;
   date: string;
@@ -62,36 +62,36 @@ export interface ClassWithExams extends Class {
 export interface CreateClassDTO {
   name: string;
   grade_level: string;
-  academic_year_id: string;
-  school_id?: string;
-  teacher_id?: string;
+  academic_year_id: number;
+  school_id?: number;
+  teacher_id?: number;
   capacity: number;
 }
 
 export interface UpdateClassDTO {
   name?: string;
   grade_level?: string;
-  teacher_id?: string;
+  teacher_id?: number;
   capacity?: number;
 }
 
 export interface CreateSectionDTO {
   name: string;
-  class_id: string;
-  teacher_id?: string;
+  class_id: number;
+  teacher_id?: number;
   capacity: number;
 }
 
 export interface UpdateSectionDTO {
   name?: string;
-  teacher_id?: string;
+  teacher_id?: number;
   capacity?: number;
 }
 
 export interface CreateExamDTO {
   name: string;
   date: string;
-  category_id: string;
+  category_id: number;
   description?: string;
   total_marks: number;
   venue?: string;
@@ -100,7 +100,7 @@ export interface CreateExamDTO {
 export interface UpdateExamDTO {
   name?: string;
   date?: string;
-  category_id?: string;
+  category_id?: number;
   description?: string;
   total_marks?: number;
   venue?: string;
@@ -110,11 +110,11 @@ export interface UpdateExamDTO {
  * Filter interfaces
  */
 export interface ClassFilters {
-  academic_year_id?: string;
-  school_id?: string;
+  academic_year_id?: number;
+  school_id?: number;
   grade_level?: string;
-  teacher_id?: string;
-  category_id?: string;
+  teacher_id?: number;
+  category_id?: number;
 }
 
 /**

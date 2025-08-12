@@ -1,8 +1,16 @@
+export type ReceiptType = 'registration' | 'levy' | 'textBooks' | 'exerciseBooks' | 'furniture' | 'jersey' | 'crest';
+
+export interface ReceiptItem {
+  id: number;
+  receipt_type: ReceiptType;
+  amount: number;
+}
+
 export interface Receipt {
   id: number;
   student_id: number;
   payment_id?: number | null;
-  receipt_type: 'registration' | 'levy' | 'textBooks' | 'exerciseBooks' | 'furniture' | 'jersey' | 'crest';
+  receipt_items: ReceiptItem[];
   amount: number;
   issued_by?: number;
   date_issued: string;
@@ -19,11 +27,6 @@ export interface Receipt {
   fullName?: string;
   school_name?: string;
   payment_date?: string;
-  receipt_items: {
-    id: number;
-    receipt_type: string;
-    amount: number;
-  }[];
   payment_type?: string;
   payment_method?: string;
   registration_first_name?: string;

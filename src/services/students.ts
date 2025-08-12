@@ -60,6 +60,11 @@ const studentService = {
     return res.data;
   },
 
+  updatePartial: async (id: number, data: Partial<CreateStudentPayload>) => {
+    const res = await api.patch(`/students/${id}`, data);
+    return res.data;
+  },
+
   remove: async (id: number) => {
     const res = await api.delete(`/students/${id}`);
     return res.data;

@@ -26,39 +26,7 @@ import studentService from '@/services/students';
 // Import types and API function
 import { HiUserGroup, HiCurrencyDollar, HiCheckCircle, HiChartBar } from "react-icons/hi";
 
-type ReceiptType = "registration" | "levy" | "textBooks" | "exerciseBooks" | "furniture" | "jersey" | "crest";
-
-interface ReceiptItem {
-  id: number;
-  receipt_type: ReceiptType;
-  amount: number;
-}
-
-interface Receipt {
-  id: number;
-  student_id: number;
-  payment_id?: number | null;
-  receipt_items: ReceiptItem[]; 
-  amount: number;
-  issued_by?: number;
-  date_issued: string;
-  venue?: string;
-  logo_url?: string;
-  exam_date?: string;
-  class_id?: number;
-  registration_id: number;
-  school_id?: number;
-  student_name?: string;
-  class_name?: string;
-  issued_by_name?: string;
-  school_name?: string;
-  payment_date?: string;
-  payment_type?: string;
-  payment_method?: string;
-  registration_first_name?: string;
-  registration_last_name?: string;
-  amount_paid?: number;
-}
+import { type Receipt, type ReceiptItem, type ReceiptType } from '../../../../../types/receipt';
 
 export default function DailyPaymentDashboard() {
  const [receipts, setReceipts] = useState<Receipt[]>([]);

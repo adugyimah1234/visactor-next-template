@@ -229,7 +229,7 @@ useEffect(() => {
           const allTypes = Array.from(
             new Set(
               filteredReceipts.flatMap((r) =>
-                r.receipt_items?.map((i) => i.receipt_type) ?? [r.receipt_type]
+                r.receipt_items?.map((i) => i.receipt_type) ?? []
               )
             )
           ).filter(Boolean) as string[];
@@ -239,12 +239,11 @@ useEffect(() => {
   selectedReceiptTab === "all"
     ? filteredReceipts
     : filteredReceipts.filter((r) =>
-        r.receipt_items?.some((i) => i.receipt_type === selectedReceiptTab) ||
         r.receipt_type === selectedReceiptTab
       )
 ).filter((r) => {
   // Filter out registration-only receipts
-  const types = r.receipt_items?.map((i) => i.receipt_type) ?? [r.receipt_type];
+  const types = r.receipt_items?.map((i) => i.receipt_type) ?? [];
   return !types.every((t) => t === "registration");
 });
 
@@ -360,7 +359,7 @@ useEffect(() => {
         <TableCell>R-{receipt.id.toString().padStart(6, "0")}</TableCell>
         <TableCell>{renderStudentName(receipt)}</TableCell>
         <TableCell className="space-x-1">
-          {(receipt.receipt_items ?? [{ receipt_type: receipt.receipt_type }]).map((i, idx) => (
+          {(receipt.receipt_items ?? []).map((i, idx) => (
             <Badge
               key={`${i.receipt_type}-${idx}`}
               variant={getReceiptTypeBadge(i.receipt_type).variant as "default" | "secondary" | "outline" | "destructive"}

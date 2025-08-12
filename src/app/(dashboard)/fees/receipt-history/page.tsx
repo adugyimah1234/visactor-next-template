@@ -154,7 +154,7 @@ export default function PaymentHistoryPage() {
 
   // 🟢 Extract unique receipt types
   const allTypes = Array.from(new Set(
-    receipts.flatMap(r => r.receipt_items?.map(i => i.receipt_type) ?? [r.receipt_type])
+    receipts.flatMap(r => r.receipt_items?.map(i => i.receipt_type) ?? [])
   )).filter(Boolean) as string[];
 
   const tabs = ["all", ...allTypes];
@@ -164,7 +164,7 @@ export default function PaymentHistoryPage() {
   const tabData  = tab === "all"
     ? filteredReceipts
     : filteredReceipts.filter(r =>
-        r.receipt_items?.some(i => i.receipt_type === tab) || r.receipt_type === tab
+        r.receipt_items?.some(i => i.receipt_type === tab)
       );
 
 
@@ -204,8 +204,8 @@ export default function PaymentHistoryPage() {
                     </Badge>
                   ))
                 ) : (
-                  <Badge variant={getReceiptTypeBadge(r.receipt_type as string).variant}>
-                    {getReceiptTypeBadge(r.receipt_type as string).label}
+                  <Badge variant={getReceiptTypeBadge(r.receipt_items[0].receipt_type as string).variant}>
+                    {getReceiptTypeBadge(r.receipt_items[0].receipt_type as string).label}
                   </Badge>
                 )}
               </TableCell>
