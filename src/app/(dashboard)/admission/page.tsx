@@ -17,6 +17,7 @@ import { getAllAcademicYear } from '@/services/academic_year';
 import { useForm } from 'react-hook-form';
 import { RefreshCcw } from "lucide-react";
 import { Printer } from "lucide-react";
+import { ChangeSchoolDialog } from '@/components/admission/ChangeSchoolDialog';
 
 interface Student {
   id?: number;
@@ -48,6 +49,16 @@ export default function StudentListPage() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const studentsPerPage = 10;
+
+  const [isChangeSchoolDialogOpen, setIsChangeSchoolDialogOpen] = useState(false);
+  const [selectedAdmissionId, setSelectedAdmissionId] = useState<string | null>(null);
+  const [selectedCurrentSchoolId, setSelectedCurrentSchoolId] = useState<string | null>(null);
+
+  const handleChangeSchoolClick = (admissionId: number, currentSchoolId: number) => {
+    setSelectedAdmissionId(String(admissionId));
+    setSelectedCurrentSchoolId(String(currentSchoolId));
+    setIsChangeSchoolDialogOpen(true);
+  };
 const {
   register,
   handleSubmit,
@@ -467,6 +478,7 @@ return (
                 <TableHead>Date of Birth</TableHead>
                 <TableHead>Gender</TableHead>
                 <TableHead>Admission Status</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -485,11 +497,21 @@ return (
         <TableCell>{new Date(s.dob).toISOString().split('T')[0]}</TableCell>
         <TableCell>{s.gender}</TableCell>
         <TableCell>{s.admission_status}</TableCell>
+        <TableCell>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleChangeSchoolClick(s.id!, s.school_id)}
+            disabled={!s.id || !s.school_id}
+          >
+            Change School
+          </Button>
+        </TableCell>
       </TableRow>
     ))
   ) : (
     <TableRow>
-      <TableCell colSpan={10} className="text-center py-6 text-muted-foreground">
+      <TableCell colSpan={11} className="text-center py-6 text-muted-foreground">
         No students found for the selected filters.
       </TableCell>
     </TableRow>
@@ -512,6 +534,15 @@ return (
           </Pagination>
         </CardContent>
       </Card>
+      {selectedAdmissionId && selectedCurrentSchoolId && (
+        <ChangeSchoolDialog
+          isOpen={isChangeSchoolDialogOpen}
+          onClose={() => setIsChangeSchoolDialogOpen(false)}
+          admissionId={selectedAdmissionId}
+          currentSchoolId={selectedCurrentSchoolId}
+          onSchoolChanged={handleRefresh}
+        />
+      )}
     </div>
   );
 }
