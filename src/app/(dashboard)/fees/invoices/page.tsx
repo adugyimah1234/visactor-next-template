@@ -841,10 +841,10 @@ return (
               <SelectValue placeholder="Select Size" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="S">S (GHS 45)</SelectItem>
-              <SelectItem value="M">M (GHS 55)</SelectItem>
-              <SelectItem value="L">L (GHS 65)</SelectItem>
-              <SelectItem value="XL">XL (GHS 70)</SelectItem>
+              <SelectItem value="S">S (GHS 115)</SelectItem>
+              <SelectItem value="M">M (GHS 115)</SelectItem>
+              <SelectItem value="L">L (GHS 115)</SelectItem>
+              <SelectItem value="XL">XL (GHS 115)</SelectItem>
             </SelectContent>
           </Select>
         </div>
