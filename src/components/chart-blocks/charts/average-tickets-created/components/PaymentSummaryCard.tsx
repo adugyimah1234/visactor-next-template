@@ -120,7 +120,8 @@ const normalizeReceiptItems = (items: any[]): ReceiptItem[] =>
     textBooks: { name: 'Text Books', color: '#f59e0b', icon: BookOpen },
     exerciseBooks: { name: 'Exercise Books', color: '#ef4444', icon: BookOpen },
     furniture: { name: 'Furniture', color: '#8b5cf6', icon: Home },
-    jersey_crest: { name: 'Jersey & Crest', color: '#06b6d4', icon: Shirt }
+    crest: { name: 'Crest', color: '#06b6d4', icon: Shirt },
+    jersey: { name: 'Jersey', color: '#86d800', icon: Shirt }
   };
 
 const formatCurrency = (amount: number): string => {
