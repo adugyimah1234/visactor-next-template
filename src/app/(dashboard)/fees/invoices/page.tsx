@@ -1087,7 +1087,7 @@ onChange={(e) => setStudentSearchQuery(e.target.value)}
                 <DropdownMenuItem onClick={() => setFilters({...filters, receipt_type: 'jersey'})}>
                   Jersey
                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setFilters({...filters, receipt_type: 'crest'})}>
+                <DropdownMenuItem onClick={() => setFilters({...filters, receipt_type: 'crest'})}>
                   Crest
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
