@@ -140,10 +140,10 @@ function getStudentTotalPaid(studentId: number, receipts: Receipt[]): number {
 
 // Jersey price map by size (must be accessible everywhere in component)
 const jerseyPriceMap: Record<string, number> = {
-  S: 45,
-  M: 55,
-  L: 65,
-  XL: 70,
+  S: 115,
+  M: 115,
+  L: 115,
+  XL: 115,
 };
 
 export default function ReceiptManagement() {
@@ -589,22 +589,22 @@ const showRegistrationWarning = selectedStudent && hasRegistrationPayment;
 
 const textBooksMap: Record<string, number> = {
   'kg 1 a': 345,
-  'kg 1 b': 345,
-  'kg 1 c': 345,
   'kg 1 d': 345,
+  'kg 1 c': 345,
+  'kg 1 b': 345,
   'kg 2 a': 345,
   'kg 2 b': 345,
   'kg 2 c': 345,
   'kg 2 d': 345,
   'basic 1': 615,
-  'basic 2': 590,
-  'basic 3': 590,
-  'basic 4': 660,
-  'basic 5': 650,
-  'basic 6': 650,
-  'basic 7': 990,
-  'basic 8': 415,
-  'basic 9': 350,
+    'basic 2': 590,
+    'basic 3': 590,
+    'basic 4': 660,
+    'basic 5': 650,
+    'basic 6': 650,
+    'basic 7': 990,
+    'basic 8': 615,
+    'basic 9': 350,
 };
 
 const exerciseBooksMap: Record<string, number> = {
@@ -616,15 +616,15 @@ const exerciseBooksMap: Record<string, number> = {
   'kg 2 b': 104,
   'kg 2 c': 104,
   'kg 2 d': 104,
-  'basic 1': 181,
-  'basic 2': 181,
-  'basic 3': 181,
+  'basic 1': 194,
+  'basic 2': 194,
+  'basic 3': 194,
   'basic 4': 186,
-  'basic 5': 274,
-  'basic 6': 274,
-  'basic 7': 341,
-  'basic 8': 341,
-  'basic 9': 341,
+  'basic 5': 272,
+  'basic 6': 272,
+  'basic 7': 333,
+  'basic 8': 333,
+  'basic 9': 333,
 };
 
 

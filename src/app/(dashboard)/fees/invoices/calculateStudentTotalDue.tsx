@@ -1,9 +1,9 @@
 // Jersey price map by size
 const jerseyPriceMap: Record<string, number> = {
-  S: 45,
-  M: 55,
-  L: 65,
-  XL: 70,
+  S: 115,
+  M: 115,
+  L: 115,
+  XL: 115,
 };
 export function calculateStudentTotalDue(
   student: any, // Student | RegistrationData
@@ -38,7 +38,7 @@ export function calculateStudentTotalDue(
     'basic 5': 650,
     'basic 6': 650,
     'basic 7': 990,
-    'basic 8': 415,
+    'basic 8': 615,
     'basic 9': 350,
   };
   
@@ -51,15 +51,15 @@ const exerciseBooksMap: Record<string, number> = {
   'kg 2 b': 104,
   'kg 2 c': 104,
   'kg 2 d': 104,
-  'basic 1': 181,
-  'basic 2': 181,
-  'basic 3': 181,
+  'basic 1': 194,
+  'basic 2': 194,
+  'basic 3': 194,
   'basic 4': 186,
-  'basic 5': 274,
-  'basic 6': 274,
-  'basic 7': 341,
-  'basic 8': 341,
-  'basic 9': 341,
+  'basic 5': 272,
+  'basic 6': 272,
+  'basic 7': 333,
+  'basic 8': 333,
+  'basic 9': 333,
 };
   // Partial match fallback
   const categoryName = categories.find(c => Number(c.id) === Number(categoryId))?.name || "";
