@@ -18,6 +18,7 @@ import { useForm } from 'react-hook-form';
 import { RefreshCcw } from "lucide-react";
 import { Printer } from "lucide-react";
 import { ChangeSchoolDialog } from '@/components/admission/ChangeSchoolDialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface Student {
   id?: number;
@@ -41,6 +42,8 @@ interface NamedItem {
 }
 
 export default function StudentListPage() {
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editStudent, setEditStudent] = useState<Student | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [categories, setCategories] = useState<NamedItem[]>([]);
   const [classes, setClasses] = useState<NamedItem[]>([]);
@@ -420,20 +423,30 @@ return (
             {selectedSchool && (
               <div>
                 <h3 className="text-sm font-semibold mb-2">Classes</h3>
-                <div className="flex flex-wrap gap-2">
-                  {classes.filter(c => students.some(s => s.school_id === selectedSchool && s.class_id === c.id)).map(cls => (
-                    <Button
-                      key={cls.id}
-                      variant={selectedClass === cls.id ? 'default' : 'outline'}
-                      onClick={() => {
-                        setSelectedClass(cls.id);
-                        setCurrentPage(1);
-                      }}
-                    >
-                      {cls.name}
-                    </Button>
-                  ))}
-                </div>
+                  <div className="flex flex-wrap gap-2">
+                    {Array.from(
+                      new Map(
+                        students
+                          .filter(s => s.school_id === selectedSchool)
+                          .map(s => {
+                            const cls = classes.find(c => c.id === s.class_id);
+                            return cls ? [cls.id, cls] as [number, NamedItem] : null;
+                          })
+                          .filter((v): v is [number, NamedItem] => v !== null)
+                      ).values()
+                    ).map(cls => (
+                      <Button
+                        key={cls.id}
+                        variant={selectedClass === cls.id ? 'default' : 'outline'}
+                        onClick={() => {
+                          setSelectedClass(cls.id);
+                          setCurrentPage(1);
+                        }}
+                      >
+                        {cls.name}
+                      </Button>
+                    ))}
+                  </div>
               </div>
             )}
           </div>
@@ -506,6 +519,17 @@ return (
           >
             Change School
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-2"
+            onClick={() => {
+              setEditStudent(s);
+              setIsEditDialogOpen(true);
+            }}
+          >
+            Edit
+          </Button>
         </TableCell>
       </TableRow>
     ))
@@ -543,6 +567,44 @@ return (
           onSchoolChanged={handleRefresh}
         />
       )}
+
+      {/* Edit Student Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Student</DialogTitle>
+          </DialogHeader>
+          {editStudent && (
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const updated: Partial<Student> = {};
+                formData.forEach((value, key) => {
+                  updated[key as keyof Student] = value as any;
+                });
+                await studentService.updatePartial(editStudent.id!, updated);
+                setIsEditDialogOpen(false);
+                setEditStudent(null);
+                handleRefresh();
+              }}
+              className="grid grid-cols-1 gap-2"
+            >
+              <input name="first_name" defaultValue={editStudent.first_name} placeholder="First Name" className="input" />
+              <input name="middle_name" defaultValue={editStudent.middle_name} placeholder="Middle Name" className="input" />
+              <input name="last_name" defaultValue={editStudent.last_name} placeholder="Last Name" className="input" />
+              <input name="dob" defaultValue={editStudent.dob} type="date" className="input" />
+              <input name="jersey_size" defaultValue={editStudent.jersey_size} placeholder="Jersey Size" className="input" />
+              <select name="gender" defaultValue={editStudent.gender} className="input">
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+              <button type="submit" className="btn btn-primary mt-2">Save Changes</button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

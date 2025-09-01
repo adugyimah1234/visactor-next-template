@@ -14,11 +14,12 @@ export interface CreateStudentPayload {
   admission_status: string;
   status: string;
   school_id?: number;
+  jersey_size?: string;
 }
 
 const studentService = {
   // Partial update (PUT /students/:id)
-  updatePartial: async (id: number, data: Partial<CreateStudentPayload & { jersey_size?: string }>) => {
+  updatePartial: async (id: number, data: Partial<CreateStudentPayload>) => {
     const res = await api.put(`/students/${id}`, data);
     return res.data;
   },
@@ -57,11 +58,6 @@ const studentService = {
       class_id,
       school_id,
     });
-    return res.data;
-  },
-
-  updatePartial: async (id: number, data: Partial<CreateStudentPayload>) => {
-    const res = await api.patch(`/students/${id}`, data);
     return res.data;
   },
 
