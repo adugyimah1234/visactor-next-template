@@ -664,7 +664,7 @@ return (
                   }
                 });
 
-                console.log('Sending update payload:', updated);
+                // console.log('Sending update payload:', updated);
                 await studentService.updatePartial(editStudent.id!, updated);
                 setIsEditDialogOpen(false);
                 setEditStudent(null);
