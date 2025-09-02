@@ -16,6 +16,7 @@ interface User {
   email: string;
   username: string;
   role_id: number;
+  role: string; // Add this line
   school_id?: number | null;
   // Add other user properties
 }
@@ -28,6 +29,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   updateUserProfile: (data: UpdateUserPayload) => Promise<void>;
+  isAdmin: boolean; // Add this line
 }
 
 export type { AuthContextType };
@@ -179,8 +181,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       const fullUserDataResponse = await getUserById(String(initialUser.id));
       if (fullUserDataResponse) {
-        setUser(fullUserDataResponse);
-        localStorage.setItem('user', JSON.stringify(fullUserDataResponse));
+        setUser({ ...fullUserDataResponse, role: initialUser.role });
+        localStorage.setItem('user', JSON.stringify({ ...fullUserDataResponse, role: initialUser.role }));
         router.push('/');
       } else {
         console.error('Failed to fetch full user data or invalid response.');
@@ -212,6 +214,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const isAuthenticated = !!token && !!user;
+  const isAdmin = user?.role?.toLowerCase() === 'admin'; // Add this line
 
   const value: AuthContextType = { 
     user, 
@@ -220,7 +223,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     logout: () => logout(), 
     isLoading,
     isAuthenticated, 
-    updateUserProfile 
+    updateUserProfile,
+    isAdmin // Add this line
   };
 
   // Show loading state while initializing

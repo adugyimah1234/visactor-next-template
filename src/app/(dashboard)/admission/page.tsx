@@ -6,6 +6,8 @@ import { Upload } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import studentService, { CreateStudentPayload } from '@/services/students';
 
 import schoolService from '@/services/schools';
@@ -19,6 +21,7 @@ import { RefreshCcw } from "lucide-react";
 import { Printer } from "lucide-react";
 import { ChangeSchoolDialog } from '@/components/admission/ChangeSchoolDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Student {
   id?: number;
@@ -57,6 +60,14 @@ export default function StudentListPage() {
   const [selectedAdmissionId, setSelectedAdmissionId] = useState<string | null>(null);
   const [selectedCurrentSchoolId, setSelectedCurrentSchoolId] = useState<string | null>(null);
 
+  const [selectedGender, setSelectedGender] = useState<string | null>(null);
+  const [selectedJerseySize, setSelectedJerseySize] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<number | null>(null);
+  const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
+
+  const { isAdmin } = useAuth();
+
   const handleChangeSchoolClick = (admissionId: number, currentSchoolId: number) => {
     setSelectedAdmissionId(String(admissionId));
     setSelectedCurrentSchoolId(String(currentSchoolId));
@@ -73,13 +84,13 @@ const {
 const [derivedSchoolId, setDerivedSchoolId] = useState<number | null>(null);
 
 // Automatically fetch school_id based on selected class_id
-const selectedClassId = watch('class_id');
+const watchedClassId = watch('class_id');
 
 useEffect(() => {
   const fetchSchoolFromClass = async () => {
-    if (selectedClassId) {
+    if (watchedClassId) {
       try {
-        const cls = await classService.getById(Number(selectedClassId));
+        const cls = await classService.getById(Number(watchedClassId));
         setDerivedSchoolId(cls.school_id);
       } catch (error) {
         toast.error('Failed to fetch class info');
@@ -87,7 +98,7 @@ useEffect(() => {
     }
   };
   fetchSchoolFromClass();
-}, [selectedClassId]);
+}, [watchedClassId]);
 
 
 const onSubmit = async (data: CreateStudentPayload) => {
@@ -143,6 +154,16 @@ const onSubmit = async (data: CreateStudentPayload) => {
     };
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (editStudent) {
+      setSelectedGender(editStudent.gender);
+      setSelectedJerseySize(editStudent.jersey_size || null); // Handle optional jersey_size
+      setSelectedCategory(editStudent.category_id);
+      setSelectedAcademicYear(editStudent.academic_year_id);
+      setSelectedClassId(editStudent.class_id);
+    }
+  }, [editStudent]);
 
   const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -205,11 +226,24 @@ await studentService.create({
   const [selectedClass, setSelectedClass] = useState<number | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
 
-  const filteredStudents = students.filter(s =>
-    (!selectedSchool || s.school_id === selectedSchool) &&
-    (!selectedClass || s.class_id === selectedClass) &&
-    (!selectedYear || s.academic_year_id === selectedYear)
-  );
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredStudents = students.filter(s => {
+    const matchesSchool = (!selectedSchool || s.school_id === selectedSchool);
+    const matchesClass = (!selectedClass || s.class_id === selectedClass);
+    const matchesYear = (!selectedYear || s.academic_year_id === selectedYear);
+
+    const searchLower = searchQuery.toLowerCase();
+
+    const studentName = `${s.first_name} ${s.middle_name || ''} ${s.last_name}`.toLowerCase();
+    const schoolName = getNameById(schools, s.school_id).toLowerCase(); // Assuming getNameById works for schools
+
+    const matchesSearch =
+      studentName.includes(searchLower) ||
+      schoolName.includes(searchLower);
+
+    return matchesSchool && matchesClass && matchesYear && matchesSearch;
+  });
 
   const indexOfLast = currentPage * studentsPerPage;
   const indexOfFirst = indexOfLast - studentsPerPage;
@@ -323,7 +357,7 @@ return (
         <option value="">Select Class</option>
 {classes.map(cls => (
   <option key={cls.id} value={cls.id}>
-    {cls.name} ({'school_id' in cls ? schools.find(s => s.id === (cls as any).school_id)?.name : ''})
+    {cls.name.toUpperCase()} ({'school_id' in cls ? schools.find(s => s.id === (cls as any).school_id)?.name.toUpperCase() : ''})
   </option>
 ))}
       </select>
@@ -456,16 +490,25 @@ return (
         <CardHeader className="flex justify-between items-center">
           <CardTitle>Filtered Students ({filteredStudents.length})</CardTitle>
           <div className="flex items-center gap-4">
+            <Input
+              type="text"
+              placeholder="Search students by name or school..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-sm"
+            />
             <Button
               onClick={() => exportToExcel(filteredStudents)}
               variant="outline"
             >
               Export to Excel
             </Button>
+            {/*
             <input type="file" accept=".xlsx, .xls" onChange={handleExcelUpload} aria-label="Upload Excel file" />
             <Button variant="outline">
               <Upload className="w-4 h-4 mr-2" /> Upload Excel
             </Button>
+            */}
             <Button onClick={handleRefresh} variant="outline">
     <RefreshCcw className="w-4 h-4 mr-2" /> Refresh
     </Button>
@@ -511,6 +554,7 @@ return (
         <TableCell>{s.gender}</TableCell>
         <TableCell>{s.admission_status}</TableCell>
         <TableCell>
+          {/*
           <Button
             variant="outline"
             size="sm"
@@ -519,6 +563,8 @@ return (
           >
             Change School
           </Button>
+          */}
+          {isAdmin && (
           <Button
             variant="outline"
             size="sm"
@@ -530,6 +576,7 @@ return (
           >
             Edit
           </Button>
+          )}
         </TableCell>
       </TableRow>
     ))
@@ -581,26 +628,113 @@ return (
                 const formData = new FormData(e.currentTarget);
                 const updated: Partial<Student> = {};
                 formData.forEach((value, key) => {
-                  updated[key as keyof Student] = value as any;
+                  // Convert empty strings to undefined so they are not sent if not changed
+                  updated[key as keyof Student] = value === '' ? undefined : value as any;
                 });
+
+                updated.gender = selectedGender || '';
+                updated.jersey_size = selectedJerseySize || '';
+                updated.category_id = selectedCategory ?? 0;
+                updated.academic_year_id = selectedAcademicYear ?? 0;
+                updated.class_id = selectedClassId ?? 0;
+
+                // Derive school_id from class_id if class_id is present and valid
+                if (updated.class_id) {
+                  const classId = Number(updated.class_id);
+                  if (!isNaN(classId) && classId !== 0) { // Ensure it's a valid number and not 0 from Number("")
+                    const cls = classes.find(c => c.id === classId) as any;
+                    if (cls) {
+                      updated.school_id = cls.school_id;
+                    }
+                  }
+                }
+
+                // Convert ID fields to numbers
+                const idFields: (keyof Student)[] = ['class_id', 'category_id', 'academic_year_id', 'school_id'];
+                idFields.forEach(key => {
+                  if (updated[key] !== undefined) { // Only process if the field was present in formData
+                    const numValue = Number(updated[key]);
+                    if (!isNaN(numValue) && numValue !== 0) { // Ensure it's a valid number and not 0
+                      (updated as any)[key] = numValue;
+                    } else {
+                      // If conversion to number fails or it's 0, set to null if it's an optional ID, otherwise undefined
+                      // Assuming 0 is not a valid ID and optional IDs can be null
+                      (updated as any)[key] = null;
+                    }
+                  }
+                });
+
+                console.log('Sending update payload:', updated);
                 await studentService.updatePartial(editStudent.id!, updated);
                 setIsEditDialogOpen(false);
                 setEditStudent(null);
                 handleRefresh();
               }}
-              className="grid grid-cols-1 gap-2"
+              className="grid grid-cols-2 gap-4"
             >
-              <input name="first_name" defaultValue={editStudent.first_name} placeholder="First Name" className="input" />
-              <input name="middle_name" defaultValue={editStudent.middle_name} placeholder="Middle Name" className="input" />
-              <input name="last_name" defaultValue={editStudent.last_name} placeholder="Last Name" className="input" />
-              <input name="dob" defaultValue={editStudent.dob} type="date" className="input" />
-              <input name="jersey_size" defaultValue={editStudent.jersey_size} placeholder="Jersey Size" className="input" />
-              <select name="gender" defaultValue={editStudent.gender} className="input">
-                <option value="">Select Gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-              </select>
-              <button type="submit" className="btn btn-primary mt-2">Save Changes</button>
+              <Input name="first_name" defaultValue={editStudent.first_name} placeholder="First Name" />
+              <Input name="middle_name" defaultValue={editStudent.middle_name} placeholder="Middle Name" />
+              <Input name="last_name" defaultValue={editStudent.last_name} placeholder="Last Name" />
+              <Input name="dob" defaultValue={new Date(editStudent.dob).toISOString().split('T')[0]} type="date" />
+              <Select onValueChange={setSelectedJerseySize} defaultValue={editStudent.jersey_size}>
+                <SelectTrigger className="input">
+                  <SelectValue placeholder="Select Jersey Size" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="XS">XS</SelectItem>
+                  <SelectItem value="S">S</SelectItem>
+                  <SelectItem value="M">M</SelectItem>
+                  <SelectItem value="L">L</SelectItem>
+                  <SelectItem value="XL">XL</SelectItem>
+                  <SelectItem value="XXL">XXL</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select onValueChange={setSelectedGender} defaultValue={editStudent.gender}>
+                <SelectTrigger className="input">
+                  <SelectValue placeholder="Select Gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Male">Male</SelectItem>
+                  <SelectItem value="Female">Female</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select onValueChange={(value) => setSelectedCategory(Number(value))} defaultValue={String(editStudent.category_id)}>
+                <SelectTrigger className="input">
+                  <SelectValue placeholder="Select Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map(cat => (
+                    <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select onValueChange={(value) => setSelectedAcademicYear(Number(value))} defaultValue={String(editStudent.academic_year_id)}>
+                <SelectTrigger className="input">
+                  <SelectValue placeholder="Select Academic Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {academicYears.map(year => (
+                    <SelectItem key={year.id} value={String(year.id)}>{year.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select onValueChange={(value) => setSelectedClassId(Number(value))} defaultValue={String(editStudent.class_id)}>
+                <SelectTrigger className="input col-span-2">
+                  <SelectValue placeholder="Select Class" />
+                </SelectTrigger>
+                <SelectContent>
+                  
+                  {classes.map(cls => (
+                    <SelectItem key={cls.id} value={String(cls.id)}>
+                      {cls.name.toUpperCase()} ({schools.find(s => s.id === (cls as any).school_id)?.name.toUpperCase()})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input name="admission_status" defaultValue={editStudent.admission_status} placeholder="Admission Status" />
+              <div className="col-span-2 flex justify-end">
+                <Button type="submit">Save Changes</Button>
+              </div>
             </form>
           )}
         </DialogContent>
