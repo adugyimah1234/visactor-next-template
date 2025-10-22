@@ -15,7 +15,7 @@ const nextConfig = {
     return [
       {
         source: '/:3000',
-        destination: 'https://api.3-gec.com/:5000', // Proxy to Express backend
+        destination: 'https://3gecbackend-k4dd3nsdw-morrisonadus-projects.vercel.app/:5000', // Proxy to Express backend
       },
     ];
   },
